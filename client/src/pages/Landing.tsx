@@ -5,6 +5,8 @@ import { motion, useScroll, useTransform } from 'framer-motion';
 import { useRef, useState } from 'react';
 import MeshBackground from '../components/MeshBackground';
 import { useStore } from '../store/useStore';
+import docuReadyBlackLogo from '../assets/DocuReady-black.png';
+import docuReadyWhiteLogo from '../assets/DocuReady-white.png';
 
 const Landing = ({ onLogin }: { onLogin: () => void }) => {
   const { token } = useStore();
@@ -54,16 +56,26 @@ const Landing = ({ onLogin }: { onLogin: () => void }) => {
             <div className="w-8 h-8 rounded-[5px] bg-[#C85A32] text-white flex items-center justify-center font-delight font-extrabold text-xs shadow-xs">
               LP
             </div>
-            <span className="font-extrabold text-[17px] tracking-tight text-[#191716]">LeadPulse</span>
-            <span className="text-[10px] font-delight font-bold uppercase bg-[#F5F2EB] text-[#C85A32] border border-[#E5E0D5] px-1.5 py-0.5 rounded-[4px] ml-0.5 tracking-wider">
-              v3.0
-            </span>
+            <div className="flex flex-col">
+              <div className="flex items-center gap-1.5">
+                <span className="font-extrabold text-[17px] tracking-tight text-[#191716] leading-none">LeadPulse</span>
+                <span className="text-[9.5px] font-delight font-bold uppercase bg-[#F5F2EB] text-[#C85A32] border border-[#E5E0D5] px-1.5 py-0.5 rounded-[4px] tracking-wider leading-none">
+                  v3.0
+                </span>
+              </div>
+              <div className="flex items-center gap-1.5 mt-1">
+                <span className="text-[9.5px] font-delight font-semibold text-[#78716A] uppercase tracking-wider">A</span>
+                <img src={docuReadyBlackLogo} alt="DocuReady" className="h-3 w-auto object-contain opacity-85" />
+                <span className="text-[9.5px] font-delight font-semibold text-[#78716A] uppercase tracking-wider">Entity</span>
+              </div>
+            </div>
           </div>
 
-          <div className="hidden md:flex items-center gap-8 text-[11px] font-delight font-bold tracking-widest uppercase text-[#57524B]">
+          <div className="hidden md:flex items-center gap-7 text-[11px] font-delight font-bold tracking-widest uppercase text-[#57524B]">
             <a href="#product" className="hover:text-[#C85A32] transition-colors">Platform</a>
             <a href="#features" className="hover:text-[#C85A32] transition-colors">Capabilities</a>
-            <a href="#benchmarks" className="hover:text-[#C85A32] transition-colors">Telemetry</a>
+            <a href="#docuready" className="hover:text-[#C85A32] transition-colors">Why DocuReady</a>
+            <a href="#pricing" className="hover:text-[#C85A32] transition-colors">Pricing</a>
           </div>
 
           <div className="flex items-center gap-3">
@@ -509,7 +521,552 @@ const Landing = ({ onLogin }: { onLogin: () => void }) => {
         </div>
       </section>
 
-      {/* ================= 6. CTA SECTION (ESPRESSO & TERRACOTTA) ================= */}
+      {/* ================= 6. WHY DOCUREADY ENGINEERED LEADPULSE (id="docuready") ================= */}
+      <section id="docuready" className="py-20 px-6 md:px-12 max-w-7xl mx-auto w-full relative z-10 scroll-mt-20 border-t border-[#E5E0D5]">
+        <div className="grid lg:grid-cols-12 gap-10 items-start">
+          
+          {/* Left Column (5 Cols): DocuReady Entity Story & What We Offer */}
+          <div className="lg:col-span-5 space-y-6">
+            <div className="inline-flex items-center gap-2.5 px-3 py-1.5 rounded-[5px] border border-[#E5E0D5] bg-[#F5F2EB]">
+              <img src={docuReadyBlackLogo} alt="DocuReady" className="h-4 w-auto object-contain" />
+              <span className="w-1 h-1 rounded-full bg-[#C85A32]"></span>
+              <span className="text-[10.5px] font-delight font-bold uppercase tracking-wider text-[#57524B]">
+                Engineering Manifesto
+              </span>
+            </div>
+
+            <h2 className="text-3xl md:text-4xl font-extrabold tracking-tight text-[#191716] leading-[1.12]">
+              How we as <span className="text-[#C85A32] font-serif italic font-normal">DocuReady</span> focused on making LeadPulse genuinely worth it.
+            </h2>
+
+            <p className="text-sm md:text-[14.5px] text-[#57524B] leading-relaxed">
+              When our engineering team at <strong>DocuReady</strong> audited the modern B2B sales stack, we saw agencies, founders, and commercial teams paying <strong>₹12,000 to ₹25,000+ every single month</strong> across four disconnected subscriptions—one for scraping leads, another for email warmup, a third for AI copywriting, and a fourth per-seat CRM.
+            </p>
+
+            <p className="text-sm md:text-[14.5px] text-[#57524B] leading-relaxed">
+              We engineered <strong>LeadPulse</strong> as a flagship <strong>DocuReady Entity</strong> with one uncompromising mandate: collapse that entire fragmented stack into a single, self-contained revenue operating system—and price it so transparently that a single closed deal pays for an entire year of compute.
+            </p>
+
+            {/* What We Offer Pillar Box */}
+            <div className="bg-white border border-[#E5E0D5] rounded-lg p-6 space-y-4 shadow-2xs">
+              <div className="flex items-center justify-between border-b border-[#E5E0D5] pb-3">
+                <span className="text-[11px] font-delight font-bold uppercase tracking-wider text-[#191716]">
+                  What DocuReady Delivers Inside LeadPulse
+                </span>
+                <img src={docuReadyBlackLogo} alt="DocuReady" className="h-3.5 w-auto object-contain opacity-80" />
+              </div>
+
+              <ul className="space-y-2.5 text-xs text-[#57524B]">
+                <li className="flex items-start gap-2.5">
+                  <Check className="w-3.5 h-3.5 text-[#C85A32] shrink-0 mt-0.5" />
+                  <span><strong>Live Spatial Lead Harvesting:</strong> Direct geo-targeted business extraction with verified websites, ratings, and phones—zero recycled lists.</span>
+                </li>
+                <li className="flex items-start gap-2.5">
+                  <Check className="w-3.5 h-3.5 text-[#C85A32] shrink-0 mt-0.5" />
+                  <span><strong>8 Link Mobility Email Architectures + AI Copilot:</strong> Synthesize personalized pitches and dispatch via Gmail, Resend, or custom SMTP with 50/50 A/B split testing.</span>
+                </li>
+                <li className="flex items-start gap-2.5">
+                  <Check className="w-3.5 h-3.5 text-[#C85A32] shrink-0 mt-0.5" />
+                  <span><strong>WhatsApp Direct Bridge &amp; Behavioral Journeys:</strong> Trigger multi-step follow-ups and 1-click WhatsApp conversations alongside email.</span>
+                </li>
+                <li className="flex items-start gap-2.5">
+                  <Check className="w-3.5 h-3.5 text-[#C85A32] shrink-0 mt-0.5" />
+                  <span><strong>6-Stage Kanban CRM &amp; Universal Team Tokens:</strong> Share your workspace token pool across registered seats without per-seat price gouging.</span>
+                </li>
+              </ul>
+            </div>
+          </div>
+
+          {/* Right Column (7 Cols): Real-World Market Rate vs. Our Price Instances */}
+          <div className="lg:col-span-7 space-y-4">
+            <div className="bg-white border border-[#E5E0D5] rounded-lg overflow-hidden shadow-2xs">
+              <div className="px-6 py-4 bg-[#F5F2EB] border-b border-[#E5E0D5] flex flex-wrap items-center justify-between gap-2">
+                <div>
+                  <span className="text-[10px] font-delight font-bold uppercase tracking-wider text-[#C85A32] block">
+                    REAL-WORLD COST BENCHMARKING
+                  </span>
+                  <h3 className="text-base font-extrabold text-[#191716] tracking-tight">
+                    Current Market Rate vs. DocuReady&apos;s LeadPulse Price
+                  </h3>
+                </div>
+                <span className="text-[10.5px] font-delight font-semibold px-2.5 py-1 rounded-[4px] bg-white border border-[#E5E0D5] text-[#191716]">
+                  Up to 92% Lower Total Cost
+                </span>
+              </div>
+
+              <div className="divide-y divide-[#E5E0D5]">
+                {/* Instance 1 */}
+                <div className="p-5 sm:p-6 hover:bg-[#FAF8F5]/60 transition-colors">
+                  <div className="flex flex-wrap items-center justify-between gap-2 mb-2">
+                    <span className="text-xs font-delight font-bold text-[#191716]">
+                      Instance 01 // B2B Lead Discovery &amp; Spatial Extraction
+                    </span>
+                    <span className="text-[10.5px] font-delight font-bold text-emerald-700 bg-emerald-50 border border-emerald-200 px-2 py-0.5 rounded-[4px]">
+                      Save ~₹3,400 – ₹11,800/mo
+                    </span>
+                  </div>
+                  <p className="text-xs text-[#57524B] leading-relaxed mb-3.5">
+                    A digital agency or local service team extracting 500–600 verified commercial prospects across targeted city zones every month.
+                  </p>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs font-delight">
+                    <div className="p-3 rounded-[5px] bg-[#FAF8F5] border border-[#E5E0D5]">
+                      <span className="text-[10px] uppercase tracking-wider text-[#78716A] block font-semibold">Current Market Rate (Apollo / Lusha / ZoomInfo)</span>
+                      <span className="text-sm font-bold text-slate-500 line-through">₹4,100 – ₹12,500 / mo</span>
+                      <span className="text-[11px] text-[#78716A] block mt-0.5">($49–$149/mo for static database credits)</span>
+                    </div>
+                    <div className="p-3 rounded-[5px] bg-[#F5F2EB] border border-[#C85A32]/35">
+                      <span className="text-[10px] uppercase tracking-wider text-[#C85A32] block font-bold">Our Price at LeadPulse</span>
+                      <span className="text-sm font-extrabold text-[#191716]">₹699 / mo <span className="text-xs font-semibold text-[#C85A32]">(or ₹1/lead Mega Pack)</span></span>
+                      <span className="text-[11px] text-[#57524B] block mt-0.5">Live Quick &amp; Deep multi-page scraping included</span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Instance 2 */}
+                <div className="p-5 sm:p-6 hover:bg-[#FAF8F5]/60 transition-colors">
+                  <div className="flex flex-wrap items-center justify-between gap-2 mb-2">
+                    <span className="text-xs font-delight font-bold text-[#191716]">
+                      Instance 02 // AI Cold Email Studio, A/B Testing &amp; Multi-Channel Dispatch
+                    </span>
+                    <span className="text-[10.5px] font-delight font-bold text-emerald-700 bg-emerald-50 border border-emerald-200 px-2 py-0.5 rounded-[4px]">
+                      Save ~₹3,100 – ₹7,900/mo
+                    </span>
+                  </div>
+                  <p className="text-xs text-[#57524B] leading-relaxed mb-3.5">
+                    Synthesizing personalized outreach copy per lead, running 50/50 A/B split tests, and dispatching directly to inboxes + WhatsApp.
+                  </p>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs font-delight">
+                    <div className="p-3 rounded-[5px] bg-[#FAF8F5] border border-[#E5E0D5]">
+                      <span className="text-[10px] uppercase tracking-wider text-[#78716A] block font-semibold">Current Market Rate (Instantly / Lemlist)</span>
+                      <span className="text-sm font-bold text-slate-500 line-through">₹3,100 – ₹7,900 / mo</span>
+                      <span className="text-[11px] text-[#78716A] block mt-0.5">($37–$97/mo for email sender only, zero leads)</span>
+                    </div>
+                    <div className="p-3 rounded-[5px] bg-[#F5F2EB] border border-[#C85A32]/35">
+                      <span className="text-[10px] uppercase tracking-wider text-[#C85A32] block font-bold">Our Price at LeadPulse</span>
+                      <span className="text-sm font-extrabold text-[#191716]">₹0 Extra — Built Native</span>
+                      <span className="text-[11px] text-[#57524B] block mt-0.5">AI Copilot + 8 Templates + Direct SMTP &amp; WhatsApp</span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Instance 3 */}
+                <div className="p-5 sm:p-6 hover:bg-[#FAF8F5]/60 transition-colors">
+                  <div className="flex flex-wrap items-center justify-between gap-2 mb-2">
+                    <span className="text-xs font-delight font-bold text-[#191716]">
+                      Instance 03 // Kanban CRM, Automated Journeys &amp; Multi-Seat Teams
+                    </span>
+                    <span className="text-[10.5px] font-delight font-bold text-emerald-700 bg-emerald-50 border border-emerald-200 px-2 py-0.5 rounded-[4px]">
+                      Zero Per-Seat Tax
+                    </span>
+                  </div>
+                  <p className="text-xs text-[#57524B] leading-relaxed mb-3.5">
+                    Managing a 5-person revenue squad with automated follow-up workflows, webhook telemetry, and shared lead pools.
+                  </p>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs font-delight">
+                    <div className="p-3 rounded-[5px] bg-[#FAF8F5] border border-[#E5E0D5]">
+                      <span className="text-[10px] uppercase tracking-wider text-[#78716A] block font-semibold">Current Market Rate (HubSpot / Pipedrive)</span>
+                      <span className="text-sm font-bold text-slate-500 line-through">₹2,000 – ₹4,500 / seat / mo</span>
+                      <span className="text-[11px] text-[#78716A] block mt-0.5">Penalizes team growth with per-user billing</span>
+                    </div>
+                    <div className="p-3 rounded-[5px] bg-[#F5F2EB] border border-[#C85A32]/35">
+                      <span className="text-[10px] uppercase tracking-wider text-[#C85A32] block font-bold">Our Price at LeadPulse</span>
+                      <span className="text-sm font-extrabold text-[#191716]">Universal Token Sharing</span>
+                      <span className="text-[11px] text-[#57524B] block mt-0.5">50% seats on Basic (₹699) • 100% seats on Pro (₹1,999)</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Bottom Espresso Comparison Summary Bar with White DocuReady Logo */}
+              <div className="p-5 bg-[#191716] text-[#FAF8F5] flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+                <div className="flex items-center gap-3">
+                  <img src={docuReadyWhiteLogo} alt="DocuReady" className="h-5 w-auto object-contain shrink-0" />
+                  <div className="border-l border-white/20 pl-3">
+                    <div className="text-xs font-delight font-bold text-white">
+                      Market Stack: <span className="line-through text-[#A8A096]">₹12,000+/mo</span> &rarr; LeadPulse by DocuReady: <span className="text-[#E07A5F]">₹699/mo</span>
+                    </div>
+                    <div className="text-[11px] font-delight text-[#A8A096]">
+                      Or test the entire engine right now with 15 free tokens—zero card required.
+                    </div>
+                  </div>
+                </div>
+                <button
+                  onClick={onLogin}
+                  className="px-4 py-2 rounded-[5px] bg-[#C85A32] hover:bg-[#B04B25] text-white text-xs font-delight font-bold transition-colors shrink-0 cursor-pointer"
+                >
+                  Claim 15 Free Tokens &rarr;
+                </button>
+              </div>
+            </div>
+          </div>
+
+        </div>
+      </section>
+
+      {/* ================= 7. DETAILED PRICING & BIFURCATION SECTION (id="pricing") ================= */}
+      <section id="pricing" className="py-20 px-6 md:px-12 max-w-7xl mx-auto w-full relative z-10 scroll-mt-20 border-t border-[#E5E0D5]">
+        <div className="flex flex-col md:flex-row md:items-end justify-between mb-12 gap-6">
+          <div className="max-w-2xl">
+            <div className="inline-flex items-center gap-2 px-2.5 py-1 rounded-[5px] border border-[#E5E0D5] bg-[#F5F2EB] text-[11px] font-delight font-bold text-[#57524B] mb-3.5">
+              <Sparkles className="w-3.5 h-3.5 text-[#C85A32]" />
+              <span>TRANSPARENT PRICING // DETAILED COST BIFURCATION</span>
+            </div>
+            <h2 className="text-3xl md:text-4xl font-extrabold tracking-tight text-[#191716] mb-3">
+              Engineered to cost less than your daily coffee.
+            </h2>
+            <p className="text-sm md:text-[15px] text-[#57524B] font-normal leading-relaxed">
+              Step inside with <strong>15 free lead tokens</strong> waiting in your workspace—no credit card, no lock-in. When you&apos;re ready to scale, upgrade for just <strong>₹23/day</strong> or top up on demand starting at <strong>₹50</strong>.
+            </p>
+          </div>
+
+          <div className="bg-[#F5F2EB] border border-[#E5E0D5] rounded-md px-4 py-3 flex items-center gap-3 shrink-0">
+            <img src={docuReadyBlackLogo} alt="DocuReady" className="h-4 w-auto object-contain" />
+            <div className="text-xs font-delight">
+              <div className="font-bold text-[#191716]">DocuReady Fair-Pricing Guarantee</div>
+              <div className="text-[11px] text-[#78716A]">Instant UPI / PhonePe • Cancel or top-up anytime</div>
+            </div>
+          </div>
+        </div>
+
+        {/* 3 Subscription Tier Cards */}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
+          
+          {/* TIER 1: FREE EXPLORER */}
+          <div className="bg-white border border-[#E5E0D5] rounded-lg p-7 flex flex-col justify-between hover:border-[#D6CFC2] transition-all shadow-2xs">
+            <div>
+              <div className="flex items-center justify-between mb-3">
+                <span className="text-[11px] font-delight font-bold uppercase tracking-wider text-[#78716A]">
+                  01 // Free Explorer
+                </span>
+                <span className="text-[10px] font-delight font-bold px-2 py-0.5 rounded-[4px] bg-[#F5F2EB] text-[#191716] border border-[#E5E0D5]">
+                  Instant Check-In
+                </span>
+              </div>
+
+              <div className="flex items-baseline gap-2 mb-1">
+                <span className="text-3xl md:text-4xl font-extrabold font-delight text-[#191716]">₹0</span>
+                <span className="text-xs font-delight text-[#78716A]">/ forever free</span>
+              </div>
+              <p className="text-xs text-[#57524B] mb-6 pb-5 border-b border-[#E5E0D5]">
+                Experience live spatial harvesting, Kanban pipeline management, and Outreach Studio preview with zero commitment.
+              </p>
+
+              {/* Bifurcation Breakdown */}
+              <div className="space-y-3 mb-6">
+                <div className="text-[10px] font-delight font-bold uppercase tracking-wider text-[#78716A]">
+                  Tier Allocation &amp; Bifurcation
+                </div>
+                <ul className="space-y-2.5 text-xs text-[#191716]">
+                  <li className="flex items-start gap-2">
+                    <Check className="w-3.5 h-3.5 text-emerald-600 shrink-0 mt-0.5" />
+                    <span><strong>15 Lead Tokens / Saved Pool</strong> (Auto-refreshes every 4 days)</span>
+                  </li>
+                  <li className="flex items-start gap-2">
+                    <Check className="w-3.5 h-3.5 text-emerald-600 shrink-0 mt-0.5" />
+                    <span><strong>Up to 10 Verified Leads</strong> per spatial extraction query</span>
+                  </li>
+                  <li className="flex items-start gap-2">
+                    <Check className="w-3.5 h-3.5 text-emerald-600 shrink-0 mt-0.5" />
+                    <span><strong>2 Fixed Workspace Seats</strong> for initial team evaluation</span>
+                  </li>
+                  <li className="flex items-start gap-2">
+                    <Check className="w-3.5 h-3.5 text-emerald-600 shrink-0 mt-0.5" />
+                    <span><strong>Quick Scan Engine</strong> (1 token / query) + 6-Stage Kanban CRM</span>
+                  </li>
+                </ul>
+              </div>
+            </div>
+
+            <div className="pt-4 border-t border-[#E5E0D5]">
+              <button
+                onClick={onLogin}
+                className="w-full h-10 rounded-[5px] bg-[#F5F2EB] hover:bg-[#191716] text-[#191716] hover:text-white border border-[#D6CFC2] hover:border-[#191716] font-delight font-bold text-xs transition-all cursor-pointer"
+              >
+                Check In Free (15 Tokens Ready) &rarr;
+              </button>
+              <p className="text-[10.5px] font-delight text-center text-[#78716A] mt-2">
+                Takes 15 seconds • No card required
+              </p>
+            </div>
+          </div>
+
+          {/* TIER 2: LEADPULSE BASIC (HIGHLIGHTED SWEET SPOT) */}
+          <div className="bg-white border-2 border-[#C85A32] rounded-lg p-7 flex flex-col justify-between relative shadow-md">
+            <div className="absolute -top-3 left-6 bg-[#C85A32] text-white text-[10px] font-delight font-bold px-3 py-0.5 rounded-[4px] uppercase tracking-wider">
+              Most Popular • Just ₹23 / Day
+            </div>
+
+            <div>
+              <div className="flex items-center justify-between mb-3 pt-1">
+                <span className="text-[11px] font-delight font-bold uppercase tracking-wider text-[#C85A32]">
+                  02 // LeadPulse Basic
+                </span>
+                <span className="text-[10px] font-delight font-bold px-2 py-0.5 rounded-[4px] bg-[#C85A32]/10 text-[#C85A32] border border-[#C85A32]/25">
+                  ₹1.16 / Lead Effective
+                </span>
+              </div>
+
+              <div className="flex items-baseline gap-2 mb-1">
+                <span className="text-3xl md:text-4xl font-extrabold font-delight text-[#191716]">₹699</span>
+                <span className="text-xs font-delight text-[#78716A]">/ month</span>
+                <span className="text-xs font-delight text-slate-400 line-through ml-1">₹4,100+ market</span>
+              </div>
+              <p className="text-xs text-[#57524B] mb-6 pb-5 border-b border-[#E5E0D5]">
+                Built for solo founders, consultants, and lean agencies ready for daily harvesting, AI outreach, and full CSV exports.
+              </p>
+
+              {/* Bifurcation Breakdown */}
+              <div className="space-y-3 mb-6">
+                <div className="text-[10px] font-delight font-bold uppercase tracking-wider text-[#C85A32]">
+                  Tier Allocation &amp; Bifurcation
+                </div>
+                <ul className="space-y-2.5 text-xs text-[#191716]">
+                  <li className="flex items-start gap-2">
+                    <Check className="w-3.5 h-3.5 text-[#C85A32] shrink-0 mt-0.5" />
+                    <span><strong>600 Saved Leads Pool</strong> with continuous daily refresh</span>
+                  </li>
+                  <li className="flex items-start gap-2">
+                    <Check className="w-3.5 h-3.5 text-[#C85A32] shrink-0 mt-0.5" />
+                    <span><strong>20+ Batch Extraction Limit</strong> + Deep Multi-Page Website Scan</span>
+                  </li>
+                  <li className="flex items-start gap-2">
+                    <Check className="w-3.5 h-3.5 text-[#C85A32] shrink-0 mt-0.5" />
+                    <span><strong>50% Registered Team Seats</strong> sharing universal workspace tokens</span>
+                  </li>
+                  <li className="flex items-start gap-2">
+                    <Check className="w-3.5 h-3.5 text-[#C85A32] shrink-0 mt-0.5" />
+                    <span><strong>Full Outreach Studio &amp; AI Copilot</strong> + 8 Link Mobility templates</span>
+                  </li>
+                  <li className="flex items-start gap-2">
+                    <Check className="w-3.5 h-3.5 text-[#C85A32] shrink-0 mt-0.5" />
+                    <span><strong>Unlimited CSV &amp; Excel Exports</strong> + Direct SMTP Inbox Dispatch</span>
+                  </li>
+                </ul>
+              </div>
+            </div>
+
+            <div className="pt-4 border-t border-[#E5E0D5]">
+              <button
+                onClick={onLogin}
+                className="w-full h-10 rounded-[5px] bg-[#C85A32] hover:bg-[#B04B25] text-white border border-[#B04B25] font-delight font-bold text-xs transition-all shadow-xs cursor-pointer"
+              >
+                Start Basic Workspace (₹699/mo) &rarr;
+              </button>
+              <p className="text-[10.5px] font-delight text-center text-[#78716A] mt-2">
+                Start free first, upgrade inside console anytime
+              </p>
+            </div>
+          </div>
+
+          {/* TIER 3: LEADPULSE PRO */}
+          <div className="bg-[#191716] text-[#FAF8F5] border border-[#2E2A27] rounded-lg p-7 flex flex-col justify-between relative shadow-2xs">
+            <div>
+              <div className="flex items-center justify-between mb-3">
+                <span className="text-[11px] font-delight font-bold uppercase tracking-wider text-[#E07A5F]">
+                  03 // LeadPulse Pro
+                </span>
+                <span className="text-[10px] font-delight font-bold px-2 py-0.5 rounded-[4px] bg-white/10 text-[#FAF8F5] border border-white/15">
+                  Unlimited Scale
+                </span>
+              </div>
+
+              <div className="flex items-baseline gap-2 mb-1">
+                <span className="text-3xl md:text-4xl font-extrabold font-delight text-white">₹1,999</span>
+                <span className="text-xs font-delight text-[#A8A096]">/ month</span>
+                <span className="text-xs font-delight text-[#78716A] line-through ml-1">₹16,500+ market</span>
+              </div>
+              <p className="text-xs text-[#B8B0A4] mb-6 pb-5 border-b border-white/10">
+                Unrestricted commercial acquisition for high-velocity sales teams requiring dedicated worker priority, webhooks, and 100% seat allocation.
+              </p>
+
+              {/* Bifurcation Breakdown */}
+              <div className="space-y-3 mb-6">
+                <div className="text-[10px] font-delight font-bold uppercase tracking-wider text-[#E07A5F]">
+                  Tier Allocation &amp; Bifurcation
+                </div>
+                <ul className="space-y-2.5 text-xs text-[#FAF8F5]">
+                  <li className="flex items-start gap-2">
+                    <Check className="w-3.5 h-3.5 text-[#E07A5F] shrink-0 mt-0.5" />
+                    <span><strong>Unlimited Saved Leads Pool</strong> &amp; 1,000+ daily extraction velocity</span>
+                  </li>
+                  <li className="flex items-start gap-2">
+                    <Check className="w-3.5 h-3.5 text-[#E07A5F] shrink-0 mt-0.5" />
+                    <span><strong>100% Registered Team Seats</strong> with shared universal tokens</span>
+                  </li>
+                  <li className="flex items-start gap-2">
+                    <Check className="w-3.5 h-3.5 text-[#E07A5F] shrink-0 mt-0.5" />
+                    <span><strong>Dedicated Headless Worker Priority</strong> (Zero queue latency)</span>
+                  </li>
+                  <li className="flex items-start gap-2">
+                    <Check className="w-3.5 h-3.5 text-[#E07A5F] shrink-0 mt-0.5" />
+                    <span><strong>WhatsApp &amp; SMS Pathways</strong> + 50/50 A/B Split Campaigns</span>
+                  </li>
+                  <li className="flex items-start gap-2">
+                    <Check className="w-3.5 h-3.5 text-[#E07A5F] shrink-0 mt-0.5" />
+                    <span><strong>Full Developer REST API</strong>, AES-256 Webhooks &amp; 24+ Integrations</span>
+                  </li>
+                </ul>
+              </div>
+            </div>
+
+            <div className="pt-4 border-t border-white/10">
+              <button
+                onClick={onLogin}
+                className="w-full h-10 rounded-[5px] bg-white hover:bg-[#C85A32] text-[#191716] hover:text-white font-delight font-bold text-xs transition-all cursor-pointer"
+              >
+                Launch Pro Console (₹1,999/mo) &rarr;
+              </button>
+              <p className="text-[10.5px] font-delight text-center text-[#A8A096] mt-2">
+                Replaces ₹16,500+/mo of fragmented SaaS tools
+              </p>
+            </div>
+          </div>
+
+        </div>
+
+        {/* Pay-As-You-Go Micro Top-Up Bifurcation Strip */}
+        <div className="bg-[#F5F2EB] border border-[#E5E0D5] rounded-lg p-6 mb-8">
+          <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6">
+            <div className="max-w-md">
+              <span className="text-[10px] font-delight font-bold uppercase tracking-wider text-[#C85A32] block mb-1">
+                ON-DEMAND ELASTICITY // ZERO MONTHLY COMMITMENT
+              </span>
+              <h3 className="text-lg font-extrabold text-[#191716] tracking-tight">
+                Just need a quick batch of leads? Use Instant Top-Up Packs.
+              </h3>
+              <p className="text-xs text-[#57524B] mt-1 leading-relaxed">
+                Even on the <strong>₹0 Free Tier</strong>, you can purchase non-expiring credit bundles via PhonePe / UPI whenever a campaign spikes.
+              </p>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 flex-1 max-w-2xl">
+              {/* Micro Pack */}
+              <div className="bg-white border border-[#E5E0D5] rounded-[6px] p-4 flex items-center justify-between gap-3">
+                <div>
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs font-delight font-bold text-[#191716]">Micro Pack</span>
+                    <span className="text-[9.5px] font-delight font-bold px-1.5 py-0.5 rounded bg-[#F5F2EB] text-[#57524B] border border-[#E5E0D5]">
+                      ₹2.50 / lead
+                    </span>
+                  </div>
+                  <div className="text-lg font-extrabold font-delight text-[#191716] mt-1">
+                    ₹50 <span className="text-xs font-semibold text-[#C85A32]">&rarr; +20 Extra Leads</span>
+                  </div>
+                  <div className="text-[10.5px] font-delight text-[#78716A]">Never expires • Instant UPI activation</div>
+                </div>
+                <button
+                  onClick={onLogin}
+                  className="px-3 py-1.5 rounded-[4px] bg-[#191716] hover:bg-[#C85A32] text-white text-[11px] font-delight font-bold transition-colors shrink-0 cursor-pointer"
+                >
+                  Try ₹50 Pack
+                </button>
+              </div>
+
+              {/* Mega Pack */}
+              <div className="bg-white border border-[#C85A32]/40 rounded-[6px] p-4 flex items-center justify-between gap-3">
+                <div>
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs font-delight font-bold text-[#191716]">Mega Pack</span>
+                    <span className="text-[9.5px] font-delight font-bold px-1.5 py-0.5 rounded bg-emerald-50 text-emerald-700 border border-emerald-200">
+                      Best Value • ₹1 / lead
+                    </span>
+                  </div>
+                  <div className="text-lg font-extrabold font-delight text-[#191716] mt-1">
+                    ₹1,000 <span className="text-xs font-semibold text-[#C85A32]">&rarr; +1,000 Extra Leads</span>
+                  </div>
+                  <div className="text-[10.5px] font-delight text-[#78716A]">Never expires • Priority queue access</div>
+                </div>
+                <button
+                  onClick={onLogin}
+                  className="px-3 py-1.5 rounded-[4px] bg-[#C85A32] hover:bg-[#B04B25] text-white text-[11px] font-delight font-bold transition-colors shrink-0 cursor-pointer"
+                >
+                  Get 1,000 Leads
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Complete Architectural & Cost Bifurcation Ledger Table */}
+        <div className="bg-white border border-[#E5E0D5] rounded-lg overflow-hidden shadow-2xs">
+          <div className="px-6 py-4 bg-[#F5F2EB] border-b border-[#E5E0D5] flex flex-wrap items-center justify-between gap-2">
+            <div>
+              <h4 className="text-xs font-delight font-bold uppercase tracking-wider text-[#191716]">
+                Detailed Capability &amp; Unit-Economics Bifurcation Matrix
+              </h4>
+              <p className="text-[11px] font-delight text-[#78716A]">
+                Every feature, compute quota, and unit cost broken down across LeadPulse tiers vs. current market rates.
+              </p>
+            </div>
+            <button
+              onClick={onLogin}
+              className="text-xs font-delight font-bold text-[#C85A32] hover:underline cursor-pointer"
+            >
+              Inspect inside live console &rarr;
+            </button>
+          </div>
+
+          <div className="overflow-x-auto">
+            <table className="w-full text-left border-collapse text-xs">
+              <thead>
+                <tr className="border-b border-[#E5E0D5] bg-[#FAF8F5] font-delight text-[11px] text-[#78716A] uppercase">
+                  <th className="py-3.5 px-5 font-bold text-[#191716]">Architecture &amp; Cost Dimension</th>
+                  <th className="py-3.5 px-4 text-center font-bold">Free Explorer (₹0)</th>
+                  <th className="py-3.5 px-4 text-center font-bold text-[#C85A32] bg-[#C85A32]/5">Basic (₹699/mo)</th>
+                  <th className="py-3.5 px-4 text-center font-bold text-[#191716]">Pro (₹1,999/mo)</th>
+                  <th className="py-3.5 px-4 text-center font-semibold text-slate-400">Market Avg.</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-[#E5E0D5] font-delight">
+                <tr>
+                  <td className="py-3 px-5 font-bold text-[#191716]">Saved Leads / Token Pool Capacity</td>
+                  <td className="py-3 px-4 text-center text-[#57524B]">15 Tokens (4-day auto-refresh)</td>
+                  <td className="py-3 px-4 text-center font-bold text-[#C85A32] bg-[#C85A32]/5">600 Saved Leads</td>
+                  <td className="py-3 px-4 text-center font-bold text-[#191716]">Unlimited Saved Leads</td>
+                  <td className="py-3 px-4 text-center text-slate-400 line-through">₹4,100+/mo</td>
+                </tr>
+                <tr>
+                  <td className="py-3 px-5 font-bold text-[#191716]">Per-Query Spatial Extraction Cap</td>
+                  <td className="py-3 px-4 text-center text-[#57524B]">10 Leads / Query</td>
+                  <td className="py-3 px-4 text-center font-bold text-[#C85A32] bg-[#C85A32]/5">20+ Batch Extraction</td>
+                  <td className="py-3 px-4 text-center font-bold text-[#191716]">1,000+ Daily Velocity</td>
+                  <td className="py-3 px-4 text-center text-slate-400">Capped Credits</td>
+                </tr>
+                <tr>
+                  <td className="py-3 px-5 font-bold text-[#191716]">Scraping Depth &amp; Domain Verification</td>
+                  <td className="py-3 px-4 text-center text-[#57524B]">Quick Scan (1 Token)</td>
+                  <td className="py-3 px-4 text-center font-bold text-[#C85A32] bg-[#C85A32]/5">Quick + Deep Multi-Page (2 Tokens)</td>
+                  <td className="py-3 px-4 text-center font-bold text-[#191716]">Priority Headless Worker</td>
+                  <td className="py-3 px-4 text-center text-slate-400">Extra Add-On</td>
+                </tr>
+                <tr>
+                  <td className="py-3 px-5 font-bold text-[#191716]">AI Email Copilot &amp; 8 Structural Templates</td>
+                  <td className="py-3 px-4 text-center text-[#57524B]">Studio Preview</td>
+                  <td className="py-3 px-4 text-center font-bold text-emerald-700 bg-[#C85A32]/5">Unlimited Synthesis &amp; Tags</td>
+                  <td className="py-3 px-4 text-center font-bold text-emerald-700">Unlimited + 50/50 A/B Split</td>
+                  <td className="py-3 px-4 text-center text-slate-400 line-through">₹3,100+/mo</td>
+                </tr>
+                <tr>
+                  <td className="py-3 px-5 font-bold text-[#191716]">Direct SMTP, Gmail, Resend &amp; WhatsApp Bridge</td>
+                  <td className="py-3 px-4 text-center text-[#57524B]">Test Dispatch</td>
+                  <td className="py-3 px-4 text-center font-bold text-[#C85A32] bg-[#C85A32]/5">Direct Inbox SMTP + CSV Export</td>
+                  <td className="py-3 px-4 text-center font-bold text-[#191716]">Official WhatsApp + Full API</td>
+                  <td className="py-3 px-4 text-center text-slate-400 line-through">₹2,800+/mo</td>
+                </tr>
+                <tr>
+                  <td className="py-3 px-5 font-bold text-[#191716]">Registered Team Seats &amp; Token Sharing</td>
+                  <td className="py-3 px-4 text-center text-[#57524B]">2 Fixed Seats</td>
+                  <td className="py-3 px-4 text-center font-bold text-[#C85A32] bg-[#C85A32]/5">50% Seats Share Pool</td>
+                  <td className="py-3 px-4 text-center font-bold text-[#191716]">100% Seats Share Pool</td>
+                  <td className="py-3 px-4 text-center text-slate-400 line-through">₹2,000/seat</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+      {/* ================= 8. CTA SECTION (ESPRESSO & TERRACOTTA) ================= */}
       <section className="py-22 px-6 md:px-12 bg-[#191716] border-t border-[#2E2A27] text-[#FAF8F5] text-left relative overflow-hidden z-10 mt-8">
         <div
           className="absolute right-[-8%] top-[-30%] w-[520px] h-[520px] pointer-events-none"
@@ -518,54 +1075,76 @@ const Landing = ({ onLogin }: { onLogin: () => void }) => {
           }}
         />
         <div className="relative z-10 max-w-7xl mx-auto flex flex-col items-start">
-          <div className="inline-flex items-center gap-2 px-2.5 py-1 rounded-[4px] border border-[#E07A5F]/35 bg-[#C85A32]/20 text-[11px] font-delight font-bold text-[#E07A5F] tracking-wider mb-4">
-            <span className="w-1.5 h-1.5 rounded-full bg-[#E07A5F]"></span>
-            <span>READY TO SCALE</span>
+          <div className="inline-flex items-center gap-2.5 px-3 py-1 rounded-[4px] border border-[#E07A5F]/35 bg-[#C85A32]/20 text-[11px] font-delight font-bold text-[#E07A5F] tracking-wider mb-4">
+            <img src={docuReadyWhiteLogo} alt="DocuReady" className="h-3.5 w-auto object-contain" />
+            <span>•</span>
+            <span>15 FREE TOKENS WAITING IN YOUR CONSOLE</span>
           </div>
           <h2 className="text-3xl md:text-5xl font-extrabold tracking-tight mb-4 text-[#FAF8F5]">
-            Accelerate your outreach pipeline.
+            Check in and test your first harvest in 30 seconds.
           </h2>
           <p className="text-sm md:text-base text-[#B8B0A4] mb-8 max-w-xl leading-relaxed">
-            Equip your revenue operations with precision prospecting, custom SMTP delivery, and visual pipeline control.
+            See why teams are replacing ₹12,000+/month of bloated outreach tools with DocuReady&apos;s unified LeadPulse engine. Start free—upgrade only when you see the pipeline results.
           </p>
           <button
             onClick={onLogin}
             className="h-11 px-7 bg-[#C85A32] text-white rounded-[6px] font-delight font-bold text-[13px] hover:bg-[#B04B25] transition-colors border border-[#B04B25] shadow-xs flex items-center gap-2 cursor-pointer"
           >
-            Launch Workspace Console &rarr;
+            Check In &amp; Launch Free Workspace &rarr;
           </button>
           <p className="mt-4 text-xs font-delight text-[#8C8479]">
-            Autonomous operation • Zero complex setup
+            15 Free Tokens • ₹50 Instant Micro Top-Ups • ₹699/mo Basic Tier
           </p>
         </div>
       </section>
 
-      {/* ================= 7. FOOTER ================= */}
-      <footer className="py-9 px-6 md:px-12 border-t border-[#E5E0D5] bg-[#F5F2EB] relative z-10">
-        <div className="max-w-7xl mx-auto flex flex-col md:flex-row items-center justify-between gap-6">
-          <div className="flex items-center gap-2.5">
-            <span className="font-extrabold tracking-tight text-[#191716] text-sm">LeadPulse</span>
-            <span className="text-[10.5px] font-delight font-semibold text-[#78716A]">
-              // ENTERPRISE OPERATING SYSTEM
-            </span>
+      {/* ================= 9. FOOTER (A DOCUREADY ENTITY) ================= */}
+      <footer className="py-10 px-6 md:px-12 border-t border-[#E5E0D5] bg-[#F5F2EB] relative z-10">
+        <div className="max-w-7xl mx-auto flex flex-col gap-6">
+          <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
+            {/* Brand + DocuReady Entity Badge */}
+            <div className="flex flex-wrap items-center gap-3">
+              <span className="font-extrabold tracking-tight text-[#191716] text-base">LeadPulse</span>
+              <span className="text-[#D6CFC2]">|</span>
+              <div className="inline-flex items-center gap-2 px-2.5 py-1 rounded-[5px] bg-white border border-[#E5E0D5]">
+                <span className="text-[10.5px] font-delight font-bold uppercase tracking-wider text-[#57524B]">
+                  A
+                </span>
+                <img src={docuReadyBlackLogo} alt="DocuReady" className="h-4 w-auto object-contain" />
+                <span className="text-[10.5px] font-delight font-bold uppercase tracking-wider text-[#57524B]">
+                  Entity
+                </span>
+              </div>
+            </div>
+
+            {/* Interactive Footer Menu */}
+            <div className="flex flex-wrap gap-6 text-xs font-delight font-semibold text-[#57524B]">
+              <a href="#docuready" className="hover:text-[#C85A32] transition-colors">
+                Why DocuReady
+              </a>
+              <a href="#pricing" className="hover:text-[#C85A32] transition-colors">
+                Pricing &amp; Bifurcation
+              </a>
+              <button onClick={() => setIsPrivacyOpen(true)} className="hover:text-[#C85A32] transition-colors cursor-pointer">
+                Privacy Policy
+              </button>
+              <button onClick={() => setIsTermsOpen(true)} className="hover:text-[#C85A32] transition-colors cursor-pointer">
+                Terms of Service
+              </button>
+              <button onClick={() => setIsContactOpen(true)} className="hover:text-[#C85A32] transition-colors cursor-pointer">
+                Contact &amp; Support
+              </button>
+            </div>
           </div>
 
-          {/* Interactive Footer Menu */}
-          <div className="flex gap-6 text-xs font-delight font-semibold text-[#57524B]">
-            <button onClick={() => setIsPrivacyOpen(true)} className="hover:text-[#C85A32] transition-colors cursor-pointer">
-              Privacy Policy
-            </button>
-            <button onClick={() => setIsTermsOpen(true)} className="hover:text-[#C85A32] transition-colors cursor-pointer">
-              Terms of Service
-            </button>
-            <button onClick={() => setIsContactOpen(true)} className="hover:text-[#C85A32] transition-colors cursor-pointer">
-              Contact &amp; Support
-            </button>
+          <div className="pt-5 border-t border-[#E5E0D5] flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 text-xs font-delight text-[#78716A]">
+            <p>
+              LeadPulse is a <strong>DocuReady Entity</strong> — Engineered to deliver enterprise B2B discovery, AI outreach synthesis, and pipeline automation at a fraction of current market rates.
+            </p>
+            <p className="shrink-0">
+              &copy; {new Date().getFullYear()} DocuReady / LeadPulse Inc. All rights reserved.
+            </p>
           </div>
-
-          <p className="text-xs font-delight text-[#78716A]">
-            &copy; {new Date().getFullYear()} LeadPulse Inc. All rights reserved.
-          </p>
         </div>
       </footer>
 
@@ -682,7 +1261,7 @@ const Landing = ({ onLogin }: { onLogin: () => void }) => {
             <div className="flex items-center justify-between pb-3 border-b border-[#E5E0D5]">
               <div>
                 <h3 className="text-sm font-extrabold tracking-tight text-[#191716]">Technical Support &amp; Inquiries</h3>
-                <p className="text-[10px] font-delight text-[#78716A]">LeadPulse Engineering Relay</p>
+                <p className="text-[10px] font-delight text-[#78716A]">LeadPulse Engineering Relay • A DocuReady Entity</p>
               </div>
               <button onClick={() => setIsContactOpen(false)} className="text-[#78716A] hover:text-[#191716] transition-colors cursor-pointer">
                 <X className="w-4 h-4" />
@@ -691,9 +1270,6 @@ const Landing = ({ onLogin }: { onLogin: () => void }) => {
 
             {contactSubmitted ? (
               <div className="py-6 text-center space-y-2">
-                <div className="w-10 h-10 bg-emerald-50 text-emerald-700 rounded-[5px] border border-emerald-200 flex items-center justify-center mx-auto">
-                  <Check className="w-5 h-5" />
-                </div>
                 <h4 className="text-sm font-bold text-[#191716]">Dispatch Successful</h4>
                 <p className="text-xs text-[#57524B]">Telemetry ticket opened. Our team will follow up via your email address.</p>
               </div>

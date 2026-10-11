@@ -5,6 +5,7 @@ import {
   Webhook, Waypoints, LogOut
 } from 'lucide-react';
 import { useStore } from '../store/useStore';
+import docuReadyBlackLogo from '../assets/DocuReady-black.png';
 
 const mainNav = [
   { name: 'Dashboard', icon: LayoutDashboard, path: '/dashboard' },
@@ -102,10 +103,14 @@ const Sidebar = () => {
            <span>Documentation</span>
          </Link>
          <div className="flex items-center justify-between px-2 py-1 text-[10px] text-[#6E675F] font-delight font-normal">
-           <span>v3.0.0</span>
+           <div className="flex items-center gap-1">
+             <span>A</span>
+             <img src={docuReadyBlackLogo} alt="DocuReady" className="h-2.5 w-auto object-contain opacity-80" />
+             <span>Entity</span>
+           </div>
            <span className="flex items-center gap-1.5">
              <span className="w-1.5 h-1.5 rounded-full bg-emerald-600"></span>
-             <span className="text-[#191716] font-semibold uppercase tracking-wider text-[9px]">Online</span>
+             <span className="text-[#191716] font-semibold uppercase tracking-wider text-[9px]">v3.0</span>
            </span>
          </div>
          <button 
