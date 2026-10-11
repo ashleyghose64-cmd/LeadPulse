@@ -33,8 +33,8 @@ const EmailProviderModal = ({ isOpen, onClose, user, onSaved }: EmailProviderMod
   const [smtpPass, setSmtpPass] = useState('');
 
   // General fields
-  const [fromName, setFromName] = useState(user?.name || 'Alex Roberts | LeadPulse');
-  const [fromEmail, setFromEmail] = useState(user?.email || 'alex@leadpulse.io');
+  const [fromName, setFromName] = useState(user?.name || 'LeadPulse Operator');
+  const [fromEmail, setFromEmail] = useState(user?.email || 'outreach@leadpulse.io');
 
   const [isSaving, setIsSaving] = useState(false);
   const [saveSuccess, setSaveSuccess] = useState(false);
@@ -353,7 +353,7 @@ const EmailProviderModal = ({ isOpen, onClose, user, onSaved }: EmailProviderMod
                 type="text"
                 value={fromName}
                 onChange={(e) => setFromName(e.target.value)}
-                placeholder="Alex Roberts"
+                placeholder="Your Name | Company"
                 className="w-full h-8 px-2.5 bg-white border border-slate-200 rounded-md text-xs font-delight font-medium text-slate-900"
               />
             </div>
@@ -363,7 +363,7 @@ const EmailProviderModal = ({ isOpen, onClose, user, onSaved }: EmailProviderMod
                 type="email"
                 value={fromEmail}
                 onChange={(e) => setFromEmail(e.target.value)}
-                placeholder="alex@yourcompany.com"
+                placeholder="outreach@yourcompany.com"
                 className="w-full h-8 px-2.5 bg-white border border-slate-200 rounded-md text-xs font-delight font-medium text-slate-900"
               />
             </div>

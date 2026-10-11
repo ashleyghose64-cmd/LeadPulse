@@ -379,10 +379,10 @@ const Landing = ({ onLogin }: { onLogin: () => void }) => {
                 <span>Rating</span>
               </div>
               <div className="px-3.5 py-2.5 border-b border-[#E5E0D5] flex items-center justify-between">
-                <span className="font-bold text-[#191716]">Apex Dental Studio • Austin, TX</span>
+                <span className="font-bold text-[#191716]">Meridian Cloud Systems • Austin, TX</span>
                 <span className="hidden sm:inline-flex items-center gap-1.5 text-[11px] font-semibold text-emerald-700">
                   <span className="w-1.5 h-1.5 rounded-full bg-emerald-600"></span>
-                  hello@apexdental.io (Verified)
+                  hello@meridiancloud.io (Verified)
                 </span>
                 <span className="font-bold text-[#C85A32] tabular-nums">★ 4.9 (214)</span>
               </div>

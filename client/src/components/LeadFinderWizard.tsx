@@ -31,8 +31,8 @@ const LeadFinderWizard = ({ onHarvestStarted }: WizardProps) => {
 
   // Step state: 1 (Location) -> 2 (Keyword) -> 3 (Scope Proficiency)
   const [currentStep, setCurrentStep] = useState<1 | 2 | 3>(1);
-  const [location, setLocation] = useState('Kalyan West');
-  const [keyword, setKeyword] = useState('Dentists');
+  const [location, setLocation] = useState(user?.target_audience || '');
+  const [keyword, setKeyword] = useState(user?.niche || user?.field_of_work || '');
   const [scope, setScope] = useState<'quick' | 'deep'>('quick');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isCollapsed, setIsCollapsed] = useState(false);
@@ -116,8 +116,8 @@ const LeadFinderWizard = ({ onHarvestStarted }: WizardProps) => {
   const maxPool = isFree ? '15' : (currentPlan === 'basic' ? '600' : 'Unlimited');
   const perQueryLimit = isFree ? 10 : 20;
 
-  const locationPresets = ['Kalyan West', 'Bandra West, Mumbai', 'Andheri East', 'Bangalore Indiranagar', 'South Delhi'];
-  const keywordPresets = ['Dentists', 'Cafes & Bakeries', 'Plumbers', 'Gyms & Fitness', 'Real Estate Brokers', 'Digital Marketing'];
+  const locationPresets = ['Mumbai', 'Bengaluru', 'Delhi NCR', 'Hyderabad', 'Pune'];
+  const keywordPresets = ['SaaS & Software', 'Real Estate Agencies', 'Healthcare Clinics', 'Digital Marketing', 'Legal & Advisory', 'Hospitality'];
 
   const handleLaunchHarvest = async () => {
     const computeCost = scope === 'deep' ? 2 : 1;
@@ -366,7 +366,7 @@ const LeadFinderWizard = ({ onHarvestStarted }: WizardProps) => {
                   type="text" 
                   value={location}
                   onChange={(e) => setLocation(e.target.value)}
-                  placeholder="e.g. Kalyan West, Mumbai"
+                  placeholder="e.g. Mumbai, Bengaluru, or Austin TX"
                   className="w-full pl-9 pr-3 py-2 bg-white border border-slate-200 rounded-md text-xs font-medium text-slate-900 outline-none focus:border-slate-400 transition-colors"
                 />
               </div>

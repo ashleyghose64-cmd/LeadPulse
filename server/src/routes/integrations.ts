@@ -31,15 +31,15 @@ export const DEFAULT_APPS: IntegrationApp[] = [
     id: 'slack',
     name: 'Slack',
     category: 'Communication',
-    connected: true,
+    connected: false,
     logo: '/integrations/Slack.png',
     description: 'Receive real-time lead capture, deal conversion, and team assignment alerts in dedicated Slack channels.',
-    config: { webhookUrl: 'https://hooks.slack.com/services/T00/B00/XXXXX', channel: '#sales-leads' },
+    config: { webhookUrl: '', channel: '#sales-leads' },
     configFields: [
       { key: 'webhookUrl', label: 'Incoming Webhook URL', type: 'url', placeholder: 'https://hooks.slack.com/services/...', required: true },
       { key: 'channel', label: 'Alert Channel', type: 'text', placeholder: '#sales-leads', required: true }
     ],
-    lastSync: '5 mins ago'
+    lastSync: null
   },
   {
     id: 'microsoft-teams',
@@ -103,15 +103,15 @@ export const DEFAULT_APPS: IntegrationApp[] = [
     id: 'gmail-workspace',
     name: 'Google Workspace / Gmail',
     category: 'Communication',
-    connected: true,
+    connected: false,
     logo: '/integrations/Google%20Drive.png',
     description: 'Native SMTP and OAuth relay to dispatch cold campaigns with 99.4% inbox deliverability.',
-    config: { emailAddress: 'sales@leadpulse.io', provider: 'google_workspace' },
+    config: { emailAddress: '', provider: 'google_workspace' },
     configFields: [
       { key: 'emailAddress', label: 'Relay Email Address', type: 'email', placeholder: 'outreach@yourcompany.com', required: true },
       { key: 'provider', label: 'Provider Type', type: 'text', placeholder: 'google_workspace' }
     ],
-    lastSync: '1 min ago'
+    lastSync: null
   },
 
   // CRM
@@ -119,14 +119,14 @@ export const DEFAULT_APPS: IntegrationApp[] = [
     id: 'hubspot',
     name: 'HubSpot',
     category: 'CRM',
-    connected: true,
+    connected: false,
     logo: '/integrations/HubSpot.png',
     description: 'Automatically push harvested B2B contacts directly into HubSpot CRM contact lists.',
-    config: { accessToken: 'pat-na1-xxxx-xxxx-xxxx' },
+    config: { accessToken: '' },
     configFields: [
       { key: 'accessToken', label: 'HubSpot Private App Token', type: 'password', placeholder: 'pat-na1-xxxx-xxxx', required: true }
     ],
-    lastSync: '12 mins ago'
+    lastSync: null
   },
   {
     id: 'salesforce',
@@ -339,7 +339,7 @@ export const DEFAULT_APPS: IntegrationApp[] = [
     connected: false,
     logo: '/integrations/Calendly.png',
     description: 'Inject {{calendly_link}} into Outreach pitches, listen for booked demos, and auto-advance deal stages.',
-    config: { bookingUrl: 'https://calendly.com/alex-roberts/15min', personalAccessToken: '', signingKey: '' },
+    config: { bookingUrl: '', personalAccessToken: '', signingKey: '' },
     configFields: [
       { key: 'bookingUrl', label: 'Booking Link URL ({{calendly_link}})', type: 'url', placeholder: 'https://calendly.com/your-name/15min', required: true },
       { key: 'personalAccessToken', label: 'Personal Access Token', type: 'password', placeholder: 'calendly_pat_...' },
@@ -717,7 +717,7 @@ export const DEFAULT_APPS: IntegrationApp[] = [
     config: { personalAccessToken: '', repository: '' },
     configFields: [
       { key: 'personalAccessToken', label: 'Personal Access Token', type: 'password', placeholder: 'ghp_...', required: true },
-      { key: 'repository', label: 'Repository (owner/repo)', type: 'text', placeholder: 'acme-inc/sales-automation', required: true }
+      { key: 'repository', label: 'Repository (owner/repo)', type: 'text', placeholder: 'your-org/sales-automation', required: true }
     ],
     lastSync: null
   },
@@ -753,26 +753,42 @@ export const DEFAULT_APPS: IntegrationApp[] = [
     id: 'webhook-custom',
     name: 'Custom Webhooks',
     category: 'Developer',
-    connected: true,
+    connected: false,
     logo: 'https://cdn.simpleicons.org/webhook',
     description: 'Send and receive raw JSON HTTP POST payloads directly into your LeadPulse database.',
     config: { targetEndpoint: `${(process.env.PUBLIC_API_URL || 'http://localhost:3001').replace(/\/$/, '')}/api/leads/form-submit` },
     configFields: [
       { key: 'targetEndpoint', label: 'Target Endpoint URL', type: 'url', placeholder: 'https://yourserver.com/api/leadpulse-hook', required: true }
     ],
-    lastSync: 'Just now'
+    lastSync: null
   }
 ];
+
+const isLegacySandboxConfig = (appId: string, cfg: any): boolean => {
+  if (!cfg) return false;
+  if (appId === 'slack' && cfg.webhookUrl === 'https://hooks.slack.com/services/T00/B00/XXXXX' && !cfg.authType) return true;
+  if (appId === 'hubspot' && cfg.accessToken === 'pat-na1-xxxx-xxxx-xxxx' && !cfg.authType) return true;
+  if (appId === 'gmail-workspace' && cfg.emailAddress === 'sales@leadpulse.io' && !cfg.authType) return true;
+  if (appId === 'webhook-custom' && !cfg.authType && (!cfg.targetEndpoint || cfg.targetEndpoint.includes('localhost:3001'))) return true;
+  return false;
+};
 
 // Helper to merge stored settings with current default schema
 const getMergedIntegrations = (savedList: any[] = []): IntegrationApp[] => {
   return DEFAULT_APPS.map(defaultApp => {
     const existing = savedList.find(s => s.id === defaultApp.id);
     if (existing) {
+      if (isLegacySandboxConfig(defaultApp.id, existing.config)) {
+        return defaultApp;
+      }
+      const cleanedConfig = { ...defaultApp.config, ...(existing.config || {}) };
+      if (defaultApp.id === 'calendly' && cleanedConfig.bookingUrl === 'https://calendly.com/alex-roberts/15min') {
+        cleanedConfig.bookingUrl = '';
+      }
       return {
         ...defaultApp,
         connected: Boolean(existing.connected),
-        config: { ...defaultApp.config, ...(existing.config || {}) },
+        config: cleanedConfig,
         lastSync: existing.lastSync || defaultApp.lastSync
       };
     }
@@ -792,42 +808,13 @@ export interface IntegrationLogEntry {
   payload?: any;
 }
 
-const DEFAULT_LOGS: IntegrationLogEntry[] = [
-  {
-    id: 'log_init_1',
-    appId: 'hubspot',
-    appName: 'HubSpot',
-    eventType: 'sync',
-    summary: 'Synchronized active CRM contact schema & pipeline stage mapping',
-    status: '200 OK',
-    latency: '62ms',
-    timestamp: new Date(Date.now() - 12 * 60 * 1000).toISOString(),
-    payload: {
-      objectType: 'contacts',
-      portalStatus: 'authenticated',
-      mappedStages: ['New', 'WhatsApp Contacted', 'Proposal Sent', 'Closed Won']
-    }
-  },
-  {
-    id: 'log_init_2',
-    appId: 'slack',
-    appName: 'Slack',
-    eventType: 'notify',
-    summary: 'Verified webhook listener on channel #sales-leads',
-    status: '200 OK',
-    latency: '48ms',
-    timestamp: new Date(Date.now() - 5 * 60 * 1000).toISOString(),
-    payload: {
-      channel: '#sales-leads',
-      webhookEvent: 'channel.handshake.verified',
-      tls: 'TLS 1.3'
-    }
-  }
-];
+const DEFAULT_LOGS: IntegrationLogEntry[] = [];
 
 const getUserLogs = (docData: any): IntegrationLogEntry[] => {
   if (docData && Array.isArray(docData.integrationLogs)) {
-    return docData.integrationLogs;
+    return docData.integrationLogs.filter(
+      (l: any) => l.id !== 'log_init_1' && l.id !== 'log_init_2'
+    );
   }
   return DEFAULT_LOGS;
 };

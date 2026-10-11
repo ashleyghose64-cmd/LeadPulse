@@ -24,7 +24,7 @@ const OutreachCenter = () => {
   const [activeChannel, setActiveChannel] = useState<'email' | 'whatsapp' | 'sms'>('email');
 
   const calendlyIntegration = integrations.find(i => i.id === 'calendly' && i.connected);
-  const resolvedCalendlyUrl = calendlyIntegration?.config?.bookingUrl || `https://calendly.com/${(user?.name || 'alex-roberts').toLowerCase().replace(/[^a-z0-9]+/g, '-')}/15min`;
+  const resolvedCalendlyUrl = calendlyIntegration?.config?.bookingUrl || `https://calendly.com/${(user?.name || user?.company_name || 'workspace').toLowerCase().replace(/[^a-z0-9]+/g, '-')}/15min`;
   const activeMailTransport = integrations.find(i => (i.id === 'gmail-workspace' || i.id === 'google_workspace' || i.id === 'resend' || i.id === 'resend_mailgun') && i.connected);
   const activeSmsTransport = integrations.find(i => i.id === 'twilio' && i.connected);
   
@@ -86,56 +86,23 @@ const OutreachCenter = () => {
     showComplianceFooter: true
   });
 
-  // Default fallback leads if user hasn't harvested any leads yet
-  const defaultLeads = [
-    {
-      _id: 'default-1',
-      businessName: 'Summit Real Estate Co.',
-      location: 'Kalyan West',
-      category: 'Commercial Properties',
-      fieldOfWork: 'Commercial Properties',
-      firstName: 'Sarah',
-      phone: '+91 98201 44520',
-      rating: '4.9',
-      email: 'sarah@summitproperties.com'
-    },
-    {
-      _id: 'default-2',
-      businessName: 'Apex Dental Care & Implant Clinic',
-      location: 'Kalyan West',
-      category: 'Dentists',
-      fieldOfWork: 'Dental Healthcare',
-      firstName: 'Dr. Rahul',
-      phone: '+91 98332 10984',
-      rating: '4.8',
-      email: 'drrahul@apexdental.com'
-    },
-    {
-      _id: 'default-3',
-      businessName: 'The Daily Roast Artisanal Cafe',
-      location: 'Bandra West, Mumbai',
-      category: 'Cafes & Bakeries',
-      fieldOfWork: 'Specialty Coffee & Dining',
-      firstName: 'Karan',
-      phone: '+91 99204 88712',
-      rating: '4.7',
-      email: 'karan@dailyroastcafe.com'
-    },
-    {
-      _id: 'default-4',
-      businessName: 'BlueSky Digital Agency',
-      location: 'Andheri East',
-      category: 'Digital Marketing',
-      fieldOfWork: 'B2B Marketing & SEO',
-      firstName: 'Ananya',
-      phone: '+91 97654 32109',
-      rating: '4.9',
-      email: 'ananya@blueskydigital.in'
-    }
-  ];
+  // Dynamic workspace profile fallback when the user hasn't harvested leads yet
+  const workspaceProfileLead = {
+    _id: 'workspace-profile',
+    businessName: user?.company_name || (user?.name ? `${user.name} Workspace` : 'Your Target Prospect'),
+    location: user?.target_audience || 'Target Market',
+    category: user?.field_of_work || user?.niche || 'B2B Services',
+    fieldOfWork: user?.field_of_work || user?.niche || 'B2B Services',
+    firstName: user?.name ? user.name.split(' ')[0] : 'Partner',
+    phone: '+1 (555) 019-2831',
+    rating: '5.0',
+    email: user?.email || 'contact@yourcompany.com'
+  };
 
   const [leadsList, setLeadsList] = useState<any[]>([]);
-  const [previewLead, setPreviewLead] = useState(defaultLeads[0]);
+  const [selectedPreviewLead, setSelectedPreviewLead] = useState<any | null>(null);
+  const previewLead = selectedPreviewLead || leadsList[0] || workspaceProfileLead;
+  const setPreviewLead = (lead: any) => setSelectedPreviewLead(lead);
   const [isLeadDropdownOpen, setIsLeadDropdownOpen] = useState(false);
   const [leadSearchQuery, setLeadSearchQuery] = useState('');
   const [dropdownAlign, setDropdownAlign] = useState<'left' | 'right'>('right');
@@ -147,8 +114,6 @@ const OutreachCenter = () => {
     if (!isLeadDropdownOpen && leadDropdownRef.current && previewCardRef.current) {
       const btnRect = leadDropdownRef.current.getBoundingClientRect();
       const cardRect = previewCardRef.current.getBoundingClientRect();
-      // Dropdown menu is 320px wide. When right-0 anchored, its left edge is btnRect.right - 320.
-      // If that falls to the left of the card's left boundary (+ padding), anchor to left-0 instead.
       if (btnRect.right - 320 < cardRect.left + 8) {
         setDropdownAlign('left');
       } else {
@@ -195,16 +160,19 @@ const OutreachCenter = () => {
           const mapped = res.data.map((l: any) => ({
             _id: l._id,
             businessName: l.businessName || 'Unnamed Business',
-            location: l.location || 'Kalyan West',
+            location: l.location || user?.target_audience || 'Local Market',
             category: l.category || 'Local Business',
             fieldOfWork: l.category || 'Professional Services',
             firstName: l.businessName ? l.businessName.split(' ')[0] : 'Partner',
-            phone: l.phone || '+91 98000 00000',
+            phone: l.phone || '',
             rating: l.rating || '4.8',
             email: l.email || `contact@${(l.businessName || 'company').toLowerCase().replace(/[^a-z0-9]/g, '')}.com`
           }));
           setLeadsList(mapped);
-          setPreviewLead(mapped[0]); // Default to user's first scraped lead
+          setSelectedPreviewLead(mapped[0]);
+        } else {
+          setLeadsList([]);
+          setSelectedPreviewLead(null);
         }
       } catch (err) {
         console.error('Failed to load leads for preview', err);
@@ -224,7 +192,7 @@ const OutreachCenter = () => {
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
-  const availableLeads = leadsList.length > 0 ? leadsList : defaultLeads;
+  const availableLeads = leadsList;
   const filteredAvailableLeads = availableLeads.filter(l => 
     l.businessName.toLowerCase().includes(leadSearchQuery.toLowerCase()) ||
     l.location.toLowerCase().includes(leadSearchQuery.toLowerCase()) ||
@@ -399,8 +367,8 @@ const OutreachCenter = () => {
   const renderPreviewHtml = (text?: string) => {
     if (!text) return '';
     let rendered = text;
-    const senderName = user?.name || 'Alex Roberts';
-    const senderEmail = user?.email || 'alex@leadpulse.io';
+    const senderName = user?.name || 'Workspace Operator';
+    const senderEmail = user?.email || 'outreach@leadpulse.io';
     const senderCompany = user?.company_name || 'LeadPulse';
 
     rendered = rendered.replace(/{{business_name}}/g, `<span class="bg-amber-100 text-amber-900 font-bold px-1 rounded">${previewLead.businessName}</span>`);
@@ -416,14 +384,6 @@ const OutreachCenter = () => {
     rendered = rendered.replace(/{{sender_email}}/g, `<span class="bg-blue-100 text-blue-900 font-bold px-1 rounded">${senderEmail}</span>`);
     rendered = rendered.replace(/{{user_email}}/g, `<span class="bg-blue-100 text-blue-900 font-bold px-1 rounded">${senderEmail}</span>`);
     rendered = rendered.replace(/{{company_name}}/g, `<span class="bg-blue-100 text-blue-900 font-bold px-1 rounded">${senderCompany}</span>`);
-
-    // Replace static fallback sender signature if user is logged in
-    if (user?.name && user.name !== 'Alex Roberts') {
-      rendered = rendered.replace(/Alex Roberts/g, user.name);
-    }
-    if (user?.email && user.email !== 'alex@leadpulse.io') {
-      rendered = rendered.replace(/alex@leadpulse\.io/g, user.email);
-    }
     return rendered;
   };
 
@@ -479,8 +439,8 @@ const OutreachCenter = () => {
         templateStyling,
         targetLead: previewLead,
         customRecipientEmail: previewLead.email,
-        fromName: user?.name || 'Alex Roberts',
-        fromEmail: user?.email || 'alex@leadpulse.io'
+        fromName: user?.name || 'Workspace Operator',
+        fromEmail: user?.email || 'outreach@leadpulse.io'
       }, {
         headers: { userid: user?._id || 'demo-user' }
       });
@@ -547,7 +507,7 @@ const OutreachCenter = () => {
               <div className="flex items-center gap-2 text-slate-600">
                 <span className={`w-1.5 h-1.5 rounded-full ${activeMailTransport ? 'bg-emerald-500' : 'bg-[#191716]'}`}></span>
                 <span className="text-slate-400">Relay:</span>
-                <span className="text-[#191716] font-semibold">{activeMailTransport ? activeMailTransport.name : 'Sandbox SMTP'}</span>
+                <span className="text-[#191716] font-semibold">{activeMailTransport ? activeMailTransport.name : 'Direct Cloud SMTP'}</span>
               </div>
               <div className="h-3.5 w-px bg-slate-200 hidden sm:block" />
               <div className="flex items-center gap-2 text-slate-600">
@@ -1866,7 +1826,7 @@ const OutreachCenter = () => {
                   title="Click to select target lead for live hydration"
                 >
                   <span className="text-slate-400">Preview as:</span>
-                  <span className="font-semibold text-[#1E1B4B] max-w-[150px] truncate">{previewLead.businessName}</span>
+                  <span className="font-semibold text-[#191716] max-w-[160px] truncate">{previewLead.businessName}</span>
                   <ChevronDown className={`w-3.5 h-3.5 text-slate-400 transition-transform ${isLeadDropdownOpen ? 'rotate-180' : ''}`} />
                 </button>
 
@@ -1877,7 +1837,7 @@ const OutreachCenter = () => {
                       <div className="flex items-center justify-between mb-1.5">
                         <span className="text-[10px] font-semibold uppercase tracking-wider text-slate-500">Select Target Lead</span>
                         <span className="text-[10px] bg-slate-200 text-slate-800 px-1.5 py-0.2 rounded-xs">
-                          {availableLeads.length} Available
+                          {availableLeads.length} Harvested
                         </span>
                       </div>
                       <div className="relative">
@@ -1886,7 +1846,7 @@ const OutreachCenter = () => {
                           type="text"
                           value={leadSearchQuery}
                           onChange={(e) => setLeadSearchQuery(e.target.value)}
-                          placeholder="Search business or city..."
+                          placeholder="Search your workspace leads..."
                           className="w-full bg-white border border-slate-200 rounded-sm pl-7 pr-2.5 py-1 text-xs outline-none focus:border-slate-400 font-delight font-medium"
                           autoFocus
                         />
@@ -1925,11 +1885,20 @@ const OutreachCenter = () => {
                         );
                       })}
 
-                      {filteredAvailableLeads.length === 0 && (
+                      {availableLeads.length === 0 ? (
+                        <div className="p-3.5 text-center space-y-1.5">
+                          <div className="text-xs font-semibold text-slate-700">
+                            No harvested leads in workspace yet
+                          </div>
+                          <p className="text-[11px] text-slate-400 font-normal leading-relaxed">
+                            Previewing with your workspace profile ({workspaceProfileLead.businessName}). Harvest prospects in Lead Finder to preview real leads here.
+                          </p>
+                        </div>
+                      ) : filteredAvailableLeads.length === 0 ? (
                         <div className="p-3 text-center text-xs text-slate-400 font-delight font-normal">
                           No matching leads found
                         </div>
-                      )}
+                      ) : null}
                     </div>
                   </div>
                 )}
@@ -1953,7 +1922,7 @@ const OutreachCenter = () => {
                   {/* Email Chrome Header */}
                   <div className="border-b border-slate-200 p-3.5 bg-slate-50 text-xs font-delight font-medium">
                     <div className="text-[11px] text-slate-500 font-medium mb-0.5">
-                      From: {user?.name || 'Alex Roberts'} &lt;{user?.email || 'alex@leadpulse.io'}&gt;
+                      From: {user?.name || 'Workspace Operator'} &lt;{user?.email || 'outreach@leadpulse.io'}&gt;
                     </div>
                     <div className="text-[11px] text-slate-500 font-medium mb-1.5">
                       To: {previewLead.email || `contact@${previewLead.businessName.toLowerCase().replace(/[^a-z0-9]/g, '') || 'biz'}.com`}

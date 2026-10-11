@@ -86,8 +86,8 @@ A few quick points that might interest your team:
 Would you have 5 minutes this Thursday for a quick chat?
 
 Best regards,
-Alex Roberts
-Growth Director | LeadPulse Platform`,
+{{sender_name}}
+{{company_name}}`,
       ctaText: 'Book a 5-Min Intro Call',
       ctaUrl: 'https://calendly.com/leadpulse/demo'
     }

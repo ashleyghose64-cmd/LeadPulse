@@ -273,13 +273,332 @@ const getAppSteps = (app: IntegrationApp) => {
   ];
 };
 
+// Official Authorization & Developer Console Portals for every integration
+const INTEGRATION_PORTALS: Record<string, { authUrl: string; consoleUrl: string; docsUrl: string; portalLabel: string }> = {
+  'slack': {
+    authUrl: 'https://slack.com/oauth/v2/authorize',
+    consoleUrl: 'https://api.slack.com/apps',
+    docsUrl: 'https://api.slack.com/messaging/webhooks',
+    portalLabel: 'Slack OAuth & Incoming Webhooks Portal'
+  },
+  'microsoft-teams': {
+    authUrl: 'https://login.microsoftonline.com/common/oauth2/v2.0/authorize',
+    consoleUrl: 'https://portal.azure.com/#view/Microsoft_AAD_RegisteredApps/ApplicationsListBlade',
+    docsUrl: 'https://learn.microsoft.com/en-us/microsoftteams/platform/webhooks-and-connectors/how-to/add-incoming-webhook',
+    portalLabel: 'Microsoft Entra ID & Teams Connectors'
+  },
+  'microsoft-outlook': {
+    authUrl: 'https://login.microsoftonline.com/common/oauth2/v2.0/authorize',
+    consoleUrl: 'https://portal.azure.com/#view/Microsoft_AAD_RegisteredApps/ApplicationsListBlade',
+    docsUrl: 'https://learn.microsoft.com/en-us/graph/auth-v2-user',
+    portalLabel: 'Microsoft 365 & Azure OAuth Portal'
+  },
+  'twilio': {
+    authUrl: 'https://console.twilio.com/',
+    consoleUrl: 'https://console.twilio.com/us1/account/keys-credentials/api-keys',
+    docsUrl: 'https://www.twilio.com/docs/iam/keys/api-key',
+    portalLabel: 'Twilio Console & API Keys'
+  },
+  'resend': {
+    authUrl: 'https://resend.com/api-keys',
+    consoleUrl: 'https://resend.com/domains',
+    docsUrl: 'https://resend.com/docs/introduction',
+    portalLabel: 'Resend API Keys Console'
+  },
+  'gmail-workspace': {
+    authUrl: 'https://accounts.google.com/o/oauth2/v2/auth',
+    consoleUrl: 'https://console.cloud.google.com/apis/credentials',
+    docsUrl: 'https://developers.google.com/gmail/api/guides',
+    portalLabel: 'Google Workspace & Cloud OAuth Console'
+  },
+  'hubspot': {
+    authUrl: 'https://app.hubspot.com/login',
+    consoleUrl: 'https://app.hubspot.com/private-apps',
+    docsUrl: 'https://developers.hubspot.com/docs/api/private-apps',
+    portalLabel: 'HubSpot Private Apps & OAuth Portal'
+  },
+  'salesforce': {
+    authUrl: 'https://login.salesforce.com/services/oauth2/authorize',
+    consoleUrl: 'https://login.salesforce.com/',
+    docsUrl: 'https://help.salesforce.com/s/articleView?id=sf.connected_app_overview.htm',
+    portalLabel: 'Salesforce Lightning OAuth Portal'
+  },
+  'apollo': {
+    authUrl: 'https://app.apollo.io/#/settings/integrations/api',
+    consoleUrl: 'https://developer.apollo.io/keys/',
+    docsUrl: 'https://apolloio.github.io/apollo-api-docs/',
+    portalLabel: 'Apollo.io API & Integrations Portal'
+  },
+  'attio': {
+    authUrl: 'https://app.attio.com/',
+    consoleUrl: 'https://developers.attio.com/',
+    docsUrl: 'https://developers.attio.com/reference/get_v2-self',
+    portalLabel: 'Attio Workspace & Developer Portal'
+  },
+  'linkedin': {
+    authUrl: 'https://www.linkedin.com/developers/apps',
+    consoleUrl: 'https://www.linkedin.com/developers/apps',
+    docsUrl: 'https://learn.microsoft.com/en-us/linkedin/shared/authentication/authentication',
+    portalLabel: 'LinkedIn Developer OAuth Portal'
+  },
+  'netsuite': {
+    authUrl: 'https://system.netsuite.com/pages/customerlogin.jsp',
+    consoleUrl: 'https://system.netsuite.com/',
+    docsUrl: 'https://docs.oracle.com/en/cloud/saas/netsuite/ns-online-help/',
+    portalLabel: 'Oracle NetSuite TBA Login Portal'
+  },
+  'openai': {
+    authUrl: 'https://platform.openai.com/api-keys',
+    consoleUrl: 'https://platform.openai.com/settings/organization/general',
+    docsUrl: 'https://platform.openai.com/docs/api-reference/authentication',
+    portalLabel: 'OpenAI Platform API Keys'
+  },
+  'anthropic': {
+    authUrl: 'https://console.anthropic.com/settings/keys',
+    consoleUrl: 'https://console.anthropic.com/',
+    docsUrl: 'https://docs.anthropic.com/en/api/getting-started',
+    portalLabel: 'Anthropic Console API Keys'
+  },
+  'gemini': {
+    authUrl: 'https://aistudio.google.com/app/apikey',
+    consoleUrl: 'https://console.cloud.google.com/apis/credentials',
+    docsUrl: 'https://ai.google.dev/gemini-api/docs/api-key',
+    portalLabel: 'Google AI Studio API Key Portal'
+  },
+  'elevenlabs': {
+    authUrl: 'https://elevenlabs.io/app/settings/api-keys',
+    consoleUrl: 'https://elevenlabs.io/app/voice-lab',
+    docsUrl: 'https://elevenlabs.io/docs/api-reference/authentication',
+    portalLabel: 'ElevenLabs API Keys Console'
+  },
+  'airtable': {
+    authUrl: 'https://airtable.com/create/tokens',
+    consoleUrl: 'https://airtable.com/create/oauth',
+    docsUrl: 'https://airtable.com/developers/web/api/introduction',
+    portalLabel: 'Airtable Builder Hub & PAT Portal'
+  },
+  'notion': {
+    authUrl: 'https://www.notion.so/my-integrations',
+    consoleUrl: 'https://www.notion.so/my-integrations',
+    docsUrl: 'https://developers.notion.com/docs/create-a-notion-integration',
+    portalLabel: 'Notion My Integrations Portal'
+  },
+  'google-sheets': {
+    authUrl: 'https://console.cloud.google.com/apis/library/sheets.googleapis.com',
+    consoleUrl: 'https://docs.google.com/spreadsheets/',
+    docsUrl: 'https://developers.google.com/sheets/api/guides/concepts',
+    portalLabel: 'Google Sheets & Cloud OAuth Console'
+  },
+  'microsoft-excel': {
+    authUrl: 'https://portal.azure.com/#view/Microsoft_AAD_RegisteredApps/ApplicationsListBlade',
+    consoleUrl: 'https://www.office.com/launch/excel',
+    docsUrl: 'https://learn.microsoft.com/en-us/graph/api/resources/excel',
+    portalLabel: 'Microsoft Graph & Excel Portal'
+  },
+  'google-calendar': {
+    authUrl: 'https://console.cloud.google.com/apis/library/calendar-json.googleapis.com',
+    consoleUrl: 'https://calendar.google.com/',
+    docsUrl: 'https://developers.google.com/calendar/api/guides/overview',
+    portalLabel: 'Google Calendar OAuth Console'
+  },
+  'calendly': {
+    authUrl: 'https://calendly.com/integrations/api_webhooks',
+    consoleUrl: 'https://calendly.com/event_types/user/me',
+    docsUrl: 'https://developer.calendly.com/how-to-authenticate-with-personal-access-tokens',
+    portalLabel: 'Calendly API & Webhooks Portal'
+  },
+  'asana': {
+    authUrl: 'https://app.asana.com/0/my-apps',
+    consoleUrl: 'https://app.asana.com/',
+    docsUrl: 'https://developers.asana.com/docs/personal-access-token',
+    portalLabel: 'Asana Developer App Console'
+  },
+  'trello': {
+    authUrl: 'https://trello.com/power-ups/admin',
+    consoleUrl: 'https://trello.com/',
+    docsUrl: 'https://developer.atlassian.com/cloud/trello/guides/rest-api/api-introduction/',
+    portalLabel: 'Trello Power-Ups & API Portal'
+  },
+  'monday': {
+    authUrl: 'https://auth.monday.com/oauth2/authorize',
+    consoleUrl: 'https://monday.com/developers/apps',
+    docsUrl: 'https://developer.monday.com/api-reference/docs/authentication',
+    portalLabel: 'monday.com Developer Center'
+  },
+  'linear': {
+    authUrl: 'https://linear.app/settings/api',
+    consoleUrl: 'https://linear.app/',
+    docsUrl: 'https://developers.linear.app/docs/graphql/working-with-the-graphql-api',
+    portalLabel: 'Linear API & OAuth Settings'
+  },
+  'jira': {
+    authUrl: 'https://id.atlassian.com/manage-profile/security/api-tokens',
+    consoleUrl: 'https://developer.atlassian.com/console/myapps/',
+    docsUrl: 'https://developer.atlassian.com/cloud/jira/platform/rest/v3/intro/',
+    portalLabel: 'Atlassian API Tokens & OAuth Console'
+  },
+  'google-drive': {
+    authUrl: 'https://console.cloud.google.com/apis/library/drive.googleapis.com',
+    consoleUrl: 'https://drive.google.com/',
+    docsUrl: 'https://developers.google.com/drive/api/guides/about-sdk',
+    portalLabel: 'Google Drive API Console'
+  },
+  'onedrive': {
+    authUrl: 'https://portal.azure.com/#view/Microsoft_AAD_RegisteredApps/ApplicationsListBlade',
+    consoleUrl: 'https://onedrive.live.com/',
+    docsUrl: 'https://learn.microsoft.com/en-us/onedrive/developer/',
+    portalLabel: 'Microsoft OneDrive Graph Portal'
+  },
+  'box': {
+    authUrl: 'https://app.box.com/developers/console',
+    consoleUrl: 'https://app.box.com/',
+    docsUrl: 'https://developer.box.com/guides/authentication/',
+    portalLabel: 'Box Developer Console'
+  },
+  'mailchimp': {
+    authUrl: 'https://us1.admin.mailchimp.com/account/api/',
+    consoleUrl: 'https://login.mailchimp.com/',
+    docsUrl: 'https://mailchimp.com/developer/marketing/guides/quick-start/',
+    portalLabel: 'Mailchimp API Keys & OAuth Portal'
+  },
+  'brevo': {
+    authUrl: 'https://app.brevo.com/settings/keys/api',
+    consoleUrl: 'https://app.brevo.com/',
+    docsUrl: 'https://developers.brevo.com/docs/getting-started',
+    portalLabel: 'Brevo SMTP & API Keys Console'
+  },
+  'typeform': {
+    authUrl: 'https://admin.typeform.com/user#/section/tokens',
+    consoleUrl: 'https://admin.typeform.com/',
+    docsUrl: 'https://www.typeform.com/developers/get-started/personal-access-token/',
+    portalLabel: 'Typeform Personal Access Tokens'
+  },
+  'google-forms': {
+    authUrl: 'https://console.cloud.google.com/apis/library/forms.googleapis.com',
+    consoleUrl: 'https://docs.google.com/forms/',
+    docsUrl: 'https://developers.google.com/forms/api/guides',
+    portalLabel: 'Google Forms API Console'
+  },
+  'facebook-pages': {
+    authUrl: 'https://developers.facebook.com/apps/',
+    consoleUrl: 'https://developers.facebook.com/tools/explorer/',
+    docsUrl: 'https://developers.facebook.com/docs/pages-api/',
+    portalLabel: 'Meta for Developers Portal'
+  },
+  'stripe': {
+    authUrl: 'https://dashboard.stripe.com/apikeys',
+    consoleUrl: 'https://dashboard.stripe.com/webhooks',
+    docsUrl: 'https://docs.stripe.com/keys',
+    portalLabel: 'Stripe Dashboard API Keys & Webhooks'
+  },
+  'quickbooks': {
+    authUrl: 'https://developer.intuit.com/app/developer/dashboard',
+    consoleUrl: 'https://accounts.intuit.com/',
+    docsUrl: 'https://developer.intuit.com/app/developer/qbo/docs/develop/authentication-and-authorization',
+    portalLabel: 'Intuit Developer Portal'
+  },
+  'xero': {
+    authUrl: 'https://developer.xero.com/app/manage',
+    consoleUrl: 'https://login.xero.com/',
+    docsUrl: 'https://developer.xero.com/documentation/guides/oauth2/overview/',
+    portalLabel: 'Xero Developer Portal'
+  },
+  'shopify': {
+    authUrl: 'https://partners.shopify.com/',
+    consoleUrl: 'https://admin.shopify.com/',
+    docsUrl: 'https://shopify.dev/docs/apps/build/authentication-authorization',
+    portalLabel: 'Shopify Admin & Partner Portal'
+  },
+  'snowflake': {
+    authUrl: 'https://app.snowflake.com/',
+    consoleUrl: 'https://app.snowflake.com/',
+    docsUrl: 'https://docs.snowflake.com/en/user-guide/admin-security',
+    portalLabel: 'Snowflake Cloud Console'
+  },
+  'databricks': {
+    authUrl: 'https://accounts.cloud.databricks.com/',
+    consoleUrl: 'https://accounts.cloud.databricks.com/',
+    docsUrl: 'https://docs.databricks.com/en/dev-tools/auth/pat.html',
+    portalLabel: 'Databricks Workspace & Token Console'
+  },
+  'clickhouse': {
+    authUrl: 'https://clickhouse.cloud/',
+    consoleUrl: 'https://clickhouse.cloud/',
+    docsUrl: 'https://clickhouse.com/docs/en/cloud/manage/openapi',
+    portalLabel: 'ClickHouse Cloud Console'
+  },
+  'google-analytics': {
+    authUrl: 'https://analytics.google.com/analytics/web/',
+    consoleUrl: 'https://analytics.google.com/',
+    docsUrl: 'https://developers.google.com/analytics/devguides/collection/protocol/ga4',
+    portalLabel: 'Google Analytics 4 Admin Console'
+  },
+  'amplitude': {
+    authUrl: 'https://app.amplitude.com/analytics',
+    consoleUrl: 'https://app.amplitude.com/',
+    docsUrl: 'https://www.docs.developers.amplitude.com/analytics/find-api-credentials/',
+    portalLabel: 'Amplitude Project Settings'
+  },
+  'firecrawl': {
+    authUrl: 'https://www.firecrawl.dev/app/api-keys',
+    consoleUrl: 'https://www.firecrawl.dev/app',
+    docsUrl: 'https://docs.firecrawl.dev/introduction',
+    portalLabel: 'Firecrawl API Keys Dashboard'
+  },
+  'google-maps': {
+    authUrl: 'https://console.cloud.google.com/google/maps-apis/credentials',
+    consoleUrl: 'https://console.cloud.google.com/',
+    docsUrl: 'https://developers.google.com/maps/documentation/javascript/get-api-key',
+    portalLabel: 'Google Maps Platform Credentials'
+  },
+  'github': {
+    authUrl: 'https://github.com/settings/tokens/new?description=LeadPulse+Workspace+Connector&scopes=repo,workflow,read:org',
+    consoleUrl: 'https://github.com/settings/apps',
+    docsUrl: 'https://docs.github.com/en/authentication/keeping-your-account-and-data-secure/managing-your-personal-access-tokens',
+    portalLabel: 'GitHub Token & OAuth Authorization'
+  },
+  'okta': {
+    authUrl: 'https://login.okta.com/',
+    consoleUrl: 'https://developer.okta.com/',
+    docsUrl: 'https://developer.okta.com/docs/guides/implement-grant-type/authcode/main/',
+    portalLabel: 'Okta Admin & SSO Console'
+  },
+  'zapier': {
+    authUrl: 'https://zapier.com/app/zaps',
+    consoleUrl: 'https://developer.zapier.com/',
+    docsUrl: 'https://help.zapier.com/hc/en-us/articles/8496288690317-Trigger-Zaps-from-webhooks',
+    portalLabel: 'Zapier Webhooks & Zaps Portal'
+  },
+  'webhook-custom': {
+    authUrl: 'https://webhook.site/',
+    consoleUrl: 'https://webhook.site/',
+    docsUrl: 'https://developer.mozilla.org/en-US/docs/Web/HTTP/Methods/POST',
+    portalLabel: 'Webhook Endpoint Inspector'
+  }
+};
+
+const getIntegrationPortal = (app: IntegrationApp) => {
+  const id = app.id.toLowerCase();
+  if (INTEGRATION_PORTALS[id]) return INTEGRATION_PORTALS[id];
+  const cleanDomain = app.name.toLowerCase().replace(/[^a-z0-9]/g, '') + '.com';
+  return {
+    authUrl: `https://${cleanDomain}/login`,
+    consoleUrl: `https://${cleanDomain}`,
+    docsUrl: `https://${cleanDomain}/docs`,
+    portalLabel: `${app.name} Authorization Portal`
+  };
+};
+
+const API_BASE = (import.meta.env.VITE_API_URL || (import.meta.env.DEV ? 'http://localhost:3001' : window.location.origin)).replace(/\/$/, '');
+
 const Integrations = () => {
   const { user, integrations: storeIntegrations, integrationLogs, setIntegrations, setIntegrationLogs } = useStore();
   const [apps, setApps] = useState<IntegrationApp[]>(storeIntegrations as IntegrationApp[]);
-  const [apiKey, setApiKey] = useState('lp_live_sample_key');
+  const [apiKey, setApiKey] = useState('lp_live_workspace_key');
   const [, setLoading] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('All');
+  const [showActiveOnly, setShowActiveOnly] = useState(false);
   const [sortBy, setSortBy] = useState<'az' | 'za' | 'connected' | 'category'>('az');
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
 
@@ -292,9 +611,10 @@ const Integrations = () => {
   const [isTestingPing, setIsTestingPing] = useState(false);
   const [testPingResult, setTestPingResult] = useState<string | null>(null);
 
-  // 1-Click OAuth Flow State
+  // External Website Authorization State
   const [isAuthorizingOAuth, setIsAuthorizingOAuth] = useState(false);
-  const [oauthStep, setOauthStep] = useState<'idle' | 'authorizing' | 'success'>('idle');
+  const [oauthStep, setOauthStep] = useState<'idle' | 'portal_open' | 'verifying' | 'success'>('idle');
+  const [openedPortalUrl, setOpenedPortalUrl] = useState<string>('');
   
   // Config edit state & show/hide passwords
   const [appConfigState, setAppConfigState] = useState<Record<string, string>>({});
@@ -308,7 +628,7 @@ const Integrations = () => {
 
   const showToast = (msg: string) => {
     setToastMessage(msg);
-    setTimeout(() => setToastMessage(''), 3000);
+    setTimeout(() => setToastMessage(''), 3500);
   };
 
   useEffect(() => {
@@ -319,7 +639,7 @@ const Integrations = () => {
     if (!user?._id) return;
     setLoading(true);
     try {
-      const res = await axios.get('http://localhost:3001/api/integrations', {
+      const res = await axios.get(`${API_BASE}/api/integrations`, {
         headers: { userid: user._id }
       });
       const fetchedApps = res.data.integrations || [];
@@ -342,51 +662,77 @@ const Integrations = () => {
     setTestPingResult(null);
     setIsAuthorizingOAuth(false);
     setOauthStep('idle');
+    setOpenedPortalUrl('');
     setIsConfigModalOpen(true);
   };
 
-  // 1-Click OAuth Handshake Flow
-  const handleOAuthConnect = async () => {
+  // Step 1: Launch Official External Integration Authorization / Developer Website
+  const handleLaunchWebsiteAuth = () => {
+    if (!selectedApp) return;
+    const portal = getIntegrationPortal(selectedApp);
+    setOpenedPortalUrl(portal.authUrl);
+    setOauthStep('portal_open');
+
+    // Open centered OAuth / Developer Authorization window directly on the provider's website
+    const width = 680;
+    const height = 760;
+    const left = Math.max(0, Math.round(window.screenX + (window.outerWidth - width) / 2));
+    const top = Math.max(0, Math.round(window.screenY + (window.outerHeight - height) / 2));
+    window.open(
+      portal.authUrl,
+      `leadpulse_oauth_${selectedApp.id}`,
+      `width=${width},height=${height},left=${left},top=${top},noopener,noreferrer`
+    );
+  };
+
+  // Step 2: Confirm & Verify Website Authorization Handshake
+  const handleCompleteWebsiteAuth = async () => {
     if (!selectedApp || !user?._id) return;
     setIsAuthorizingOAuth(true);
-    setOauthStep('authorizing');
+    setOauthStep('verifying');
 
-    const defaultSlug = (user?.name || 'alex-roberts').toLowerCase().replace(/[^a-z0-9]/g, '-');
+    const portal = getIntegrationPortal(selectedApp);
+    const defaultSlug = (user?.name || user?.company_name || 'workspace').toLowerCase().replace(/[^a-z0-9]/g, '-');
     const extraDefaults: Record<string, string> = {};
     if (selectedApp.id === 'calendly' && !appConfigState.bookingUrl) {
       extraDefaults.bookingUrl = `https://calendly.com/${defaultSlug}/15min`;
     }
 
-    setTimeout(async () => {
-      try {
-        const res = await axios.post('http://localhost:3001/api/integrations/connect', {
-          appId: selectedApp.id,
-          config: { ...selectedApp.config, ...appConfigState, ...extraDefaults, authType: 'oauth2', connectedAt: new Date().toISOString() }
-        }, {
-          headers: { userid: user._id }
-        });
+    try {
+      const res = await axios.post(`${API_BASE}/api/integrations/connect`, {
+        appId: selectedApp.id,
+        config: {
+          ...selectedApp.config,
+          ...appConfigState,
+          ...extraDefaults,
+          authType: 'website_oauth2',
+          authorizedPortal: portal.authUrl,
+          connectedAt: new Date().toISOString()
+        }
+      }, {
+        headers: { userid: user._id }
+      });
 
-        setApps(res.data.integrations);
-        setIntegrations(res.data.integrations);
-        if (res.data.logs) setIntegrationLogs(res.data.logs);
-        setOauthStep('success');
-        setTimeout(() => {
-          setIsConfigModalOpen(false);
-          setIsAuthorizingOAuth(false);
-          setOauthStep('idle');
-          showToast(`Connected to ${selectedApp.name} — Workspace actions unlocked!`);
-        }, 800);
-      } catch (err) {
-        console.error('OAuth connect failed:', err);
+      setApps(res.data.integrations);
+      setIntegrations(res.data.integrations);
+      if (res.data.logs) setIntegrationLogs(res.data.logs);
+      setOauthStep('success');
+      setTimeout(() => {
+        setIsConfigModalOpen(false);
         setIsAuthorizingOAuth(false);
         setOauthStep('idle');
-        await alertDialog({
-          title: 'OAuth Authorization Failed',
-          message: 'OAuth authorization failed. Please try again or use direct credentials below.',
-          variant: 'error'
-        });
-      }
-    }, 900);
+        showToast(`Authorized & linked ${selectedApp.name} via ${portal.portalLabel}!`);
+      }, 600);
+    } catch (err) {
+      console.error('Website authorization connect failed:', err);
+      setIsAuthorizingOAuth(false);
+      setOauthStep('portal_open');
+      await alertDialog({
+        title: 'Authorization Verification Failed',
+        message: 'Could not verify the connection. Please check your authorization or paste your API key/webhook below.',
+        variant: 'error'
+      });
+    }
   };
 
   // Toggle reveal password
@@ -400,7 +746,7 @@ const Integrations = () => {
     setIsTestingPing(true);
     setTestPingResult(null);
     try {
-      const res = await axios.post('http://localhost:3001/api/integrations/test', {
+      const res = await axios.post(`${API_BASE}/api/integrations/test`, {
         appId: selectedApp.id,
         config: appConfigState
       });
@@ -412,14 +758,20 @@ const Integrations = () => {
     }
   };
 
-  // Save / Connect App
+  // Save / Connect App via Direct API Credentials
   const handleSaveConnection = async () => {
     if (!selectedApp || !user?._id) return;
     setIsSaving(true);
     try {
-      const res = await axios.post('http://localhost:3001/api/integrations/connect', {
+      const portal = getIntegrationPortal(selectedApp);
+      const res = await axios.post(`${API_BASE}/api/integrations/connect`, {
         appId: selectedApp.id,
-        config: appConfigState
+        config: {
+          ...appConfigState,
+          authType: 'api_key',
+          authorizedPortal: portal.consoleUrl,
+          connectedAt: new Date().toISOString()
+        }
       }, {
         headers: { userid: user._id }
       });
@@ -453,7 +805,7 @@ const Integrations = () => {
     });
     if (!confirmed) return;
     try {
-      const res = await axios.post('http://localhost:3001/api/integrations/disconnect', {
+      const res = await axios.post(`${API_BASE}/api/integrations/disconnect`, {
         appId: selectedApp.id
       }, {
         headers: { userid: user._id }
@@ -480,7 +832,7 @@ const Integrations = () => {
     });
     if (!confirmed) return;
     try {
-      await axios.delete('http://localhost:3001/api/integrations/logs', {
+      await axios.delete(`${API_BASE}/api/integrations/logs`, {
         headers: { userid: user._id }
       });
       setIntegrationLogs([]);
@@ -494,17 +846,17 @@ const Integrations = () => {
   const handleSendTestWebhookLead = async () => {
     if (!user?._id) return;
     try {
-      await axios.post(`http://localhost:3001/api/leads/form-submit/${user._id}`, {
-        name: 'Zapier Inbound Lead',
+      await axios.post(`${API_BASE}/api/leads/form-submit/${user._id}`, {
+        name: 'Webhook Inbound Lead',
         email: 'webhook.test@cloudconnect.com',
         phone: '+1 (555) 018-9200',
-        company: 'CloudConnect Inc',
+        company: 'CloudConnect Systems',
         formId: 'api-webhook-sync'
       });
       await useStore.getState().notifyIntegration(
         'webhook-custom',
-        'Captured inbound webhook lead: CloudConnect Inc (webhook.test@cloudconnect.com)',
-        { source: 'api-webhook-sync', company: 'CloudConnect Inc', email: 'webhook.test@cloudconnect.com' }
+        'Captured inbound webhook lead: CloudConnect Systems (webhook.test@cloudconnect.com)',
+        { source: 'api-webhook-sync', company: 'CloudConnect Systems', email: 'webhook.test@cloudconnect.com' }
       );
       showToast('Test Webhook Lead dispatched, saved to Audience, and logged!');
     } catch (err) {
@@ -516,6 +868,7 @@ const Integrations = () => {
   const filteredApps = useMemo(() => {
     const query = searchQuery.trim().toLowerCase();
     const matched = apps.filter(app => {
+      if (showActiveOnly && !app.connected) return false;
       const matchesCategory = selectedCategory === 'All' || app.category.toLowerCase() === selectedCategory.toLowerCase();
       if (!matchesCategory) return false;
       if (!query) return true;
@@ -543,21 +896,22 @@ const Integrations = () => {
       // Default: 'az' (Alphabetical A -> Z)
       return a.name.localeCompare(b.name);
     });
-  }, [apps, searchQuery, selectedCategory, sortBy]);
+  }, [apps, searchQuery, selectedCategory, showActiveOnly, sortBy]);
 
   // Compute category counts
   const categoryCounts = useMemo(() => {
-    const counts: Record<string, number> = { All: apps.length };
+    const baseApps = showActiveOnly ? apps.filter(a => a.connected) : apps;
+    const counts: Record<string, number> = { All: baseApps.length };
     CATEGORIES.forEach(cat => {
       if (cat !== 'All') {
-        counts[cat] = apps.filter(a => a.category.toLowerCase() === cat.toLowerCase()).length;
+        counts[cat] = baseApps.filter(a => a.category.toLowerCase() === cat.toLowerCase()).length;
       }
     });
     return counts;
-  }, [apps]);
+  }, [apps, showActiveOnly]);
 
   const connectedCount = apps.filter(a => a.connected).length;
-  const webhookUrl = `http://localhost:3001/api/leads/form-submit/${user?._id || 'YOUR_USER_ID'}`;
+  const webhookUrl = `${API_BASE}/api/leads/form-submit/${user?._id || 'YOUR_USER_ID'}`;
 
   const getCategoryTheme = (cat: string) => {
     switch (cat) {
@@ -657,16 +1011,31 @@ const Integrations = () => {
 
             {/* Unified 3-Column Divided Architectural Ledger */}
             <div className="bg-white border border-slate-200 rounded-lg grid grid-cols-1 md:grid-cols-3 divide-y md:divide-y-0 md:divide-x divide-slate-200 overflow-hidden">
-              {/* Column 1: Workspace Ecosystem */}
-              <div className="p-4 flex items-center justify-between">
+              {/* Column 1: Workspace Ecosystem (Click to toggle Active / Connected view) */}
+              <div
+                onClick={() => setShowActiveOnly(prev => !prev)}
+                className={`p-4 flex items-center justify-between cursor-pointer transition-colors group ${
+                  showActiveOnly ? 'bg-emerald-50/60 hover:bg-emerald-50' : 'hover:bg-slate-50'
+                }`}
+                title="Click to toggle Active / Connected integrations filter"
+              >
                 <div>
-                  <span className="text-[10px] font-delight font-semibold uppercase tracking-wider text-slate-500">Workspace Ecosystem</span>
+                  <div className="flex items-center gap-2">
+                    <span className="text-[10px] font-delight font-semibold uppercase tracking-wider text-slate-500">Workspace Ecosystem</span>
+                    <span className={`text-[9px] font-delight font-semibold px-1.5 py-0.5 rounded border transition-colors ${
+                      showActiveOnly
+                        ? 'bg-emerald-600 text-white border-emerald-600'
+                        : 'bg-slate-100 text-slate-600 border-slate-200 group-hover:border-[#191716] group-hover:text-[#191716]'
+                    }`}>
+                      {showActiveOnly ? 'Showing Active Only' : 'Filter Active'}
+                    </span>
+                  </div>
                   <div className="text-xl font-bold font-delight mt-1 text-[#191716] tabular-nums">
                     {connectedCount} <span className="text-xs font-normal text-slate-500">/ {apps.length} Active</span>
                   </div>
                   <p className="text-[11px] text-slate-500 mt-0.5 flex items-center gap-1.5">
-                    <span className="w-1.5 h-1.5 rounded-full bg-[#C85A32]"></span>
-                    <span>Synced across Audience, CRM &amp; Outreach</span>
+                    <span className={`w-1.5 h-1.5 rounded-full ${connectedCount > 0 ? 'bg-emerald-500' : 'bg-[#C85A32]'}`}></span>
+                    <span>{showActiveOnly ? 'Click to view all available connectors' : 'Click to filter connected integrations'}</span>
                   </p>
                 </div>
               </div>
@@ -708,9 +1077,29 @@ const Integrations = () => {
               </div>
             </div>
 
-            {/* Clean Category Filter, Search, Sort & View Toggle Bar */}
+            {/* Clean Category Filter, Active Toggle, Search, Sort & View Toggle Bar */}
             <div className="bg-white border border-slate-200 rounded-md p-2.5 flex flex-col xl:flex-row xl:items-center justify-between gap-2.5">
               <div className="flex items-center gap-1 overflow-x-auto pb-1 xl:pb-0 custom-scrollbar">
+                {/* Prominent Active / Connected Toggle Button */}
+                <button
+                  type="button"
+                  onClick={() => setShowActiveOnly(prev => !prev)}
+                  className={`px-2.5 py-1 rounded text-xs font-delight transition-all cursor-pointer border flex items-center gap-1.5 whitespace-nowrap shrink-0 mr-1 ${
+                    showActiveOnly
+                      ? 'bg-emerald-600 text-white border-emerald-600 font-semibold shadow-2xs'
+                      : 'bg-emerald-50/80 text-emerald-800 border-emerald-200 hover:bg-emerald-100/80 font-semibold'
+                  }`}
+                  title="Toggle viewing only active/connected integrations"
+                >
+                  <span className={`w-1.5 h-1.5 rounded-full ${showActiveOnly ? 'bg-white animate-pulse' : 'bg-emerald-500'}`} />
+                  <span>Active / Connected</span>
+                  <span className={`text-[10px] font-delight font-bold px-1.5 py-0.2 rounded ${
+                    showActiveOnly ? 'bg-black/20 text-white' : 'bg-emerald-200/80 text-emerald-900'
+                  }`}>
+                    {connectedCount}
+                  </span>
+                </button>
+
                 {CATEGORIES.map(cat => {
                   const count = categoryCounts[cat] ?? 0;
                   const isSelected = selectedCategory === cat;
@@ -805,14 +1194,33 @@ const Integrations = () => {
             {/* Apps Display — Compact 4-Column Grid View OR Sleek List View (Alphabetical Default) */}
             {filteredApps.length === 0 ? (
               <div className="bg-white border border-slate-200 rounded-md p-10 text-center space-y-2">
-                <p className="text-sm font-delight text-slate-700 font-semibold">No connectors matching "{searchQuery}"</p>
-                <p className="text-xs text-slate-400">Try searching for CRM, AI providers, databases, or clear the search query.</p>
-                <button
-                  onClick={() => { setSearchQuery(''); setSelectedCategory('All'); setSortBy('az'); }}
-                  className="mt-3 px-3.5 py-1.5 bg-[#191716] text-white rounded text-xs font-delight font-semibold cursor-pointer"
-                >
-                  Reset Filter
-                </button>
+                {showActiveOnly ? (
+                  <>
+                    <p className="text-sm font-delight text-slate-700 font-semibold">
+                      No active integrations connected yet{selectedCategory !== 'All' ? ` in ${selectedCategory}` : ''}
+                    </p>
+                    <p className="text-xs text-slate-400">
+                      Authorize an integration via its official website portal or API key to see it under Active / Connected.
+                    </p>
+                    <button
+                      onClick={() => { setShowActiveOnly(false); setSearchQuery(''); setSelectedCategory('All'); }}
+                      className="mt-3 px-3.5 py-1.5 bg-[#191716] text-white rounded text-xs font-delight font-semibold cursor-pointer"
+                    >
+                      Browse All {apps.length} Connectors
+                    </button>
+                  </>
+                ) : (
+                  <>
+                    <p className="text-sm font-delight text-slate-700 font-semibold">No connectors matching "{searchQuery}"</p>
+                    <p className="text-xs text-slate-400">Try searching for CRM, AI providers, databases, or clear the search query.</p>
+                    <button
+                      onClick={() => { setSearchQuery(''); setSelectedCategory('All'); setShowActiveOnly(false); setSortBy('az'); }}
+                      className="mt-3 px-3.5 py-1.5 bg-[#191716] text-white rounded text-xs font-delight font-semibold cursor-pointer"
+                    >
+                      Reset Filter
+                    </button>
+                  </>
+                )}
               </div>
             ) : viewMode === 'grid' ? (
               <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-3">
@@ -1025,279 +1433,306 @@ const Integrations = () => {
         </div>
       </div>
 
-      {/* ================= MODAL: CONFIGURE INTEGRATION ================= */}
-      {isConfigModalOpen && selectedApp && (
-        <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-xs flex items-center justify-center p-3 sm:p-4 z-50 animate-in fade-in duration-150">
-          <div className="bg-white rounded-lg shadow-2xl border border-slate-200 max-w-xl w-full flex flex-col overflow-hidden animate-in zoom-in-95 duration-150 max-h-[92vh]">
-            
-            {/* Header: Back Button + Title + Close */}
-            <div className="flex items-center justify-between p-4 sm:p-5 border-b border-slate-200 bg-white shrink-0">
-              <div className="flex items-center gap-2.5">
-                <button
-                  type="button"
-                  onClick={() => setIsConfigModalOpen(false)}
-                  className="w-7 h-7 rounded-md border border-slate-200 hover:bg-slate-50 flex items-center justify-center text-slate-500 hover:text-slate-800 transition-colors cursor-pointer"
-                  title="Back"
-                >
-                  <ChevronLeft className="w-4 h-4" />
-                </button>
-                <div className="flex items-center gap-2">
-                  <h3 className="text-base sm:text-lg font-bold text-slate-900 tracking-tight font-display">
-                    Connect to {selectedApp.name}
-                  </h3>
-                  {selectedApp.connected && (
-                    <span className="text-[10px] font-delight font-medium px-2 py-0.5 rounded-sm bg-emerald-50 text-emerald-700 border border-emerald-200">
-                      Active Sync
-                    </span>
-                  )}
-                </div>
-              </div>
-
-              <button 
-                type="button"
-                onClick={() => setIsConfigModalOpen(false)} 
-                className="w-7 h-7 rounded-md bg-white hover:bg-slate-100 text-slate-500 border border-slate-200 flex items-center justify-center cursor-pointer transition-colors"
-                title="Close"
-              >
-                <X className="w-4 h-4" />
-              </button>
-            </div>
-
-            {/* Scrollable Modal Content */}
-            <div className="p-5 sm:p-6 overflow-y-auto custom-scrollbar space-y-5 flex-1">
+      {/* ================= MODAL: CONFIGURE & AUTHORIZE INTEGRATION ================= */}
+      {isConfigModalOpen && selectedApp && (() => {
+        const portal = getIntegrationPortal(selectedApp);
+        return (
+          <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-xs flex items-center justify-center p-3 sm:p-4 z-50 animate-in fade-in duration-150">
+            <div className="bg-white rounded-lg shadow-2xl border border-slate-200 max-w-xl w-full flex flex-col overflow-hidden animate-in zoom-in-95 duration-150 max-h-[92vh]">
               
-              {/* 1. Numbered Step-by-Step Instructions */}
-              <div className="space-y-2">
-                {getAppSteps(selectedApp).map((step, idx) => (
-                  <div key={idx} className="flex items-start gap-2.5 text-xs text-slate-700 font-delight font-medium">
-                    <span className="w-4 h-4 rounded-xs bg-slate-100 border border-slate-200 text-slate-700 font-bold flex items-center justify-center text-[10px] shrink-0 mt-0.5">
-                      {idx + 1}
-                    </span>
-                    <span className="leading-snug">{step}</span>
-                  </div>
-                ))}
-              </div>
-
-              {/* 2. Visual OAuth Authorization Preview Mockup Card */}
-              <div className="bg-slate-50/70 border border-slate-200 rounded-lg p-5 flex flex-col items-center text-center shadow-xs">
-                <div className="bg-white border border-slate-200/90 rounded-md p-4 w-full max-w-sm shadow-xs space-y-3 text-left">
-                  <div className="flex items-center gap-2 pb-2 border-b border-slate-100">
-                    <IntegrationLogo logo={selectedApp.logo} name={selectedApp.name} size="sm" />
-                    <span className="text-xs font-bold text-slate-800 font-display">
-                      Sign in with {selectedApp.name}
-                    </span>
-                  </div>
-                  
-                  <div className="text-center py-1">
-                    <div className="inline-flex items-center justify-center gap-2 mb-2">
-                      <div className="w-8 h-8 rounded-md bg-slate-900 text-white flex items-center justify-center font-bold text-xs shadow-2xs">
-                        LP
-                      </div>
-                      <div className="w-6 h-0.5 bg-slate-200"></div>
-                      <div className="w-8 h-8 rounded-md bg-white border border-slate-200 flex items-center justify-center p-1 shadow-2xs">
-                        <IntegrationLogo logo={selectedApp.logo} name={selectedApp.name} size="sm" />
-                      </div>
-                    </div>
-                    <h4 className="text-xs font-bold text-slate-900 tracking-tight font-display">
-                      LeadPulse wants access to your {selectedApp.name} Account
-                    </h4>
-                    <div className="text-[10px] text-slate-500 font-delight font-normal mt-0.5 flex items-center justify-center gap-1">
-                      <span className="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
-                      <span>{user?.email || 'user@workspace.com'}</span>
-                    </div>
-                  </div>
-
-                  <div className="bg-slate-50 rounded-sm p-2.5 text-[11px] text-slate-600 space-y-1.5 border border-slate-100 font-delight font-medium">
-                    <div className="text-[10px] font-bold text-slate-700 uppercase tracking-wider">When you allow access:</div>
-                    <div className="flex items-center gap-1.5 text-slate-700">
-                      <Check className="w-3 h-3 text-emerald-600 shrink-0" />
-                      <span>Read, write & sync lead intelligence data</span>
-                    </div>
-                    <div className="flex items-center gap-1.5 text-slate-700">
-                      <Check className="w-3 h-3 text-emerald-600 shrink-0" />
-                      <span>Stream automated triggers and pipeline conversions</span>
-                    </div>
-                    <div className="flex items-center gap-1.5 text-slate-700">
-                      <Check className="w-3 h-3 text-emerald-600 shrink-0" />
-                      <span>Protected under SOC2 & AES-256 token encryption</span>
-                    </div>
+              {/* Header: Back Button + Title + Close */}
+              <div className="flex items-center justify-between p-4 sm:p-5 border-b border-slate-200 bg-white shrink-0">
+                <div className="flex items-center gap-2.5">
+                  <button
+                    type="button"
+                    onClick={() => setIsConfigModalOpen(false)}
+                    className="w-7 h-7 rounded-md border border-slate-200 hover:bg-slate-50 flex items-center justify-center text-slate-500 hover:text-slate-800 transition-colors cursor-pointer"
+                    title="Back"
+                  >
+                    <ChevronLeft className="w-4 h-4" />
+                  </button>
+                  <div className="flex items-center gap-2">
+                    <h3 className="text-base sm:text-lg font-bold text-slate-900 tracking-tight font-display">
+                      {selectedApp.connected ? `Manage ${selectedApp.name}` : `Authorize & Link ${selectedApp.name}`}
+                    </h3>
+                    {selectedApp.connected && (
+                      <span className="text-[10px] font-delight font-medium px-2 py-0.5 rounded-sm bg-emerald-50 text-emerald-700 border border-emerald-200">
+                        Active Sync
+                      </span>
+                    )}
                   </div>
                 </div>
 
-                <p className="text-[11px] text-slate-400 mt-3 max-w-sm leading-relaxed">
-                  LeadPulse adheres to stringent security measures to protect and encrypt your credentials.{' '}
-                  <span className="text-slate-700 underline font-medium cursor-pointer">
-                    Read about LeadPulse's commitment to data security.
-                  </span>
-                </p>
-              </div>
-
-              {/* 3. Primary 1-Click OAuth Connect Button */}
-              <div>
-                <button
+                <button 
                   type="button"
-                  onClick={handleOAuthConnect}
-                  disabled={isAuthorizingOAuth}
-                  className="w-full h-11 bg-slate-900 hover:bg-slate-800 text-white font-delight text-xs font-medium rounded-md transition-all flex items-center justify-center gap-2.5 border border-slate-900 shadow-xs cursor-pointer disabled:opacity-50"
+                  onClick={() => setIsConfigModalOpen(false)} 
+                  className="w-7 h-7 rounded-md bg-white hover:bg-slate-100 text-slate-500 border border-slate-200 flex items-center justify-center cursor-pointer transition-colors"
+                  title="Close"
                 >
-                  {isAuthorizingOAuth ? (
-                    <>
-                      <RefreshCw className="w-4 h-4 animate-spin text-white" />
-                      <span>{oauthStep === 'authorizing' ? `Authorizing with ${selectedApp.name}...` : `Connected! Syncing...`}</span>
-                    </>
-                  ) : selectedApp.connected ? (
-                    <>
-                      <CheckCircle2 className="w-4 h-4 text-emerald-400" />
-                      <span>Re-authorize {selectedApp.name} (OAuth 2.0)</span>
-                    </>
-                  ) : (
-                    <>
-                      <div className="w-5 h-5 rounded-xs bg-white/10 flex items-center justify-center p-0.5">
-                        <IntegrationLogo logo={selectedApp.logo} name={selectedApp.name} size="sm" />
-                      </div>
-                      <span>Connect to {selectedApp.name}</span>
-                    </>
-                  )}
+                  <X className="w-4 h-4" />
                 </button>
               </div>
 
-              {/* 4. Sleek "OR" Divider */}
-              <div className="relative my-2">
-                <div className="absolute inset-0 flex items-center">
-                  <div className="w-full border-t border-slate-200"></div>
-                </div>
-                <div className="relative flex justify-center text-xs">
-                  <span className="bg-white px-3 text-slate-500 font-delight font-normal text-[11px]">
-                    or connect via API credentials & webhooks
-                  </span>
-                </div>
-              </div>
-
-              {/* 5. Direct API Credentials Fallback (Right Below) */}
-              <div className="space-y-3.5 bg-slate-50/70 p-4 rounded-lg border border-slate-200">
-                <div className="flex items-center justify-between pb-1.5 border-b border-slate-200/80">
-                  <div className="flex items-center gap-1.5 text-xs font-delight font-bold text-slate-800">
-                    <Key className="w-3.5 h-3.5 text-slate-500" />
-                    <span>Direct API Key / Webhook Settings</span>
-                  </div>
-                  <span className="text-[10px] font-delight font-normal text-slate-400">Manual Endpoint</span>
+              {/* Scrollable Modal Content */}
+              <div className="p-5 sm:p-6 overflow-y-auto custom-scrollbar space-y-5 flex-1">
+                
+                {/* 1. Numbered Step-by-Step Instructions */}
+                <div className="space-y-2">
+                  {getAppSteps(selectedApp).map((step, idx) => (
+                    <div key={idx} className="flex items-start gap-2.5 text-xs text-slate-700 font-delight font-medium">
+                      <span className="w-4 h-4 rounded-xs bg-slate-100 border border-slate-200 text-slate-700 font-bold flex items-center justify-center text-[10px] shrink-0 mt-0.5">
+                        {idx + 1}
+                      </span>
+                      <span className="leading-snug">{step}</span>
+                    </div>
+                  ))}
                 </div>
 
-                {selectedApp.configFields && selectedApp.configFields.length > 0 ? (
-                  selectedApp.configFields.map((field) => {
-                    const isPassword = field.type === 'password';
-                    const isRevealed = revealedKeys[field.key];
-                    const currentInputType = isPassword ? (isRevealed ? 'text' : 'password') : field.type;
-
-                    return (
-                      <div key={field.key} className="space-y-1">
-                        <div className="flex items-center justify-between">
-                          <label className="block text-[11px] font-delight text-slate-700 font-medium">
-                            {field.label} {field.required && <span className="text-rose-500">*</span>}
-                          </label>
-                          {field.helperText && (
-                            <span className="text-[10px] text-slate-400 font-delight font-normal">{field.helperText}</span>
-                          )}
-                        </div>
-                        
-                        <div className="relative">
-                          <input 
-                            type={currentInputType}
-                            value={appConfigState[field.key] ?? ''}
-                            onChange={(e) => setAppConfigState({ ...appConfigState, [field.key]: e.target.value })}
-                            placeholder={field.placeholder}
-                            className={`w-full h-8 px-2.5 bg-white border border-slate-200 rounded-md text-xs font-delight font-normal outline-none focus:border-slate-400 transition-colors placeholder:text-slate-400 ${
-                              isPassword ? 'pr-8' : ''
-                            }`}
-                          />
-                          {isPassword && (
-                            <button
-                              type="button"
-                              onClick={() => toggleRevealKey(field.key)}
-                              className="absolute right-2 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 cursor-pointer"
-                              title={isRevealed ? 'Hide secret' : 'Reveal secret'}
-                            >
-                              {isRevealed ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
-                            </button>
-                          )}
-                        </div>
+                {/* 2. Official Website OAuth & Developer Portal Authorization Card */}
+                <div className="bg-slate-50/80 border border-slate-200 rounded-lg p-4 sm:p-5 space-y-3.5 shadow-2xs">
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="flex items-center gap-2.5">
+                      <div className="w-9 h-9 rounded-md bg-white border border-slate-200 flex items-center justify-center p-1.5 shrink-0 shadow-2xs">
+                        <IntegrationLogo logo={selectedApp.logo} name={selectedApp.name} size="md" />
                       </div>
-                    );
-                  })
-                ) : (
-                  <div className="space-y-3">
-                    <div>
-                      <label className="block text-[11px] font-delight font-semibold text-slate-600 mb-1">API Key / Token</label>
-                      <input 
-                        type="password"
-                        value={appConfigState.apiKey || ''}
-                        onChange={(e) => setAppConfigState({ ...appConfigState, apiKey: e.target.value })}
-                        placeholder="Enter API token..."
-                        className="w-full h-8 px-2.5 bg-white border border-slate-200 rounded-md text-xs font-delight font-medium outline-none focus:border-slate-400"
-                      />
+                      <div>
+                        <h4 className="text-xs font-bold text-slate-900 font-delight">
+                          {portal.portalLabel}
+                        </h4>
+                        <p className="text-[11px] text-slate-500 font-delight truncate max-w-[310px]">
+                          {portal.authUrl}
+                        </p>
+                      </div>
                     </div>
-                    <div>
-                      <label className="block text-[11px] font-delight font-semibold text-slate-600 mb-1">Target Endpoint / Webhook URL</label>
-                      <input 
-                        type="url"
-                        value={appConfigState.endpoint || ''}
-                        onChange={(e) => setAppConfigState({ ...appConfigState, endpoint: e.target.value })}
-                        placeholder="https://api.service.com/v1"
-                        className="w-full h-8 px-2.5 bg-white border border-slate-200 rounded-md text-xs font-delight font-medium outline-none focus:border-slate-400"
-                      />
-                    </div>
-                  </div>
-                )}
 
-                {testPingResult && (
-                  <div className="p-2.5 bg-emerald-50 text-emerald-800 rounded-md text-xs font-delight font-medium border border-emerald-200 flex items-start gap-2">
-                    <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0 mt-0.5" />
-                    <span className="leading-snug">{testPingResult}</span>
+                    <a
+                      href={portal.docsUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-[11px] font-delight font-semibold text-[#C85A32] hover:underline flex items-center gap-1 shrink-0"
+                    >
+                      <span>Official Docs</span>
+                      <ExternalLink className="w-3 h-3" />
+                    </a>
                   </div>
-                )}
+
+                  <div className="bg-white rounded-md p-3 border border-slate-200/90 text-[11px] text-slate-600 space-y-1.5 font-delight">
+                    <div className="text-[10px] font-bold text-slate-700 uppercase tracking-wider">
+                      Website Authorization Permissions:
+                    </div>
+                    <div className="flex items-center gap-1.5 text-slate-700">
+                      <Check className="w-3 h-3 text-emerald-600 shrink-0" />
+                      <span>Authenticate directly on {selectedApp.name}&apos;s official login &amp; OAuth portal</span>
+                    </div>
+                    <div className="flex items-center gap-1.5 text-slate-700">
+                      <Check className="w-3 h-3 text-emerald-600 shrink-0" />
+                      <span>Link workspace account ({user?.email || 'your operator account'}) for live 2-way sync</span>
+                    </div>
+                  </div>
+
+                  {/* Step 1 Button: Open Real Provider Website */}
+                  <div className="space-y-2.5">
+                    <button
+                      type="button"
+                      onClick={handleLaunchWebsiteAuth}
+                      disabled={isAuthorizingOAuth}
+                      className="w-full h-10 bg-[#191716] hover:bg-slate-800 text-white font-delight text-xs font-semibold rounded-md transition-all flex items-center justify-center gap-2 border border-[#191716] shadow-xs cursor-pointer disabled:opacity-50"
+                    >
+                      <IntegrationLogo logo={selectedApp.logo} name={selectedApp.name} size="sm" />
+                      <span>
+                        {oauthStep === 'portal_open'
+                          ? `Re-open ${selectedApp.name} Authorization Website`
+                          : selectedApp.connected
+                          ? `Re-authorize on ${selectedApp.name} Website`
+                          : `Authorize on ${selectedApp.name} Website`}
+                      </span>
+                      <ExternalLink className="w-3.5 h-3.5 text-slate-300" />
+                    </button>
+
+                    {/* Step 2 Box: Shown once the external website popup/tab has been launched */}
+                    {oauthStep !== 'idle' && (
+                      <div className="p-3.5 rounded-md bg-emerald-50/90 border border-emerald-200 space-y-2.5 animate-in fade-in duration-150">
+                        <div className="flex items-start justify-between gap-2">
+                          <div className="space-y-0.5">
+                            <div className="text-xs font-delight font-bold text-emerald-950 flex items-center gap-1.5">
+                              <span className="w-2 h-2 rounded-full bg-emerald-500 animate-ping" />
+                              <span>External {selectedApp.name} Portal Launched</span>
+                            </div>
+                            <p className="text-[11px] text-emerald-800 font-delight leading-relaxed">
+                              Complete sign-in and authorization in the opened {selectedApp.name} window ({openedPortalUrl || portal.authUrl}), then click below to verify and activate your workspace link.
+                            </p>
+                          </div>
+                        </div>
+
+                        <button
+                          type="button"
+                          onClick={handleCompleteWebsiteAuth}
+                          disabled={isAuthorizingOAuth}
+                          className="w-full h-9 bg-emerald-600 hover:bg-emerald-700 text-white font-delight text-xs font-semibold rounded-md transition-all flex items-center justify-center gap-2 cursor-pointer shadow-2xs disabled:opacity-50"
+                        >
+                          {isAuthorizingOAuth ? (
+                            <>
+                              <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                              <span>Verifying Authorization with {selectedApp.name}...</span>
+                            </>
+                          ) : (
+                            <>
+                              <CheckCircle2 className="w-3.5 h-3.5" />
+                              <span>I&apos;ve Authorized on {selectedApp.name} — Verify &amp; Link Now</span>
+                            </>
+                          )}
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                {/* 4. Sleek "OR" Divider */}
+                <div className="relative my-2">
+                  <div className="absolute inset-0 flex items-center">
+                    <div className="w-full border-t border-slate-200"></div>
+                  </div>
+                  <div className="relative flex justify-center text-xs">
+                    <span className="bg-white px-3 text-slate-500 font-delight font-normal text-[11px]">
+                      or paste live credentials from {selectedApp.name} Developer Console
+                    </span>
+                  </div>
+                </div>
+
+                {/* 5. Direct API Credentials / Webhook Settings */}
+                <div className="space-y-3.5 bg-slate-50/70 p-4 rounded-lg border border-slate-200">
+                  <div className="flex items-center justify-between pb-1.5 border-b border-slate-200/80">
+                    <div className="flex items-center gap-1.5 text-xs font-delight font-bold text-slate-800">
+                      <Key className="w-3.5 h-3.5 text-slate-500" />
+                      <span>Direct API Key / Webhook Configuration</span>
+                    </div>
+                    <a
+                      href={portal.consoleUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-[11px] font-delight font-semibold text-[#C85A32] hover:underline flex items-center gap-1"
+                    >
+                      <span>Open {selectedApp.name} Console</span>
+                      <ExternalLink className="w-3 h-3" />
+                    </a>
+                  </div>
+
+                  {selectedApp.configFields && selectedApp.configFields.length > 0 ? (
+                    selectedApp.configFields.map((field) => {
+                      const isPassword = field.type === 'password';
+                      const isRevealed = revealedKeys[field.key];
+                      const currentInputType = isPassword ? (isRevealed ? 'text' : 'password') : field.type;
+
+                      return (
+                        <div key={field.key} className="space-y-1">
+                          <div className="flex items-center justify-between">
+                            <label className="block text-[11px] font-delight text-slate-700 font-medium">
+                              {field.label} {field.required && <span className="text-rose-500">*</span>}
+                            </label>
+                            {field.helperText && (
+                              <span className="text-[10px] text-slate-400 font-delight font-normal">{field.helperText}</span>
+                            )}
+                          </div>
+                          
+                          <div className="relative">
+                            <input 
+                              type={currentInputType}
+                              value={appConfigState[field.key] ?? ''}
+                              onChange={(e) => setAppConfigState({ ...appConfigState, [field.key]: e.target.value })}
+                              placeholder={field.placeholder}
+                              className={`w-full h-8 px-2.5 bg-white border border-slate-200 rounded-md text-xs font-delight font-normal outline-none focus:border-slate-400 transition-colors placeholder:text-slate-400 ${
+                                isPassword ? 'pr-8' : ''
+                              }`}
+                            />
+                            {isPassword && (
+                              <button
+                                type="button"
+                                onClick={() => toggleRevealKey(field.key)}
+                                className="absolute right-2 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 cursor-pointer"
+                                title={isRevealed ? 'Hide secret' : 'Reveal secret'}
+                              >
+                                {isRevealed ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
+                              </button>
+                            )}
+                          </div>
+                        </div>
+                      );
+                    })
+                  ) : (
+                    <div className="space-y-3">
+                      <div>
+                        <label className="block text-[11px] font-delight font-semibold text-slate-600 mb-1">API Key / Token</label>
+                        <input 
+                          type="password"
+                          value={appConfigState.apiKey || ''}
+                          onChange={(e) => setAppConfigState({ ...appConfigState, apiKey: e.target.value })}
+                          placeholder="Enter API token..."
+                          className="w-full h-8 px-2.5 bg-white border border-slate-200 rounded-md text-xs font-delight font-medium outline-none focus:border-slate-400"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-[11px] font-delight font-semibold text-slate-600 mb-1">Target Endpoint / Webhook URL</label>
+                        <input 
+                          type="url"
+                          value={appConfigState.endpoint || ''}
+                          onChange={(e) => setAppConfigState({ ...appConfigState, endpoint: e.target.value })}
+                          placeholder="https://api.service.com/v1"
+                          className="w-full h-8 px-2.5 bg-white border border-slate-200 rounded-md text-xs font-delight font-medium outline-none focus:border-slate-400"
+                        />
+                      </div>
+                    </div>
+                  )}
+
+                  {testPingResult && (
+                    <div className="p-2.5 bg-emerald-50 text-emerald-800 rounded-md text-xs font-delight font-medium border border-emerald-200 flex items-start gap-2">
+                      <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0 mt-0.5" />
+                      <span className="leading-snug">{testPingResult}</span>
+                    </div>
+                  )}
+                </div>
+
               </div>
 
-            </div>
+              {/* Modal Bottom Actions */}
+              <div className="p-4 border-t border-slate-200 bg-slate-50 flex items-center justify-between gap-2.5 shrink-0">
+                <div>
+                  {selectedApp.connected && (
+                    <button 
+                      type="button" 
+                      onClick={handleDisconnect}
+                      className="text-xs font-delight font-medium text-rose-600 hover:text-rose-700 hover:underline cursor-pointer"
+                    >
+                      Disconnect Integration
+                    </button>
+                  )}
+                </div>
 
-            {/* Modal Bottom Actions */}
-            <div className="p-4 border-t border-slate-200 bg-slate-50 flex items-center justify-between gap-2.5 shrink-0">
-              <div>
-                {selectedApp.connected && (
+                <div className="flex items-center gap-2">
                   <button 
                     type="button" 
-                    onClick={handleDisconnect}
-                    className="text-xs font-delight font-medium text-rose-600 hover:text-rose-700 hover:underline cursor-pointer"
+                    disabled={isTestingPing}
+                    onClick={handleTestConnection}
+                    className="px-3 py-1.5 bg-white border border-slate-200 hover:bg-slate-50 text-slate-700 rounded-md text-xs font-delight font-medium transition-colors cursor-pointer flex items-center gap-1.5"
                   >
-                    Disconnect Integration
+                    {isTestingPing && <RefreshCw className="w-3 h-3 animate-spin text-slate-500" />}
+                    <span>{isTestingPing ? 'Pinging...' : 'Test Ping'}</span>
                   </button>
-                )}
+                  
+                  <button 
+                    type="button" 
+                    disabled={isSaving}
+                    onClick={handleSaveConnection}
+                    className="px-3.5 py-1.5 bg-slate-900 text-white rounded-md text-xs font-delight font-medium hover:bg-slate-800 transition-colors border border-slate-900 cursor-pointer"
+                  >
+                    {isSaving ? 'Saving...' : 'Save & Link Credentials'}
+                  </button>
+                </div>
               </div>
 
-              <div className="flex items-center gap-2">
-                <button 
-                  type="button" 
-                  disabled={isTestingPing}
-                  onClick={handleTestConnection}
-                  className="px-3 py-1.5 bg-white border border-slate-200 hover:bg-slate-50 text-slate-700 rounded-md text-xs font-delight font-medium transition-colors cursor-pointer flex items-center gap-1.5"
-                >
-                  {isTestingPing && <RefreshCw className="w-3 h-3 animate-spin text-slate-500" />}
-                  <span>{isTestingPing ? 'Pinging...' : 'Test Ping'}</span>
-                </button>
-                
-                <button 
-                  type="button" 
-                  disabled={isSaving}
-                  onClick={handleSaveConnection}
-                  className="px-3.5 py-1.5 bg-slate-900 text-white rounded-md text-xs font-delight font-medium hover:bg-slate-800 transition-colors border border-slate-900 cursor-pointer"
-                >
-                  {isSaving ? 'Saving...' : 'Save API Credentials'}
-                </button>
-              </div>
             </div>
-
           </div>
-        </div>
-      )}
+        );
+      })()}
 
       {/* ================= MODAL: API DOCUMENTATION ================= */}
       {isApiDocsOpen && (
@@ -1329,12 +1764,12 @@ const Integrations = () => {
                   <span className="text-slate-400">• Create or Ingest B2B Contact</span>
                 </div>
                 <pre className="p-3 bg-slate-900 text-slate-100 rounded-md font-delight font-normal text-[11px] overflow-x-auto leading-relaxed border border-slate-800">
-{`curl -X POST ${(import.meta.env.VITE_API_URL || (import.meta.env.DEV ? 'http://localhost:3001' : window.location.origin)).replace(/\/$/, '')}/api/leads \\
+{`curl -X POST ${API_BASE}/api/leads \\
   -H "Content-Type: application/json" \\
   -H "userid: ${user?._id || 'YOUR_USER_ID'}" \\
   -d '{
-    "businessName": "Apex Innovations",
-    "email": "contact@apex.io",
+    "businessName": "${user?.company_name || 'Meridian Cloud Systems'}",
+    "email": "${user?.email || 'contact@meridiancloud.io'}",
     "phone": "+1 555-0192",
     "category": "SaaS",
     "status": "New"
@@ -1350,12 +1785,12 @@ const Integrations = () => {
                   <span className="text-slate-400">• Public Inbound Lead Capture (No auth required)</span>
                 </div>
                 <pre className="p-3 bg-slate-900 text-slate-100 rounded-md font-delight font-normal text-[11px] overflow-x-auto leading-relaxed border border-slate-800">
-{`curl -X POST ${(import.meta.env.VITE_API_URL || (import.meta.env.DEV ? 'http://localhost:3001' : window.location.origin)).replace(/\/$/, '')}/api/leads/form-submit/${user?._id || 'YOUR_USER_ID'} \\
+{`curl -X POST ${API_BASE}/api/leads/form-submit/${user?._id || 'YOUR_USER_ID'} \\
   -H "Content-Type: application/json" \\
   -d '{
-    "name": "Alex Rivera",
-    "email": "alex@company.com",
-    "company": "Rivera Media",
+    "name": "${user?.name || 'Enterprise Buyer'}",
+    "email": "${user?.email || 'buyer@enterprise.com'}",
+    "company": "${user?.company_name || 'Meridian Cloud'}",
     "formId": "landing-page-v1"
   }'`}
                 </pre>

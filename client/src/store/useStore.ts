@@ -45,48 +45,7 @@ export interface IntegrationLogEntry {
   payload?: any;
 }
 
-const INITIAL_WORKSPACE_INTEGRATIONS: WorkspaceIntegration[] = [
-  {
-    id: 'slack',
-    name: 'Slack',
-    category: 'Communication',
-    connected: true,
-    logo: '/integrations/Slack.png',
-    description: 'Receive real-time lead capture, deal conversion, and team assignment alerts in dedicated Slack channels.',
-    config: { webhookUrl: 'https://hooks.slack.com/services/T00/B00/XXXXX', channel: '#sales-leads' },
-    lastSync: '5 mins ago'
-  },
-  {
-    id: 'hubspot',
-    name: 'HubSpot',
-    category: 'CRM',
-    connected: true,
-    logo: '/integrations/HubSpot.png',
-    description: 'Automatically push harvested B2B contacts directly into HubSpot CRM contact lists.',
-    config: { accessToken: 'pat-na1-xxxx-xxxx-xxxx' },
-    lastSync: '12 mins ago'
-  },
-  {
-    id: 'gmail-workspace',
-    name: 'Google Workspace / Gmail',
-    category: 'Communication',
-    connected: true,
-    logo: '/integrations/Google%20Drive.png',
-    description: 'Native SMTP and OAuth relay to dispatch cold campaigns with 99.4% inbox deliverability.',
-    config: { emailAddress: 'sales@leadpulse.io', provider: 'google_workspace' },
-    lastSync: '1 min ago'
-  },
-  {
-    id: 'webhook-custom',
-    name: 'Custom Webhooks',
-    category: 'Developer',
-    connected: true,
-    logo: 'https://cdn.simpleicons.org/webhook',
-    description: 'Send and receive raw JSON HTTP POST payloads directly into your LeadPulse database.',
-    config: { targetEndpoint: `${(import.meta.env.VITE_API_URL || (import.meta.env.DEV ? 'http://localhost:3001' : window.location.origin)).replace(/\/$/, '')}/api/leads/form-submit` },
-    lastSync: 'Just now'
-  }
-];
+const INITIAL_WORKSPACE_INTEGRATIONS: WorkspaceIntegration[] = [];
 
 interface AppState {
   user: User | null;

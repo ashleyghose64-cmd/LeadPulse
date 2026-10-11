@@ -81,11 +81,11 @@ router.post('/dispatch-batch', requireAuth, async (req: any, res: any) => {
       targetLeads = fallbackLeads.map((fl: any) => ({
         _id: fl._id || `lead-${Date.now()}-${Math.random().toString(36).substring(7)}`,
         businessName: fl.businessName || 'Business Lead',
-        location: fl.location || 'Kalyan West',
+        location: fl.location || req.user?.target_audience || 'Target Market',
         category: fl.category || fl.fieldOfWork || 'Commercial',
         fieldOfWork: fl.fieldOfWork || fl.category || 'Commercial',
         firstName: fl.firstName || (fl.businessName ? fl.businessName.split(' ')[0] : 'Partner'),
-        phone: fl.phone || '+91 98201 44520',
+        phone: fl.phone || '',
         rating: fl.rating || '4.9',
         email: fl.email || `contact@${(fl.businessName || 'partner').toLowerCase().replace(/[^a-z0-9]/g, '')}.com`
       }));
@@ -212,13 +212,13 @@ router.post('/dispatch-single', requireAuth, async (req: any, res: any) => {
 
   try {
     const lead: LeadData = targetLead || {
-      businessName: 'Apex Dental Care & Implant Clinic',
-      location: 'Kalyan West',
-      category: 'Dentists',
-      fieldOfWork: 'Dental Healthcare',
-      firstName: 'Dr. Rahul',
-      phone: '+91 98332 10984',
-      rating: '4.8'
+      businessName: req.user?.company_name || 'Target Business',
+      location: req.user?.target_audience || 'Target Market',
+      category: req.user?.field_of_work || 'B2B Services',
+      fieldOfWork: req.user?.field_of_work || 'B2B Services',
+      firstName: req.user?.name ? req.user.name.split(' ')[0] : 'Partner',
+      phone: '',
+      rating: '5.0'
     };
 
     const recipient = customRecipientEmail || lead.email || `contact@${lead.businessName.toLowerCase().replace(/[^a-z0-9]/g, '')}.com`;

@@ -114,7 +114,7 @@ const CrmPipeline = () => {
             event: 'deal.stage_changed',
             businessName: leadName,
             newStage: newStatus,
-            operator: user?.name || 'Alex Roberts'
+            operator: user?.name || 'Workspace Operator'
           }
         );
         showToast(`Moved "${leadName}" to ${newStatus} • Alert sent to ${activeAlertApp.name} (${channelLabel}) [200 OK]`);

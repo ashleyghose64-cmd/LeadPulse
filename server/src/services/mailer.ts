@@ -146,7 +146,7 @@ export async function getTransporter(userSmtpConfig?: UserSmtpSettings): Promise
 }
 
 export async function sendDirectEmail(options: SendMailOptions): Promise<DispatchResult> {
-  const { to, subject, html, text, fromName = 'Alex Roberts | LeadPulse Growth', fromEmail, userSmtp } = options;
+  const { to, subject, html, text, fromName = 'LeadPulse Outreach', fromEmail, userSmtp } = options;
 
   try {
     const { transporter, provider, isTestAccount, senderEmail } = await getTransporter(userSmtp);
