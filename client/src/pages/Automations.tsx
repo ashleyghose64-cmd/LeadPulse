@@ -1,0 +1,935 @@
+import { useState, useEffect } from 'react';
+import Sidebar from '../components/Sidebar';
+import Header from '../components/Header';
+import { 
+  Waypoints, Plus, Play, Pause, MoreHorizontal, ArrowRight, 
+  Mail, MessageSquare, Clock, GitBranch, CheckCircle2, Trash2, 
+  Sparkles, X, Edit3, Send, Layers, Zap, AlertCircle, RefreshCw, Eye
+} from 'lucide-react';
+import { useStore } from '../store/useStore';
+import { confirmDialog, alertDialog } from '../components/AppConfirmModal';
+import axios from 'axios';
+
+interface JourneyStep {
+  id: string;
+  type: 'trigger' | 'delay' | 'email' | 'whatsapp' | 'condition' | 'crm_update' | 'integration';
+  title: string;
+  description: string;
+  config: {
+    delayDays?: number;
+    delayHours?: number;
+    emailSubject?: string;
+    emailBody?: string;
+    whatsappMessage?: string;
+    targetStage?: string;
+    conditionType?: string;
+    integrationId?: string;
+    integrationName?: string;
+  };
+}
+
+interface Journey {
+  _id: string;
+  name: string;
+  trigger: string;
+  status: 'active' | 'paused';
+  steps: JourneyStep[];
+  totalEnrolled: number;
+  conversions: number;
+  createdAt?: string;
+}
+
+const TEMPLATE_PRESETS = [
+  {
+    name: 'Instant Inbound Lead Engagement',
+    trigger: 'Inbound Form Submitted',
+    desc: 'Immediately send welcome email and schedule automated WhatsApp follow-up.',
+    steps: [
+      {
+        id: 's1',
+        type: 'trigger' as const,
+        title: 'Trigger: Inbound Form Submitted',
+        description: 'Prospect filled out website embed form.',
+        config: {}
+      },
+      {
+        id: 's2',
+        type: 'email' as const,
+        title: 'Instant Confirmation & Value Deck',
+        description: 'Send greeting within 60 seconds.',
+        config: {
+          emailSubject: 'Welcome! Here is your LeadPulse access deck',
+          emailBody: 'Hi {{name}}, thanks for reaching out. Here is what you need to scale your outreach.'
+        }
+      },
+      {
+        id: 's3',
+        type: 'delay' as const,
+        title: 'Wait 1 Business Day',
+        description: 'Allow review window.',
+        config: { delayDays: 1 }
+      },
+      {
+        id: 's4',
+        type: 'whatsapp' as const,
+        title: 'Direct WhatsApp Intro',
+        description: 'Send friendly message to verified phone.',
+        config: {
+          whatsappMessage: 'Hi {{name}}, wanted to check if you had questions on the deck we emailed yesterday!'
+        }
+      }
+    ]
+  },
+  {
+    name: '3-Touch Cold Outreach Follow-up',
+    trigger: 'Lead Scraped in Lead Finder',
+    desc: 'Automate initial outreach plus 2 follow-ups spaced across 5 business days.',
+    steps: [
+      {
+        id: 's1',
+        type: 'trigger' as const,
+        title: 'Trigger: Contact Added to Database',
+        description: 'Harvested or imported into LeadPulse.',
+        config: {}
+      },
+      {
+        id: 's2',
+        type: 'email' as const,
+        title: 'Touch 1: Personalized Cold Pitch',
+        description: 'AI-tailored hook on {{company}} niche.',
+        config: {
+          emailSubject: 'Quick question for {{company}}',
+          emailBody: 'Hi {{name}}, saw what your team is building in {{location}} and wanted to share an idea.'
+        }
+      },
+      {
+        id: 's3',
+        type: 'delay' as const,
+        title: 'Wait 3 Days',
+        description: 'Wait for reply.',
+        config: { delayDays: 3 }
+      },
+      {
+        id: 's4',
+        type: 'email' as const,
+        title: 'Touch 2: Soft Bump & Case Study',
+        description: 'Bump thread with proof points.',
+        config: {
+          emailSubject: 'Re: Quick question for {{company}}',
+          emailBody: 'Hi {{name}}, following up with a quick benchmark of how our clients booked 20+ meetings.'
+        }
+      }
+    ]
+  },
+  {
+    name: 'Post-Proposal Deal Closer',
+    trigger: 'Stage updated to: Proposal Sent',
+    desc: 'Keep decision-makers warm and advance pipeline to Closed Won.',
+    steps: [
+      {
+        id: 's1',
+        type: 'trigger' as const,
+        title: 'Trigger: Proposal Sent',
+        description: 'Deal card moved to Proposal stage in CRM.',
+        config: {}
+      },
+      {
+        id: 's2',
+        type: 'delay' as const,
+        title: 'Wait 2 Days',
+        description: 'Allow internal review.',
+        config: { delayDays: 2 }
+      },
+      {
+        id: 's3',
+        type: 'whatsapp' as const,
+        title: 'WhatsApp Check-in',
+        description: 'Direct ping to champion.',
+        config: {
+          whatsappMessage: 'Hi {{name}}, quick check-in on the proposal — happy to jump on a 5-min call to clarify anything.'
+        }
+      }
+    ]
+  }
+];
+
+const Automations = () => {
+  const { user, integrations, notifyIntegration } = useStore();
+  const [journeys, setJourneys] = useState<Journey[]>([]);
+  const [loading, setLoading] = useState(false);
+
+  const connectedWorkflowApps = integrations.filter(i => i.connected);
+
+  // Modal states
+  const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
+  const [isCanvasOpen, setIsCanvasOpen] = useState(false);
+  const [isTemplateModalOpen, setIsTemplateModalOpen] = useState(false);
+  
+  // Selected journey for Canvas / Inspection
+  const [activeJourney, setActiveJourney] = useState<Journey | null>(null);
+
+  // Create Journey Inputs
+  const [newJourneyName, setNewJourneyName] = useState('');
+  const [newJourneyTrigger, setNewJourneyTrigger] = useState('Lead Created (Lead Finder or Form)');
+  const [selectedTemplateIndex, setSelectedTemplateIndex] = useState<number | null>(null);
+
+  // Feedback toast
+  const [toastMessage, setToastMessage] = useState('');
+
+  const showToast = (msg: string) => {
+    setToastMessage(msg);
+    setTimeout(() => setToastMessage(''), 3000);
+  };
+
+  useEffect(() => {
+    fetchJourneys();
+  }, [user]);
+
+  const fetchJourneys = async () => {
+    if (!user?._id) return;
+    setLoading(true);
+    try {
+      const res = await axios.get('http://localhost:3001/api/automations', {
+        headers: { userid: user._id }
+      });
+      setJourneys(res.data);
+    } catch (err) {
+      console.error('Failed to fetch automations:', err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Toggle active/paused
+  const handleToggleStatus = async (journey: Journey, e?: React.MouseEvent) => {
+    if (e) e.stopPropagation();
+    const nextStatus = journey.status === 'active' ? 'paused' : 'active';
+    try {
+      await axios.patch(`http://localhost:3001/api/automations/${journey._id}`, {
+        status: nextStatus
+      }, {
+        headers: { userid: user?._id }
+      });
+
+      setJourneys(journeys.map(j => j._id === journey._id ? { ...j, status: nextStatus } : j));
+      if (activeJourney?._id === journey._id) {
+        setActiveJourney({ ...activeJourney, status: nextStatus });
+      }
+      showToast(`Journey "${journey.name}" is now ${nextStatus.toUpperCase()}`);
+    } catch (err) {
+      console.error('Failed to toggle status:', err);
+    }
+  };
+
+  // Delete journey
+  const handleDeleteJourney = async (id: string, e?: React.MouseEvent) => {
+    if (e) e.stopPropagation();
+    const targetJourney = journeys.find(j => j._id === id);
+    const confirmed = await confirmDialog({
+      title: 'Delete Automation Journey?',
+      message: `Are you sure you want to delete "${targetJourney?.name || 'this automation journey'}"? All enrolled step sequences for this workflow will stop immediately.`,
+      confirmText: 'Delete Journey',
+      cancelText: 'Cancel',
+      variant: 'danger'
+    });
+    if (!confirmed) return;
+    try {
+      await axios.delete(`http://localhost:3001/api/automations/${id}`, {
+        headers: { userid: user?._id }
+      });
+      setJourneys(journeys.filter(j => j._id !== id));
+      if (activeJourney?._id === id) {
+        setIsCanvasOpen(false);
+        setActiveJourney(null);
+      }
+      showToast('Journey deleted.');
+    } catch (err) {
+      console.error('Failed to delete journey:', err);
+    }
+  };
+
+  // Test Run / Trigger Journey
+  const handleTestRun = async (journey: Journey, e?: React.MouseEvent) => {
+    if (e) e.stopPropagation();
+    try {
+      const res = await axios.post(`http://localhost:3001/api/automations/${journey._id}/trigger`, {}, {
+        headers: { userid: user?._id }
+      });
+      
+      const newCount = res.data.totalEnrolled;
+      setJourneys(journeys.map(j => j._id === journey._id ? { ...j, totalEnrolled: newCount } : j));
+      if (activeJourney?._id === journey._id) {
+        setActiveJourney({ ...activeJourney, totalEnrolled: newCount });
+      }
+
+      // Also fire outbound integration notifications for any connected integration steps or channels
+      const integrationSteps = (journey.steps || []).filter(s => s.type === 'integration');
+      const targetAppId = integrationSteps[0]?.config?.integrationId || connectedWorkflowApps[0]?.id;
+      if (targetAppId) {
+        await notifyIntegration(
+          targetAppId,
+          `Workflow "${journey.name}" executed (${journey.steps.length} steps)`,
+          {
+            journeyId: journey._id,
+            journeyName: journey.name,
+            stepsExecuted: journey.steps.map(s => s.title),
+            integrationSteps: integrationSteps.map(s => s.config.integrationName)
+          }
+        );
+        showToast(`Workflow "${journey.name}" executed & dispatched to connected apps [200 OK]!`);
+      } else {
+        showToast(res.data.message || 'Workflow test executed successfully!');
+      }
+    } catch (err) {
+      console.error('Failed to test run journey:', err);
+      showToast('Simulation failed.');
+    }
+  };
+
+  // Create Journey Submit
+  const handleCreateJourney = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!user?._id || !newJourneyName) return;
+
+    let stepsToUse = [];
+    if (selectedTemplateIndex !== null && TEMPLATE_PRESETS[selectedTemplateIndex]) {
+      stepsToUse = TEMPLATE_PRESETS[selectedTemplateIndex].steps;
+    }
+
+    try {
+      const res = await axios.post('http://localhost:3001/api/automations', {
+        name: newJourneyName,
+        trigger: newJourneyTrigger,
+        steps: stepsToUse
+      }, {
+        headers: { userid: user._id }
+      });
+
+      setJourneys([res.data, ...journeys]);
+      setIsCreateModalOpen(false);
+      setNewJourneyName('');
+      setSelectedTemplateIndex(null);
+      setActiveJourney(res.data);
+      setIsCanvasOpen(true);
+      showToast('Journey created! Edit steps below.');
+    } catch (err) {
+      console.error('Failed to create journey:', err);
+      await alertDialog({
+        title: 'Creation Error',
+        message: 'Could not create automation journey. Please try again.',
+        variant: 'error'
+      });
+    }
+  };
+
+  // Instantiate from template picker
+  const handleUsePreset = async (preset: typeof TEMPLATE_PRESETS[0]) => {
+    if (!user?._id) return;
+    try {
+      const res = await axios.post('http://localhost:3001/api/automations', {
+        name: preset.name,
+        trigger: preset.trigger,
+        steps: preset.steps
+      }, {
+        headers: { userid: user._id }
+      });
+
+      setJourneys([res.data, ...journeys]);
+      setIsTemplateModalOpen(false);
+      setActiveJourney(res.data);
+      setIsCanvasOpen(true);
+      showToast(`Created journey from template "${preset.name}"!`);
+    } catch (err) {
+      console.error('Failed to use template:', err);
+    }
+  };
+
+  // Add Step to active journey
+  const handleAddStep = async (type: JourneyStep['type'], integrationApp?: { id: string; name: string }) => {
+    if (!activeJourney || !user?._id) return;
+
+    let newStep: JourneyStep = {
+      id: `step_${Date.now()}`,
+      type,
+      title: type === 'integration' && integrationApp
+        ? `Push / Notify ${integrationApp.name}`
+        : type === 'email' ? 'Follow-up Email' : type === 'whatsapp' ? 'WhatsApp Message' : type === 'delay' ? 'Wait 2 Days' : 'Advance CRM Stage',
+      description: type === 'integration' && integrationApp
+        ? `Automatically dispatch JSON payload to connected ${integrationApp.name} integration.`
+        : type === 'email' ? 'Send follow-up template.' : type === 'whatsapp' ? 'Direct mobile outreach.' : type === 'delay' ? 'Wait interval before next step.' : 'Update deal stage.',
+      config: type === 'integration' && integrationApp
+        ? { integrationId: integrationApp.id, integrationName: integrationApp.name }
+        : type === 'delay' ? { delayDays: 2 } : type === 'email' ? { emailSubject: 'Quick update', emailBody: 'Hi {{name}}, wanted to check in.' } : type === 'whatsapp' ? { whatsappMessage: 'Hey {{name}}, following up!' } : { targetStage: 'Proposal Sent' }
+    };
+
+    const updatedSteps = [...activeJourney.steps, newStep];
+    try {
+      const res = await axios.patch(`http://localhost:3001/api/automations/${activeJourney._id}`, {
+        steps: updatedSteps
+      }, {
+        headers: { userid: user._id }
+      });
+
+      setActiveJourney(res.data);
+      setJourneys(journeys.map(j => j._id === activeJourney._id ? res.data : j));
+      showToast(integrationApp ? `Added ${integrationApp.name} action step to workflow!` : 'New step added to workflow.');
+    } catch (err) {
+      console.error('Failed to add step:', err);
+    }
+  };
+
+  // Summary Metrics
+  const activeCount = journeys.filter(j => j.status === 'active').length;
+  const totalEnrolled = journeys.reduce((acc, j) => acc + (j.totalEnrolled || 0), 0);
+  const totalConversions = journeys.reduce((acc, j) => acc + (j.conversions || 0), 0);
+
+  return (
+    <div className="flex h-screen w-full overflow-hidden bg-transparent">
+      <Sidebar />
+      <div className="flex-1 flex flex-col h-screen overflow-hidden">
+        <Header />
+        
+        <div className="flex-1 overflow-y-auto p-6 lg:p-8 custom-scrollbar">
+          <div className="max-w-6xl mx-auto w-full space-y-6">
+            
+            {/* Toast Notification */}
+            {toastMessage && (
+              <div className="fixed top-6 right-6 z-50 bg-slate-900 text-white px-3.5 py-2 rounded-md shadow-xl border border-slate-800 text-xs font-delight font-medium flex items-center gap-2 animate-in fade-in">
+                <Sparkles className="w-3.5 h-3.5 text-accent" />
+                <span>{toastMessage}</span>
+              </div>
+            )}
+
+            {/* Header */}
+            <div className="flex flex-wrap items-center justify-between gap-4">
+              <div>
+                <h1 className="text-2xl font-bold text-slate-900 tracking-tight">Automations & Journeys</h1>
+                <p className="text-slate-500 font-normal text-xs mt-0.5">Build multi-step automated outreach sequences, smart delays, and CRM stage transitions.</p>
+              </div>
+
+              <div className="flex items-center gap-2.5">
+                <button 
+                  onClick={() => setIsTemplateModalOpen(true)}
+                  className="h-8 px-3 bg-white border border-slate-200 rounded-md font-delight font-medium text-xs text-slate-700 hover:bg-slate-50 hover:border-slate-300 flex items-center gap-1.5 transition-colors cursor-pointer"
+                >
+                  <Layers className="w-3.5 h-3.5 text-accent" />
+                  <span>Templates Library</span>
+                </button>
+
+                <button 
+                  onClick={() => setIsCreateModalOpen(true)}
+                  className="h-8 px-3.5 bg-slate-900 text-white rounded-md font-delight font-medium text-xs hover:bg-slate-800 transition-colors flex items-center gap-1.5 border border-slate-900 cursor-pointer"
+                >
+                  <Waypoints className="w-3.5 h-3.5" />
+                  <span>Create Journey</span>
+                </button>
+              </div>
+            </div>
+
+            {/* Summary Metrics */}
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+              <div className="bg-white border border-slate-200 rounded-md p-3.5 flex items-center justify-between">
+                <div>
+                  <p className="text-[10px] font-delight font-semibold text-slate-500 uppercase tracking-wider">Active Sequences</p>
+                  <h3 className="text-xl font-delight font-bold text-slate-900 mt-1 tracking-tight">{activeCount} / {journeys.length}</h3>
+                </div>
+                <div className="w-8 h-8 rounded-md bg-slate-100 text-slate-700 flex items-center justify-center font-bold border border-slate-200">
+                  <Zap className="w-4 h-4" />
+                </div>
+              </div>
+
+              <div className="bg-white border border-slate-200 rounded-md p-3.5 flex items-center justify-between">
+                <div>
+                  <p className="text-[10px] font-delight font-semibold text-slate-500 uppercase tracking-wider">Prospects Enrolled</p>
+                  <h3 className="text-xl font-delight font-bold text-slate-900 mt-1 tracking-tight">{totalEnrolled}</h3>
+                </div>
+                <div className="w-8 h-8 rounded-md bg-slate-100 text-slate-700 flex items-center justify-center font-bold border border-slate-200">
+                  <Send className="w-4 h-4" />
+                </div>
+              </div>
+
+              <div className="bg-white border border-slate-200 rounded-md p-3.5 flex items-center justify-between">
+                <div>
+                  <p className="text-[10px] font-delight font-semibold text-slate-500 uppercase tracking-wider">Automated Conversions</p>
+                  <h3 className="text-xl font-delight font-bold text-slate-900 mt-1 tracking-tight">{totalConversions}</h3>
+                </div>
+                <div className="w-8 h-8 rounded-md bg-slate-100 text-slate-700 flex items-center justify-center font-bold border border-slate-200">
+                  <CheckCircle2 className="w-4 h-4" />
+                </div>
+              </div>
+            </div>
+
+            {/* Main Automations Table */}
+            <div className="bg-white border border-slate-200 rounded-md overflow-hidden shadow-xs">
+              <div className="p-3 border-b border-slate-200 flex items-center justify-between bg-slate-50/70">
+                <span className="text-[10px] font-delight font-semibold uppercase tracking-wider text-slate-500">Configured Workflows</span>
+                <span className="text-[11px] font-delight font-normal text-slate-400">Click any journey to inspect visual steps</span>
+              </div>
+
+              {journeys.length === 0 ? (
+                <div className="p-12 text-center space-y-3 font-delight font-medium">
+                  <div className="w-10 h-10 bg-slate-100 text-slate-700 rounded-md flex items-center justify-center mx-auto border border-slate-200">
+                    <Waypoints className="w-5 h-5" />
+                  </div>
+                  <div className="space-y-1">
+                    <h3 className="text-sm font-bold text-slate-900 tracking-tight">No automation workflows configured</h3>
+                    <p className="text-slate-500 text-xs max-w-sm mx-auto">
+                      Create your first multi-step journey or choose an automated template from our library.
+                    </p>
+                  </div>
+                  <button 
+                    onClick={() => setIsTemplateModalOpen(true)}
+                    className="px-3.5 py-1.5 bg-slate-900 text-white text-xs font-delight font-medium rounded-md hover:bg-slate-800 transition-colors border border-slate-900 cursor-pointer"
+                  >
+                    Load Starter Templates
+                  </button>
+                </div>
+              ) : (
+                <div className="overflow-x-auto custom-scrollbar">
+                  <table className="w-full text-left border-collapse text-xs">
+                    <thead>
+                      <tr className="bg-slate-50 text-slate-500 font-delight font-semibold uppercase text-[10px] tracking-wider border-b border-slate-200">
+                        <th className="px-4 py-2.5 w-[42%]">Journey Name</th>
+                        <th className="px-4 py-2.5">Trigger Condition</th>
+                        <th className="px-4 py-2.5">Status</th>
+                        <th className="px-4 py-2.5">Enrolled</th>
+                        <th className="px-4 py-2.5 text-right">Actions</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-100">
+                      {journeys.map((j) => (
+                        <tr 
+                          key={j._id} 
+                          onClick={() => {
+                            setActiveJourney(j);
+                            setIsCanvasOpen(true);
+                          }}
+                          className="hover:bg-slate-50/80 transition-colors group cursor-pointer"
+                        >
+                          <td className="px-4 py-3">
+                            <div className="font-bold text-xs text-slate-900 group-hover:text-accent transition-colors flex items-center gap-1.5 tracking-tight">
+                              <span>{j.name}</span>
+                              <ArrowRight className="w-3 h-3 opacity-0 group-hover:opacity-100 transition-opacity" />
+                            </div>
+                            <div className="text-[10px] font-delight font-normal text-slate-400 mt-0.5">
+                              {(j.steps || []).length} steps • {j.conversions || 0} conversions
+                            </div>
+                          </td>
+
+                          <td className="px-4 py-3">
+                            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-sm bg-slate-100 text-[10px] font-delight font-medium text-slate-700 border border-slate-200">
+                              <Zap className="w-3 h-3 text-slate-500" />
+                              <span>{j.trigger}</span>
+                            </span>
+                          </td>
+
+                          <td className="px-4 py-3 font-delight font-medium">
+                            {j.status === 'active' ? (
+                              <div className="flex items-center gap-1.5 text-xs font-delight font-medium text-emerald-600">
+                                <span className="relative flex h-2 w-2">
+                                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                                  <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
+                                </span>
+                                <span>Running</span>
+                              </div>
+                            ) : (
+                              <div className="flex items-center gap-1.5 text-xs font-delight font-normal text-slate-400">
+                                <span className="w-2 h-2 rounded-full bg-slate-300"></span>
+                                <span>Paused</span>
+                              </div>
+                            )}
+                          </td>
+
+                          <td className="px-4 py-3 font-delight font-medium text-xs text-slate-700">
+                            {j.totalEnrolled || 0} contacts
+                          </td>
+
+                          <td className="px-4 py-3 text-right">
+                            <div className="flex items-center justify-end gap-1.5 opacity-80 group-hover:opacity-100">
+                              {/* Test Run Button */}
+                              <button 
+                                onClick={(e) => handleTestRun(j, e)}
+                                title="Run Test Simulation"
+                                className="px-2 py-1 bg-white hover:bg-slate-50 border border-slate-200 text-slate-700 rounded-md text-xs font-delight font-medium flex items-center gap-1 transition-colors cursor-pointer"
+                              >
+                                <Play className="w-3 h-3 text-emerald-600" /> Test
+                              </button>
+
+                              {/* Toggle Active / Paused Button */}
+                              <button 
+                                onClick={(e) => handleToggleStatus(j, e)}
+                                title={j.status === 'active' ? 'Pause Journey' : 'Activate Journey'}
+                                className="w-6 h-6 rounded-md bg-white hover:bg-slate-100 border border-slate-200 flex items-center justify-center transition-colors text-slate-600 cursor-pointer"
+                              >
+                                {j.status === 'active' ? <Pause className="w-3 h-3" /> : <Play className="w-3 h-3" />}
+                              </button>
+
+                              {/* Delete Journey Button */}
+                              <button 
+                                onClick={(e) => handleDeleteJourney(j._id, e)}
+                                title="Delete Journey"
+                                className="w-6 h-6 rounded-md bg-white hover:bg-rose-50 border border-slate-200 flex items-center justify-center transition-colors text-slate-400 hover:text-rose-600 cursor-pointer"
+                              >
+                                <Trash2 className="w-3 h-3" />
+                              </button>
+                            </div>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </div>
+
+            {/* Template Presets Banner */}
+            <div className="border border-dashed border-slate-300 rounded-md p-5 bg-white flex flex-col md:flex-row items-center justify-between gap-4">
+              <div className="flex items-center gap-3">
+                <div className="w-9 h-9 bg-slate-50 rounded-md border border-slate-200 flex items-center justify-center text-slate-700">
+                  <Layers className="w-4 h-4" />
+                </div>
+                <div>
+                  <h3 className="font-bold text-slate-900 text-sm tracking-tight">Explore Pre-built Outreach Journeys</h3>
+                  <p className="text-xs text-slate-500 mt-0.5">Deploy proven sequences for cold acquisition, post-proposal follow-ups, and inbound conversions in 1 click.</p>
+                </div>
+              </div>
+              <button 
+                onClick={() => setIsTemplateModalOpen(true)}
+                className="h-8 px-3.5 bg-white border border-slate-200 text-slate-700 font-delight font-medium text-xs rounded-md hover:bg-slate-50 transition-colors whitespace-nowrap cursor-pointer hover:border-slate-300"
+              >
+                Browse All Templates &rarr;
+              </button>
+            </div>
+
+          </div>
+        </div>
+      </div>
+
+      {/* ================= MODAL: VISUAL WORKFLOW CANVAS ================= */}
+      {isCanvasOpen && activeJourney && (
+        <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-xs flex items-center justify-center p-4 z-50 animate-in fade-in duration-150">
+          <div className="bg-white rounded-md shadow-xl border border-slate-200 max-w-4xl w-full max-h-[90vh] flex flex-col overflow-hidden animate-in zoom-in-95 duration-150">
+            
+            {/* Canvas Header */}
+            <div className="p-4 border-b border-slate-200 flex items-center justify-between bg-slate-50">
+              <div className="flex items-center gap-2.5">
+                <div className="w-7 h-7 rounded-md bg-slate-900 text-white flex items-center justify-center font-bold">
+                  <Waypoints className="w-4 h-4" />
+                </div>
+                <div>
+                  <div className="flex items-center gap-2.5">
+                    <h3 className="text-sm font-bold text-slate-900 tracking-tight">{activeJourney.name}</h3>
+                    <span className={`px-1.5 py-0.5 rounded-sm text-[10px] font-delight font-medium border ${
+                      activeJourney.status === 'active' ? 'bg-emerald-50 text-emerald-700 border-emerald-200' : 'bg-slate-100 text-slate-600 border-slate-200'
+                    }`}>
+                      {activeJourney.status}
+                    </span>
+                  </div>
+                  <p className="text-[11px] font-delight font-normal text-slate-400 mt-0.5 flex items-center gap-1.5">
+                    <span>Trigger: {activeJourney.trigger}</span>
+                    <span>•</span>
+                    <span>{activeJourney.totalEnrolled || 0} Contacts Enrolled</span>
+                  </p>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-2">
+                <button 
+                  onClick={() => handleTestRun(activeJourney)}
+                  className="px-2.5 py-1 bg-white hover:bg-slate-50 border border-slate-200 text-slate-700 rounded-md text-xs font-delight font-medium flex items-center gap-1 transition-colors cursor-pointer"
+                >
+                  <Play className="w-3 h-3 text-emerald-600" /> Test Simulation
+                </button>
+
+                <button 
+                  onClick={() => handleToggleStatus(activeJourney)}
+                  className="px-2.5 py-1 bg-slate-900 hover:bg-slate-800 text-white rounded-md text-xs font-delight font-medium flex items-center gap-1 transition-colors border border-slate-900 cursor-pointer"
+                >
+                  {activeJourney.status === 'active' ? <Pause className="w-3 h-3" /> : <Play className="w-3 h-3" />}
+                  <span>{activeJourney.status === 'active' ? 'Pause' : 'Activate'}</span>
+                </button>
+
+                <button onClick={() => setIsCanvasOpen(false)} className="w-7 h-7 rounded-md bg-white hover:bg-slate-100 text-slate-500 border border-slate-200 flex items-center justify-center cursor-pointer">
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+            </div>
+
+            {/* Visual Flowchart Canvas */}
+            <div className="flex-1 overflow-y-auto p-6 bg-slate-50 space-y-3 custom-scrollbar">
+              <div className="max-w-xl mx-auto flex flex-col items-center space-y-3">
+                
+                {activeJourney.steps.map((step, idx) => (
+                  <div key={step.id || idx} className="w-full flex flex-col items-center">
+                    
+                    {/* Node Card */}
+                    <div className="w-full bg-white rounded-md p-4 border border-slate-200 shadow-2xs hover:border-slate-400 transition-colors space-y-2.5 relative group">
+                      <div className="flex items-start justify-between">
+                        <div className="flex items-center gap-2.5">
+                          <div className={`w-7 h-7 rounded-md flex items-center justify-center border font-bold ${
+                            step.type === 'trigger' ? 'bg-amber-50 text-amber-700 border-amber-200' :
+                            step.type === 'email' ? 'bg-indigo-50 text-indigo-700 border-indigo-200' :
+                            step.type === 'whatsapp' ? 'bg-emerald-50 text-emerald-700 border-emerald-200' :
+                            step.type === 'delay' ? 'bg-blue-50 text-blue-700 border-blue-200' :
+                            step.type === 'integration' ? 'bg-emerald-50 text-emerald-700 border-emerald-300' :
+                            'bg-purple-50 text-purple-700 border-purple-200'
+                          }`}>
+                            {step.type === 'trigger' && <Zap className="w-3.5 h-3.5" />}
+                            {step.type === 'email' && <Mail className="w-3.5 h-3.5" />}
+                            {step.type === 'whatsapp' && <MessageSquare className="w-3.5 h-3.5" />}
+                            {step.type === 'delay' && <Clock className="w-3.5 h-3.5" />}
+                            {step.type === 'condition' && <GitBranch className="w-3.5 h-3.5" />}
+                            {step.type === 'crm_update' && <CheckCircle2 className="w-3.5 h-3.5" />}
+                            {step.type === 'integration' && <Waypoints className="w-3.5 h-3.5" />}
+                          </div>
+                          <div>
+                            <span className="text-[10px] font-delight font-semibold uppercase tracking-wider text-slate-400">Step {idx + 1}</span>
+                            <h4 className="font-bold text-xs text-slate-900 tracking-tight">{step.title}</h4>
+                          </div>
+                        </div>
+                        {step.type === 'integration' && step.config.integrationName && (
+                          <span className="text-[10px] font-delight font-bold bg-emerald-50 text-emerald-700 border border-emerald-200 px-2 py-0.5 rounded-sm">
+                            ✓ Connected App: {step.config.integrationName}
+                          </span>
+                        )}
+                      </div>
+
+                      <p className="text-xs text-slate-500 font-normal">{step.description}</p>
+
+                      {/* Config details */}
+                      {step.config.emailSubject && (
+                        <div className="p-2.5 bg-slate-50 rounded-md border border-slate-200 text-[11px] font-delight font-medium space-y-0.5">
+                          <div className="font-medium text-slate-800">Subject: {step.config.emailSubject}</div>
+                          <div className="text-slate-500 truncate">{step.config.emailBody}</div>
+                        </div>
+                      )}
+
+                      {step.config.whatsappMessage && (
+                        <div className="p-2.5 bg-emerald-50/60 rounded-md border border-emerald-200 text-[11px] font-delight font-medium text-emerald-900">
+                          {step.config.whatsappMessage}
+                        </div>
+                      )}
+
+                      {step.config.delayDays && (
+                        <div className="text-[10px] font-delight font-medium text-blue-700 bg-blue-50 border border-blue-200 px-2 py-0.5 rounded-sm w-max">
+                          Waits {step.config.delayDays} day(s) before advancing
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Connecting Connector Arrow */}
+                    {idx < activeJourney.steps.length - 1 && (
+                      <div className="my-1.5 flex flex-col items-center">
+                        <div className="w-px h-5 bg-slate-300"></div>
+                        <div className="w-1.5 h-1.5 rounded-full bg-slate-400"></div>
+                      </div>
+                    )}
+
+                  </div>
+                ))}
+
+                {/* Add Next Step Bar */}
+                <div className="pt-2 w-full flex flex-col items-center space-y-2.5">
+                  <div className="w-px h-5 bg-slate-300"></div>
+                  <div className="flex flex-wrap items-center justify-center gap-1.5">
+                    <button 
+                      onClick={() => handleAddStep('email')}
+                      className="px-2.5 py-1 bg-white border border-slate-200 rounded-md text-xs font-delight font-medium text-slate-700 hover:bg-slate-50 flex items-center gap-1 cursor-pointer"
+                    >
+                      <Plus className="w-3 h-3 text-accent" /> + Email
+                    </button>
+                    <button 
+                      onClick={() => handleAddStep('delay')}
+                      className="px-2.5 py-1 bg-white border border-slate-200 rounded-md text-xs font-delight font-medium text-slate-700 hover:bg-slate-50 flex items-center gap-1 cursor-pointer"
+                    >
+                      <Clock className="w-3 h-3 text-blue-600" /> + Delay
+                    </button>
+                    <button 
+                      onClick={() => handleAddStep('whatsapp')}
+                      className="px-2.5 py-1 bg-white border border-slate-200 rounded-md text-xs font-delight font-medium text-slate-700 hover:bg-slate-50 flex items-center gap-1 cursor-pointer"
+                    >
+                      <MessageSquare className="w-3 h-3 text-emerald-600" /> + WhatsApp
+                    </button>
+                    <button 
+                      onClick={() => handleAddStep('crm_update')}
+                      className="px-2.5 py-1 bg-white border border-slate-200 rounded-md text-xs font-delight font-medium text-slate-700 hover:bg-slate-50 flex items-center gap-1 cursor-pointer"
+                    >
+                      <CheckCircle2 className="w-3 h-3 text-purple-600" /> + Stage
+                    </button>
+                  </div>
+
+                  {/* Connected Integration Step Actions */}
+                  {connectedWorkflowApps.length > 0 && (
+                    <div className="w-full pt-2 border-t border-slate-200/80 flex flex-col items-center gap-1.5">
+                      <span className="text-[10px] font-delight uppercase tracking-wider text-emerald-700 font-bold">
+                        + Add Connected App Step ({connectedWorkflowApps.length} Active)
+                      </span>
+                      <div className="flex flex-wrap items-center justify-center gap-1.5">
+                        {connectedWorkflowApps.map(app => (
+                          <button
+                            key={app.id}
+                            onClick={() => handleAddStep('integration', { id: app.id, name: app.name })}
+                            className="px-2.5 py-1 bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 rounded-md text-xs font-delight font-medium text-emerald-800 flex items-center gap-1 cursor-pointer transition-colors"
+                          >
+                            <Waypoints className="w-3 h-3 text-emerald-600" /> + {app.name} Action
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+              </div>
+            </div>
+
+            {/* Canvas Footer */}
+            <div className="p-3 border-t border-slate-200 bg-white flex items-center justify-between">
+              <span className="text-[11px] font-delight font-medium text-slate-400">All workflow steps execute automatically in the background.</span>
+              <button 
+                onClick={() => setIsCanvasOpen(false)}
+                className="px-4 py-1.5 bg-slate-900 text-white rounded-md text-xs font-delight font-medium hover:bg-slate-800 border border-slate-900 cursor-pointer"
+              >
+                Close Canvas
+              </button>
+            </div>
+
+          </div>
+        </div>
+      )}
+
+      {/* ================= MODAL: CREATE JOURNEY ================= */}
+      {isCreateModalOpen && (
+        <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-xs flex items-center justify-center p-4 z-50 animate-in fade-in duration-150">
+          <div className="bg-white rounded-md shadow-xl border border-slate-200 max-w-lg w-full p-5 space-y-4 animate-in zoom-in-95 duration-150">
+            <div className="flex items-center justify-between pb-3 border-b border-slate-200">
+              <div className="flex items-center gap-2">
+                <div className="w-7 h-7 rounded-md bg-slate-900 text-white flex items-center justify-center font-bold">
+                  <Waypoints className="w-4 h-4" />
+                </div>
+                <h3 className="text-sm font-bold text-slate-900 tracking-tight">Create Automation Journey</h3>
+              </div>
+              <button onClick={() => setIsCreateModalOpen(false)} className="w-7 h-7 rounded-md bg-white hover:bg-slate-100 text-slate-500 border border-slate-200 flex items-center justify-center cursor-pointer">
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            <form onSubmit={handleCreateJourney} className="space-y-3">
+              <div>
+                <label className="block text-[11px] font-delight font-semibold text-slate-600 mb-1">Journey Name *</label>
+                <input 
+                  type="text"
+                  required
+                  value={newJourneyName}
+                  onChange={(e) => setNewJourneyName(e.target.value)}
+                  placeholder="e.g. New B2B Lead 3-Day Nurture"
+                  className="w-full h-8 px-2.5 border border-slate-200 rounded-md text-xs font-delight font-medium outline-none focus:border-slate-400"
+                />
+              </div>
+
+              <div>
+                <label className="block text-[11px] font-delight font-semibold text-slate-600 mb-1">Starting Trigger Event</label>
+                <select 
+                  value={newJourneyTrigger}
+                  onChange={(e) => setNewJourneyTrigger(e.target.value)}
+                  className="w-full h-8 px-2.5 border border-slate-200 rounded-md text-xs font-delight font-medium outline-none bg-white cursor-pointer"
+                >
+                  <option value="Lead Created (Lead Finder or Form)">Lead Created (Lead Finder or Inbound Form)</option>
+                  <option value="CRM Stage Updated to 'Proposal Sent'">CRM Stage Updated to 'Proposal Sent'</option>
+                  <option value="Contact Added to Segment: Verified Emails">Contact Added to Segment: Verified Emails</option>
+                  <option value="No Reply after 3 Days">No Reply after 3 Days</option>
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-[11px] font-delight font-semibold text-slate-600 mb-1.5">Optional: Start with a Template Preset</label>
+                <div className="space-y-1.5 max-h-44 overflow-y-auto custom-scrollbar">
+                  {TEMPLATE_PRESETS.map((tpl, i) => (
+                    <div 
+                      key={tpl.name}
+                      onClick={() => {
+                        setSelectedTemplateIndex(i);
+                        if (!newJourneyName) setNewJourneyName(tpl.name);
+                      }}
+                      className={`p-2.5 rounded-md border text-xs cursor-pointer transition-colors ${
+                        selectedTemplateIndex === i ? 'border-slate-900 bg-slate-50' : 'border-slate-200 hover:border-slate-300'
+                      }`}
+                    >
+                      <div className="font-bold text-xs text-slate-900 tracking-tight">{tpl.name}</div>
+                      <div className="text-[11px] text-slate-500 mt-0.5">{tpl.desc}</div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              <div className="pt-2 border-t border-slate-200">
+                <button 
+                  type="submit"
+                  className="w-full h-8 bg-slate-900 text-white rounded-md font-delight font-medium text-xs hover:bg-slate-800 transition-colors flex items-center justify-center gap-1.5 border border-slate-900 cursor-pointer"
+                >
+                  Create & Launch Visual Canvas &rarr;
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* ================= MODAL: EXPLORE TEMPLATES LIBRARY ================= */}
+      {isTemplateModalOpen && (
+        <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-xs flex items-center justify-center p-4 z-50 animate-in fade-in duration-150">
+          <div className="bg-white rounded-md shadow-xl border border-slate-200 max-w-2xl w-full p-5 space-y-4 animate-in zoom-in-95 duration-150">
+            <div className="flex items-center justify-between pb-3 border-b border-slate-200">
+              <div className="flex items-center gap-2">
+                <div className="w-7 h-7 rounded-md bg-slate-900 text-white flex items-center justify-center font-bold">
+                  <Layers className="w-4 h-4" />
+                </div>
+                <div>
+                  <h3 className="text-sm font-bold text-slate-900 tracking-tight">Journey Templates Library</h3>
+                  <p className="text-[11px] font-delight font-normal text-slate-400">Deploy battle-tested multi-channel workflows in 1 click.</p>
+                </div>
+              </div>
+              <button onClick={() => setIsTemplateModalOpen(false)} className="w-7 h-7 rounded-md bg-white hover:bg-slate-100 text-slate-500 border border-slate-200 flex items-center justify-center cursor-pointer">
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            <div className="grid grid-cols-1 gap-3">
+              {TEMPLATE_PRESETS.map(tpl => (
+                <div 
+                  key={tpl.name}
+                  className="p-4 border border-slate-200 rounded-md hover:border-slate-400 transition-colors flex items-center justify-between gap-3 group"
+                >
+                  <div className="space-y-1">
+                    <span className="text-[10px] font-delight font-semibold uppercase tracking-wider text-slate-700 bg-slate-100 border border-slate-200 px-1.5 py-0.5 rounded-sm">
+                      {tpl.steps.length} Steps Sequence
+                    </span>
+                    <h4 className="font-bold text-xs text-slate-900 tracking-tight">{tpl.name}</h4>
+                    <p className="text-xs text-slate-500 leading-relaxed">{tpl.desc}</p>
+                  </div>
+                  <button 
+                    onClick={() => handleUsePreset(tpl)}
+                    className="px-3 py-1.5 bg-slate-900 text-white rounded-md font-delight font-medium text-xs hover:bg-slate-800 transition-colors whitespace-nowrap border border-slate-900 cursor-pointer"
+                  >
+                    Deploy Flow
+                  </button>
+                </div>
+              ))}
+            </div>
+
+            <div className="flex justify-end pt-2 border-t border-slate-200">
+              <button 
+                onClick={() => setIsTemplateModalOpen(false)}
+                className="px-3.5 py-1.5 text-xs font-delight font-medium text-slate-600 hover:text-slate-900 border border-slate-200 rounded-md cursor-pointer hover:bg-slate-50"
+              >
+                Close
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+    </div>
+  );
+};
+
+export default Automations;

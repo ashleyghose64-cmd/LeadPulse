@@ -1,0 +1,5 @@
+<svg width="512" height="512" viewBox="0 0 512 512">
+
+<rect width="512" height="512" rx="112" fill="#107C41"/>
+<rect x="130" y="120" width="140" height="272" rx="16" fill="#0E5C30"/><rect x="240" y="150" width="142" height="212" rx="12" fill="white"/><text x="200" y="295" font-family="sans-serif" font-weight="bold" font-size="140" fill="white" text-anchor="middle">X</text><line x1="260" y1="210" x2="360" y2="210" stroke="#107C41" stroke-width="16"/><line x1="260" y1="256" x2="360" y2="256" stroke="#107C41" stroke-width="16"/><line x1="260" y1="302" x2="360" y2="302" stroke="#107C41" stroke-width="16"/>
+</svg>

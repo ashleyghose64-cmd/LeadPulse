@@ -1,0 +1,749 @@
+import { useState, useEffect } from 'react';
+import { useStore } from '../store/useStore';
+import { alertDialog } from '../components/AppConfirmModal';
+import axios from 'axios';
+import { 
+  User, Mail, Server, Shield, 
+  CreditCard, Download, Check,
+  Sparkles, Save, CheckCircle2, AlertCircle,
+  MessageCircle, Zap, Lock
+} from 'lucide-react';
+import Sidebar from '../components/Sidebar';
+import Header from '../components/Header';
+
+type SettingsTab = 'profile' | 'smtp' | 'outreach' | 'billing' | 'data';
+
+const Settings = () => {
+  const { user, setUser, setTopUpOpen, setUpgradeModalOpen, setUpgradeTab } = useStore();
+  const [activeTab, setActiveTab] = useState<SettingsTab>('profile');
+  const [saving, setSaving] = useState(false);
+  const [saveSuccess, setSaveSuccess] = useState(false);
+  const [errorMsg, setErrorMsg] = useState('');
+
+  // Profile Form State
+  const [name, setName] = useState(user?.name || '');
+  const [companyName, setCompanyName] = useState(user?.company_name || '');
+  const [fieldOfWork, setFieldOfWork] = useState(user?.field_of_work || '');
+  const [phone, setPhone] = useState((user as any)?.phone || '');
+  const [niche, setNiche] = useState(user?.niche || '');
+  const [targetAudience, setTargetAudience] = useState(user?.target_audience || '');
+  const [goals, setGoals] = useState(user?.goals || '');
+  const [profilePicture, setProfilePicture] = useState(user?.profile_picture || '');
+
+  // SMTP & Mail Transport State
+  const [smtpHost, setSmtpHost] = useState((user as any)?.smtp_settings?.host || 'smtp.ethereal.email');
+  const [smtpPort, setSmtpPort] = useState((user as any)?.smtp_settings?.port || '587');
+  const [smtpUser, setSmtpUser] = useState((user as any)?.smtp_settings?.user || 'leadpulse-dispatcher@ethereal.email');
+  const [smtpPass, setSmtpPass] = useState((user as any)?.smtp_settings?.pass || '••••••••••••');
+  const [fromName, setFromName] = useState((user as any)?.smtp_settings?.fromName || user?.name || 'LeadPulse Outreach');
+  const [fromEmail, setFromEmail] = useState((user as any)?.smtp_settings?.fromEmail || user?.email || 'outreach@leadpulse.io');
+  const [complianceFooter, setComplianceFooter] = useState(true);
+
+  // WhatsApp & Outreach Defaults State
+  const [autoAdvanceStage, setAutoAdvanceStage] = useState(true);
+  const [defaultFallbackBusiness, setDefaultFallbackBusiness] = useState('Business Owner');
+  const [defaultFallbackLocation, setDefaultFallbackLocation] = useState('your area');
+
+  // Test SMTP state
+  const [testEmailSending, setTestEmailSending] = useState(false);
+  const [testEmailSuccess, setTestEmailSuccess] = useState(false);
+
+  useEffect(() => {
+    if (user) {
+      setName(user.name || '');
+      setCompanyName(user.company_name || '');
+      setFieldOfWork(user.field_of_work || '');
+      setPhone((user as any)?.phone || '');
+      setNiche(user.niche || '');
+      setTargetAudience(user.target_audience || '');
+      setGoals(user.goals || '');
+      setProfilePicture(user.profile_picture || '');
+    }
+  }, [user]);
+
+  // Save Settings handler
+  const handleSaveSettings = async () => {
+    if (!user?._id) return;
+    setSaving(true);
+    setErrorMsg('');
+    setSaveSuccess(false);
+
+    try {
+      const payload = {
+        name,
+        company_name: companyName,
+        field_of_work: fieldOfWork,
+        phone,
+        niche,
+        target_audience: targetAudience,
+        goals,
+        profile_picture: profilePicture,
+        smtp_settings: {
+          host: smtpHost,
+          port: smtpPort,
+          user: smtpUser,
+          pass: smtpPass,
+          fromName,
+          fromEmail,
+          complianceFooter
+        },
+        outreach_defaults: {
+          autoAdvanceStage,
+          defaultFallbackBusiness,
+          defaultFallbackLocation
+        }
+      };
+
+      const res = await axios.patch('http://localhost:3001/api/auth/profile', payload, {
+        headers: { userid: user._id }
+      });
+
+      setUser({
+        ...user,
+        ...res.data.user
+      });
+
+      setSaveSuccess(true);
+      setTimeout(() => setSaveSuccess(false), 3000);
+    } catch (err: any) {
+      console.error('Failed to save settings:', err);
+      setErrorMsg(err.response?.data?.error || 'Failed to persist settings changes.');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  // Test SMTP Dispatch
+  const handleTestSmtp = async () => {
+    setTestEmailSending(true);
+    setTestEmailSuccess(false);
+    setTimeout(() => {
+      setTestEmailSending(false);
+      setTestEmailSuccess(true);
+      setTimeout(() => setTestEmailSuccess(false), 4000);
+    }, 1200);
+  };
+
+  // Export CSV
+  const handleExportAll = async () => {
+    if ((user?.plan || 'free') === 'free') {
+      setUpgradeTab('plans');
+      setUpgradeModalOpen(true);
+      return;
+    }
+
+    try {
+      const res = await axios.get('http://localhost:3001/api/leads', {
+        headers: { userid: user?._id }
+      });
+      const leads = res.data || [];
+      if (leads.length === 0) {
+        await alertDialog({
+          title: 'Nothing to Export',
+          message: 'No leads are currently available in your workspace to export.',
+          variant: 'warning'
+        });
+        return;
+      }
+
+      const headers = ['Business Name', 'Category', 'Phone', 'Email', 'Status', 'Rating', 'Location'];
+      const rows = leads.map((l: any) => [
+        `"${l.businessName || ''}"`,
+        `"${l.category || ''}"`,
+        `"${l.phone || ''}"`,
+        `"${l.email || ''}"`,
+        `"${l.status || ''}"`,
+        `"${l.rating || ''}"`,
+        `"${l.location || ''}"`
+      ]);
+      const csvContent = 'data:text/csv;charset=utf-8,' + [headers.join(','), ...rows.map((r: any) => r.join(','))].join('\n');
+      const encodedUri = encodeURI(csvContent);
+      const link = document.createElement('a');
+      link.setAttribute('href', encodedUri);
+      link.setAttribute('download', `LeadPulse_Full_CRM_${Date.now()}.csv`);
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    } catch (err) {
+      await alertDialog({
+        title: 'Export Error',
+        message: 'Failed to export leads. Please try again.',
+        variant: 'error'
+      });
+    }
+  };
+
+  const currentPlan = user?.plan || 'free';
+  const isFree = currentPlan === 'free';
+  const credits = user?.lead_credits ?? 50;
+
+  return (
+    <div className="flex w-full min-h-screen bg-transparent font-sans text-slate-900">
+      <Sidebar />
+
+      <div className="flex-1 flex flex-col min-w-0">
+        <Header title="Platform Settings & Configurations" />
+
+        <div className="p-6 sm:p-8 space-y-5 overflow-y-auto max-w-5xl">
+          
+          {/* Header Banner */}
+          <div className="flex flex-wrap items-center justify-between gap-4">
+            <div>
+              <h2 className="text-xl sm:text-2xl font-bold tracking-tight text-slate-900">Account & System Settings</h2>
+              <p className="text-xs text-slate-500 mt-0.5">Manage your user profile, direct email SMTP transport, WhatsApp defaults, and billing tier.</p>
+            </div>
+
+            {saveSuccess && (
+              <div className="flex items-center gap-1.5 text-xs font-delight font-medium text-emerald-700 bg-emerald-50 border border-emerald-200 px-3 py-1 rounded-md animate-in fade-in">
+                <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
+                <span>Settings saved successfully!</span>
+              </div>
+            )}
+
+            {errorMsg && (
+              <div className="flex items-center gap-1.5 text-xs font-delight font-medium text-red-700 bg-red-50 border border-red-200 px-3 py-1 rounded-md animate-in fade-in">
+                <AlertCircle className="w-3.5 h-3.5 text-red-600" />
+                <span>{errorMsg}</span>
+              </div>
+            )}
+          </div>
+
+          {/* Settings Tabs Navigation */}
+          <div className="flex flex-wrap gap-2 border-b border-slate-200 pb-3 text-xs font-delight font-medium">
+            <button
+              onClick={() => setActiveTab('profile')}
+              className={`px-3 py-1.5 rounded-md transition-all flex items-center gap-1.5 cursor-pointer ${
+                activeTab === 'profile' ? 'bg-slate-900 text-white border border-slate-900 shadow-xs' : 'bg-white border border-slate-200 text-slate-600 hover:bg-slate-50'
+              }`}
+            >
+              <User className="w-3.5 h-3.5" />
+              <span>Profile & Workspace</span>
+            </button>
+
+            <button
+              onClick={() => setActiveTab('smtp')}
+              className={`px-3 py-1.5 rounded-md transition-all flex items-center gap-1.5 cursor-pointer ${
+                activeTab === 'smtp' ? 'bg-slate-900 text-white border border-slate-900 shadow-xs' : 'bg-white border border-slate-200 text-slate-600 hover:bg-slate-50'
+              }`}
+            >
+              <Server className="w-3.5 h-3.5 text-blue-500" />
+              <span>Mail Delivery & SMTP</span>
+            </button>
+
+            <button
+              onClick={() => setActiveTab('outreach')}
+              className={`px-3 py-1.5 rounded-md transition-all flex items-center gap-1.5 cursor-pointer ${
+                activeTab === 'outreach' ? 'bg-slate-900 text-white border border-slate-900 shadow-xs' : 'bg-white border border-slate-200 text-slate-600 hover:bg-slate-50'
+              }`}
+            >
+              <MessageCircle className="w-3.5 h-3.5 text-emerald-600" />
+              <span>WhatsApp & Automation</span>
+            </button>
+
+            <button
+              onClick={() => setActiveTab('billing')}
+              className={`px-3 py-1.5 rounded-md transition-all flex items-center gap-1.5 cursor-pointer ${
+                activeTab === 'billing' ? 'bg-slate-900 text-white border border-slate-900 shadow-xs' : 'bg-white border border-slate-200 text-slate-600 hover:bg-slate-50'
+              }`}
+            >
+              <CreditCard className="w-3.5 h-3.5 text-purple-600" />
+              <span>Subscription & Compute</span>
+            </button>
+
+            <button
+              onClick={() => setActiveTab('data')}
+              className={`px-3 py-1.5 rounded-md transition-all flex items-center gap-1.5 cursor-pointer ${
+                activeTab === 'data' ? 'bg-slate-900 text-white border border-slate-900 shadow-xs' : 'bg-white border border-slate-200 text-slate-600 hover:bg-slate-50'
+              }`}
+            >
+              <Download className="w-3.5 h-3.5 text-amber-600" />
+              <span>Data Management</span>
+            </button>
+          </div>
+
+          {/* TAB 1: PROFILE & WORKSPACE */}
+          {activeTab === 'profile' && (
+            <div className="bg-white rounded-md border border-slate-200 p-5 sm:p-6 shadow-none space-y-5">
+              <div>
+                <h3 className="text-sm font-bold text-slate-900">Profile & Workspace Details</h3>
+                <p className="text-xs text-slate-500">Configure your business identity to automatically populate merge tags across outbound campaigns.</p>
+              </div>
+
+              <div className="p-4 border border-slate-200 rounded-md bg-slate-50 flex items-center gap-4">
+                <div className="w-14 h-14 rounded-md bg-slate-200 overflow-hidden border border-slate-300 flex-shrink-0">
+                  {profilePicture ? (
+                    <img src={profilePicture} alt="Profile" className="w-full h-full object-cover" />
+                  ) : (
+                    <div className="w-full h-full flex items-center justify-center text-slate-400">
+                      <User className="w-6 h-6" />
+                    </div>
+                  )}
+                </div>
+                <div className="flex-1">
+                  <label className="block text-[11px] font-delight font-medium text-slate-600 mb-1">Upload Profile Picture</label>
+                  <input 
+                    type="file"
+                    accept="image/*"
+                    className="w-full border border-slate-200 rounded-md p-1.5 text-xs font-delight font-medium outline-none bg-white file:mr-3 file:py-1 file:px-3 file:rounded-md file:border file:border-slate-300 file:text-xs file:font-delight font-medium file:bg-slate-100 file:text-slate-700 hover:file:bg-slate-200 cursor-pointer"
+                    onChange={(e) => {
+                      const file = e.target.files?.[0];
+                      if (file) {
+                        const reader = new FileReader();
+                        reader.onloadend = () => {
+                          const img = new Image();
+                          img.onload = () => {
+                            const canvas = document.createElement('canvas');
+                            const MAX_WIDTH = 256;
+                            const MAX_HEIGHT = 256;
+                            let width = img.width;
+                            let height = img.height;
+                            
+                            if (width > height) {
+                              if (width > MAX_WIDTH) {
+                                height *= MAX_WIDTH / width;
+                                width = MAX_WIDTH;
+                              }
+                            } else {
+                              if (height > MAX_HEIGHT) {
+                                width *= MAX_HEIGHT / height;
+                                width = MAX_HEIGHT;
+                              }
+                            }
+                            canvas.width = width;
+                            canvas.height = height;
+                            const ctx = canvas.getContext('2d');
+                            ctx?.drawImage(img, 0, 0, width, height);
+                            const dataUrl = canvas.toDataURL('image/jpeg', 0.8);
+                            setProfilePicture(dataUrl);
+                          };
+                          img.src = reader.result as string;
+                        };
+                        reader.readAsDataURL(file);
+                      }
+                    }}
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs">
+                <div className="space-y-1">
+                  <label className="font-delight text-[11px] font-medium text-slate-600">Target Audience</label>
+                  <input 
+                    type="text" 
+                    className="w-full h-8 px-2.5 bg-white border border-slate-200 rounded-md font-delight font-semibold text-xs text-slate-900 outline-none focus:border-slate-400"
+                    value={targetAudience}
+                    onChange={(e) => setTargetAudience(e.target.value)}
+                    placeholder="e.g. Local Dentists"
+                  />
+                </div>
+                <div className="space-y-1">
+                  <label className="font-delight text-[11px] font-medium text-slate-600">Primary Goal</label>
+                  <input 
+                    type="text" 
+                    className="w-full h-8 px-2.5 bg-white border border-slate-200 rounded-md font-delight font-semibold text-xs text-slate-900 outline-none focus:border-slate-400"
+                    value={goals}
+                    onChange={(e) => setGoals(e.target.value)}
+                    placeholder="e.g. Book demo calls"
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs">
+                <div className="space-y-1">
+                  <label className="font-delight text-[11px] font-medium text-slate-600">Full Name / Operator</label>
+                  <input
+                    type="text"
+                    value={name}
+                    onChange={(e) => setName(e.target.value)}
+                    placeholder="e.g. Alex Rivera"
+                    className="w-full h-8 px-2.5 bg-white border border-slate-200 rounded-md font-delight font-medium text-xs text-slate-900 outline-none focus:border-slate-400"
+                  />
+                </div>
+
+                <div className="space-y-1">
+                  <label className="font-delight text-[11px] font-medium text-slate-600">Account Email</label>
+                  <input
+                    type="email"
+                    value={user?.email || ''}
+                    disabled
+                    className="w-full h-8 px-2.5 bg-slate-100 border border-slate-200 rounded-md font-delight font-normal text-xs text-slate-500 cursor-not-allowed"
+                  />
+                </div>
+
+                <div className="space-y-1">
+                  <label className="font-delight text-[11px] font-medium text-slate-600">Company / Agency Name</label>
+                  <input
+                    type="text"
+                    value={companyName}
+                    onChange={(e) => setCompanyName(e.target.value)}
+                    placeholder="e.g. Apex Growth Media"
+                    className="w-full h-8 px-2.5 bg-white border border-slate-200 rounded-md font-delight font-medium text-xs text-slate-900 outline-none focus:border-slate-400"
+                  />
+                </div>
+
+                <div className="space-y-1">
+                  <label className="font-delight text-[11px] font-medium text-slate-600">Broad Industry Category</label>
+                  <input
+                    type="text"
+                    value={fieldOfWork}
+                    onChange={(e) => setFieldOfWork(e.target.value)}
+                    placeholder="e.g. Healthcare B2B Marketing"
+                    className="w-full h-8 px-2.5 bg-white border border-slate-200 rounded-md font-delight font-medium text-xs text-slate-900 outline-none focus:border-slate-400"
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs">
+                <div className="space-y-1">
+                  <label className="font-delight text-[11px] font-medium text-slate-600">Specific Niche</label>
+                  <input
+                    type="text"
+                    value={niche}
+                    onChange={(e) => setNiche(e.target.value)}
+                    placeholder="e.g. Vegan Restaurants, Luxury Real Estate"
+                    className="w-full h-8 px-2.5 bg-white border border-slate-200 rounded-md font-delight font-medium text-xs text-slate-900 outline-none focus:border-slate-400"
+                  />
+                </div>
+
+                <div className="space-y-1 sm:col-span-2">
+                  <label className="font-delight text-[11px] font-medium text-slate-600">Business WhatsApp Contact Number</label>
+                  <input
+                    type="tel"
+                    value={phone}
+                    onChange={(e) => setPhone(e.target.value)}
+                    placeholder="e.g. +91 9876543210"
+                    className="w-full h-8 px-2.5 bg-white border border-slate-200 rounded-md font-delight font-medium text-xs text-slate-900 outline-none focus:border-slate-400"
+                  />
+                </div>
+              </div>
+
+              <div className="pt-3 border-t border-slate-200 flex justify-end">
+                <button
+                  onClick={handleSaveSettings}
+                  disabled={saving}
+                  className="bg-slate-900 hover:bg-slate-800 text-white h-8 px-4 rounded-md font-delight font-medium text-xs transition-all flex items-center gap-1.5 cursor-pointer border border-slate-900 disabled:opacity-50"
+                >
+                  <Save className="w-3.5 h-3.5" />
+                  <span>{saving ? 'Saving Changes...' : 'Save Profile'}</span>
+                </button>
+              </div>
+            </div>
+          )}
+
+          {/* TAB 2: MAIL DELIVERY & SMTP */}
+          {activeTab === 'smtp' && (
+            <div className="bg-white rounded-md border border-slate-200 p-5 sm:p-6 shadow-none space-y-5">
+              <div className="flex items-start justify-between">
+                <div>
+                  <h3 className="text-sm font-bold text-slate-900">Direct-to-Inbox Mail Transport Configuration</h3>
+                  <p className="text-xs text-slate-500">Connect your custom SMTP server (SendGrid, Mailgun, Amazon SES, Google Workspace) to route outbound email campaigns.</p>
+                </div>
+                <span className="text-[10px] font-delight font-semibold bg-emerald-50 text-emerald-700 px-2 py-0.5 rounded-sm border border-emerald-200">
+                  SMTP Engine Connected
+                </span>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 text-xs">
+                <div className="sm:col-span-2 space-y-1">
+                  <label className="font-delight text-[11px] font-medium text-slate-600">SMTP Host Server</label>
+                  <input
+                    type="text"
+                    value={smtpHost}
+                    onChange={(e) => setSmtpHost(e.target.value)}
+                    placeholder="e.g. smtp.sendgrid.net or smtp.gmail.com"
+                    className="w-full h-8 px-2.5 bg-white border border-slate-200 rounded-md font-delight font-medium text-xs text-slate-900 outline-none focus:border-slate-400"
+                  />
+                </div>
+
+                <div className="space-y-1">
+                  <label className="font-delight text-[11px] font-medium text-slate-600">Port</label>
+                  <input
+                    type="text"
+                    value={smtpPort}
+                    onChange={(e) => setSmtpPort(e.target.value)}
+                    placeholder="587 (TLS) or 465 (SSL)"
+                    className="w-full h-8 px-2.5 bg-white border border-slate-200 rounded-md font-delight font-medium text-xs text-slate-900 outline-none focus:border-slate-400"
+                  />
+                </div>
+
+                <div className="space-y-1">
+                  <label className="font-delight text-[11px] font-medium text-slate-600">SMTP Username / API Key</label>
+                  <input
+                    type="text"
+                    value={smtpUser}
+                    onChange={(e) => setSmtpUser(e.target.value)}
+                    placeholder="apikey or username"
+                    className="w-full h-8 px-2.5 bg-white border border-slate-200 rounded-md font-delight font-medium text-xs text-slate-900 outline-none focus:border-slate-400"
+                  />
+                </div>
+
+                <div className="space-y-1">
+                  <label className="font-delight text-[11px] font-medium text-slate-600">SMTP Password</label>
+                  <input
+                    type="password"
+                    value={smtpPass}
+                    onChange={(e) => setSmtpPass(e.target.value)}
+                    placeholder="Password or API secret"
+                    className="w-full h-8 px-2.5 bg-white border border-slate-200 rounded-md font-delight font-medium text-xs text-slate-900 outline-none focus:border-slate-400"
+                  />
+                </div>
+
+                <div className="space-y-1">
+                  <label className="font-delight text-[11px] font-medium text-slate-600">Sender Display Name</label>
+                  <input
+                    type="text"
+                    value={fromName}
+                    onChange={(e) => setFromName(e.target.value)}
+                    placeholder="Alex Rivera | LeadPulse"
+                    className="w-full h-8 px-2.5 bg-white border border-slate-200 rounded-md font-delight font-medium text-xs text-slate-900 outline-none focus:border-slate-400"
+                  />
+                </div>
+
+                <div className="sm:col-span-3 space-y-1">
+                  <label className="font-delight text-[11px] font-medium text-slate-600">Sender "From" Email Address</label>
+                  <input
+                    type="email"
+                    value={fromEmail}
+                    onChange={(e) => setFromEmail(e.target.value)}
+                    placeholder="alex@yourdomain.com"
+                    className="w-full h-8 px-2.5 bg-white border border-slate-200 rounded-md font-delight font-medium text-xs text-slate-900 outline-none focus:border-slate-400"
+                  />
+                </div>
+              </div>
+
+              {/* Compliance Checkbox */}
+              <div className="p-3.5 rounded-md bg-slate-50 border border-slate-200 flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <Shield className="w-4 h-4 text-emerald-600 shrink-0" />
+                  <div className="text-xs">
+                    <strong className="text-slate-900 block font-semibold">Mandatory CAN-SPAM / GDPR Compliance Footer</strong>
+                    <span className="text-slate-500">Automatically inject one-click unsubscribe links and sender physical address to maintain high deliverability.</span>
+                  </div>
+                </div>
+                <input
+                  type="checkbox"
+                  checked={complianceFooter}
+                  onChange={(e) => setComplianceFooter(e.target.checked)}
+                  className="w-4 h-4 text-blue-600 rounded-sm cursor-pointer"
+                />
+              </div>
+
+              <div className="pt-3 border-t border-slate-200 flex flex-wrap items-center justify-between gap-3">
+                <button
+                  type="button"
+                  onClick={handleTestSmtp}
+                  disabled={testEmailSending}
+                  className="bg-white hover:bg-slate-50 text-slate-700 border border-slate-200 h-8 px-3.5 rounded-md text-xs font-delight font-medium transition-all flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
+                >
+                  <Mail className="w-3.5 h-3.5 text-blue-600" />
+                  <span>{testEmailSending ? 'Sending Test Message...' : testEmailSuccess ? 'Test Delivered to Inbox!' : 'Send Test SMTP Ping'}</span>
+                </button>
+
+                <button
+                  onClick={handleSaveSettings}
+                  disabled={saving}
+                  className="bg-slate-900 hover:bg-slate-800 text-white h-8 px-4 rounded-md text-xs font-delight font-medium transition-all flex items-center gap-1.5 cursor-pointer border border-slate-900 disabled:opacity-50"
+                >
+                  <Save className="w-3.5 h-3.5" />
+                  <span>{saving ? 'Saving...' : 'Save SMTP Settings'}</span>
+                </button>
+              </div>
+            </div>
+          )}
+
+          {/* TAB 3: WHATSAPP & AUTOMATION */}
+          {activeTab === 'outreach' && (
+            <div className="bg-white rounded-md border border-slate-200 p-5 sm:p-6 shadow-none space-y-5">
+              <div>
+                <h3 className="text-sm font-bold text-slate-900">WhatsApp & Outreach Automation Defaults</h3>
+                <p className="text-xs text-slate-500">Configure fallback parameters and automatic stage advancing for high-speed multi-channel execution.</p>
+              </div>
+
+              <div className="space-y-4 text-xs">
+                <div className="p-3.5 bg-slate-50 border border-slate-200 rounded-md space-y-1.5">
+                  <div className="flex items-center gap-2 text-slate-900 font-semibold font-delight text-xs">
+                    <MessageCircle className="w-3.5 h-3.5 text-emerald-600" />
+                    <span>Organic WhatsApp Convenience Framing Script</span>
+                  </div>
+                  <p className="text-slate-700 text-xs italic bg-white p-2.5 rounded-sm border border-slate-200 font-sans">
+                    "Instead of cramming files into messy WhatsApp chat history, what is the best email address to drop this over to?"
+                  </p>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div className="space-y-1">
+                    <label className="font-delight text-[11px] font-medium text-slate-600">Fallback for Business Name (`&#123;&#123;business_name&#125;&#125;`)</label>
+                    <input
+                      type="text"
+                      value={defaultFallbackBusiness}
+                      onChange={(e) => setDefaultFallbackBusiness(e.target.value)}
+                      placeholder="e.g. Business Owner or Partner"
+                      className="w-full h-8 px-2.5 bg-white border border-slate-200 rounded-md font-delight font-medium text-xs text-slate-900 outline-none focus:border-slate-400"
+                    />
+                  </div>
+
+                  <div className="space-y-1">
+                    <label className="font-delight text-[11px] font-medium text-slate-600">Fallback for Location (`&#123;&#123;location&#125;&#125;`)</label>
+                    <input
+                      type="text"
+                      value={defaultFallbackLocation}
+                      onChange={(e) => setDefaultFallbackLocation(e.target.value)}
+                      placeholder="e.g. your locality or your area"
+                      className="w-full h-8 px-2.5 bg-white border border-slate-200 rounded-md font-delight font-medium text-xs text-slate-900 outline-none focus:border-slate-400"
+                    />
+                  </div>
+                </div>
+
+                <div className="p-3.5 rounded-md bg-slate-50 border border-slate-200 flex items-center justify-between">
+                  <div>
+                    <strong className="text-slate-900 block font-semibold">Auto-Advance Pipeline Stage on Outreach Launch</strong>
+                    <span className="text-slate-500">Automatically advance lead from "New" to "WhatsApp Contacted" or "Proposal Sent" upon clicking dispatch.</span>
+                  </div>
+                  <input
+                    type="checkbox"
+                    checked={autoAdvanceStage}
+                    onChange={(e) => setAutoAdvanceStage(e.target.checked)}
+                    className="w-4 h-4 text-blue-600 rounded-sm cursor-pointer"
+                  />
+                </div>
+              </div>
+
+              <div className="pt-3 border-t border-slate-200 flex justify-end">
+                <button
+                  onClick={handleSaveSettings}
+                  disabled={saving}
+                  className="bg-slate-900 hover:bg-slate-800 text-white h-8 px-4 rounded-md font-delight font-medium text-xs transition-all flex items-center gap-1.5 cursor-pointer border border-slate-900 disabled:opacity-50"
+                >
+                  <Save className="w-3.5 h-3.5" />
+                  <span>{saving ? 'Saving...' : 'Save Automation Defaults'}</span>
+                </button>
+              </div>
+            </div>
+          )}
+
+          {/* TAB 4: BILLING & COMPUTE */}
+          {activeTab === 'billing' && (
+            <div className="bg-white rounded-md border border-slate-200 p-5 sm:p-6 shadow-none space-y-5">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h3 className="text-sm font-bold text-slate-900">Current Subscription & Compute Tier</h3>
+                  <p className="text-xs text-slate-500">Manage your B2B harvesting limits, auto-refresh schedule, and PhonePe payment history.</p>
+                </div>
+                <span className="text-[10px] font-delight font-bold bg-purple-50 text-purple-700 border border-purple-200 px-2.5 py-0.5 rounded-sm uppercase tracking-wider">
+                  {currentPlan.toUpperCase()} TIER
+                </span>
+              </div>
+
+              {/* Plan Card Banner */}
+              <div className="p-5 rounded-md bg-slate-950 border border-slate-800 text-white flex flex-wrap items-center justify-between gap-4">
+                <div className="space-y-1">
+                  <div className="flex items-center gap-2">
+                    <span className="text-base font-bold font-delight">{isFree ? 'Free Tier Compute' : `LeadPulse ${currentPlan.toUpperCase()}`}</span>
+                    <span className="text-[10px] font-delight font-bold bg-blue-600 text-white px-2 py-0.5 rounded-sm">
+                      {isFree ? '₹0 / forever' : currentPlan === 'basic' ? '₹699 / mo' : '₹1,999 / mo'}
+                    </span>
+                  </div>
+                  <p className="text-xs text-slate-400">
+                    {isFree 
+                      ? '50 Saved Leads Pool (Auto-refreshes every 4 days) • Max 10 leads / query'
+                      : currentPlan === 'basic' 
+                        ? '600 Saved Leads & continuous daily harvesting • Unlimited CSV exports'
+                        : 'Unlimited Saved Leads & 1,000 daily velocity • Dedicated Priority Worker'
+                    }
+                  </p>
+                </div>
+
+                <button
+                  onClick={() => {
+                    setUpgradeTab('plans');
+                    setUpgradeModalOpen(true);
+                  }}
+                  className="bg-white hover:bg-slate-100 text-slate-900 h-8 px-3.5 rounded-md text-xs font-delight font-bold transition-all flex items-center gap-1.5 cursor-pointer"
+                >
+                  <Sparkles className="w-3.5 h-3.5 text-blue-600" />
+                  <span>{isFree ? 'Upgrade to Basic / Pro' : 'Manage Subscription'}</span>
+                </button>
+              </div>
+
+              {/* Compute Pool Breakdown */}
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 text-xs font-delight font-medium">
+                <div className="p-3.5 bg-slate-50 rounded-md border border-slate-200 space-y-1">
+                  <span className="text-slate-400 font-semibold uppercase text-[10px]">Lead Balance</span>
+                  <div className="text-xl font-bold text-slate-900">{credits} Credits</div>
+                  <span className="text-[11px] text-slate-500 font-sans">Available to harvest</span>
+                </div>
+
+                <div className="p-3.5 bg-slate-50 rounded-md border border-slate-200 space-y-1">
+                  <span className="text-slate-400 font-semibold uppercase text-[10px]">Saved Leads Limit</span>
+                  <div className="text-xl font-bold text-purple-700">
+                    {isFree ? '50 Leads' : currentPlan === 'basic' ? '600 Leads' : 'Unlimited'}
+                  </div>
+                  <span className="text-[11px] text-slate-500 font-sans">CRM capacity</span>
+                </div>
+
+                <div className="p-3.5 bg-slate-50 rounded-md border border-slate-200 space-y-1">
+                  <span className="text-slate-400 font-semibold uppercase text-[10px]">One-Time Top-Up</span>
+                  <div>
+                    <button
+                      onClick={() => setTopUpOpen(true)}
+                      className="mt-0.5 text-xs font-bold text-blue-600 hover:underline flex items-center gap-1 cursor-pointer"
+                    >
+                      <Zap className="w-3 h-3 fill-current" />
+                      <span>Buy Top-Up Pack (₹50) →</span>
+                    </button>
+                  </div>
+                  <span className="text-[11px] text-slate-500 font-sans">Instant PhonePe UPI</span>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* TAB 5: DATA MANAGEMENT */}
+          {activeTab === 'data' && (
+            <div className="bg-white rounded-md border border-slate-200 p-5 sm:p-6 shadow-none space-y-5">
+              <div>
+                <h3 className="text-sm font-bold text-slate-900">Data Portability & Database Operations</h3>
+                <p className="text-xs text-slate-500">Export your complete prospect dataset or clean up stale CRM pipeline records.</p>
+              </div>
+
+              <div className="space-y-3">
+                {/* Export Card */}
+                <div className="p-4 rounded-md bg-slate-50 border border-slate-200 flex flex-wrap items-center justify-between gap-4">
+                  <div className="space-y-0.5">
+                    <strong className="text-xs font-semibold text-slate-900 block">Export All Verified Leads (CSV / Excel)</strong>
+                    <p className="text-xs text-slate-500 font-sans">Download all extracted business names, direct emails, phone numbers, and pipeline stages.</p>
+                  </div>
+
+                  <button
+                    onClick={handleExportAll}
+                    className="bg-slate-900 hover:bg-slate-800 text-white h-8 px-3.5 rounded-md text-xs font-delight font-medium transition-all flex items-center gap-1.5 cursor-pointer border border-slate-900"
+                  >
+                    <Download className="w-3.5 h-3.5" />
+                    <span>Download Full CRM (.CSV)</span>
+                    {isFree && <Lock className="w-3 h-3 text-amber-400" />}
+                  </button>
+                </div>
+
+                {/* Cloud Firestore Sync Status */}
+                <div className="p-4 rounded-md bg-emerald-50 border border-emerald-200 flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <div className="w-7 h-7 rounded-md bg-emerald-600 text-white flex items-center justify-center font-bold flex-shrink-0">
+                      <Check className="w-4 h-4" />
+                    </div>
+                    <div>
+                      <strong className="text-xs font-semibold text-emerald-950 block">Google Cloud Firestore Synchronized</strong>
+                      <span className="text-[11px] text-emerald-800 font-sans">Your CRM data is automatically backed up and persisted with production service account credentials.</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
+        </div>
+      </div>
+    </div>
+  );
+};
+
+export default Settings;

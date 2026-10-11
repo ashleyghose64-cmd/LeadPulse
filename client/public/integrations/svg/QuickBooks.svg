@@ -1,0 +1,5 @@
+<svg width="512" height="512" viewBox="0 0 512 512">
+
+<rect width="512" height="512" rx="112" fill="#2CA01C"/>
+<circle cx="200" cy="256" r="65" stroke="white" stroke-width="28" fill="none"/><path d="M200 191 V321" stroke="white" stroke-width="28"/><circle cx="312" cy="256" r="65" stroke="white" stroke-width="28" fill="none"/><path d="M312 191 V321" stroke="white" stroke-width="28"/>
+</svg>

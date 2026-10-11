@@ -1,0 +1,1049 @@
+import { useState, useEffect } from 'react';
+import { useStore } from '../store/useStore';
+import { confirmDialog, alertDialog } from '../components/AppConfirmModal';
+import axios from 'axios';
+import { 
+  Search, List, Kanban, 
+  Plus, Phone, Globe, MapPin,
+  MessageCircle, Send,
+  Check, Edit3, ShieldCheck, GripVertical,
+  X, ExternalLink, Trash2, Star, Sparkles
+} from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import Sidebar from '../components/Sidebar';
+import Header from '../components/Header';
+import { EMAIL_CAPTURE_BRIDGE_SCRIPT } from '../data/whatsappTemplates';
+
+const KANBAN_STAGES = [
+  'New',
+  'WhatsApp Contacted',
+  'Replied / Awaiting Email',
+  'Email Verified & Captured',
+  'Proposal Sent',
+  'Closed Won'
+];
+
+const CrmPipeline = () => {
+  const { user, integrations, notifyIntegration, syncLeadsToIntegration } = useStore();
+  const navigate = useNavigate();
+  const [viewMode, setViewMode] = useState<'kanban' | 'table'>('kanban');
+  const [leads, setLeads] = useState<any[]>([]);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [selectedLeads, setSelectedLeads] = useState<string[]>([]);
+  const [toastMessage, setToastMessage] = useState('');
+  const [isSyncingCrm, setIsSyncingCrm] = useState(false);
+
+  const showToast = (msg: string) => {
+    setToastMessage(msg);
+    setTimeout(() => setToastMessage(''), 3800);
+  };
+
+  // Active Alert & CRM integrations
+  const activeAlertApp = integrations.find(
+    a => a.connected && ['slack', 'microsoft-teams', 'zapier', 'webhook-custom'].includes(a.id)
+  );
+  const activeCrmApp = integrations.find(
+    a => a.connected && ['hubspot', 'salesforce', 'attio', 'google-sheets', 'airtable', 'notion'].includes(a.id)
+  );
+  
+  // Drag and Drop State
+  const [draggedLeadId, setDraggedLeadId] = useState<string | null>(null);
+  const [dragOverStage, setDragOverStage] = useState<string | null>(null);
+
+  // Click-to-View Lead Details Modal State
+  const [selectedLeadDetails, setSelectedLeadDetails] = useState<any | null>(null);
+
+  // Inline Email Capture Upgrade State
+  const [capturingLeadId, setCapturingLeadId] = useState<string | null>(null);
+  const [capturedEmailInput, setCapturedEmailInput] = useState('');
+  const [isUpdating, setIsUpdating] = useState(false);
+
+  // Edit Lead Modal State
+  const [editingLead, setEditingLead] = useState<any | null>(null);
+  const [isSavingEdit, setIsSavingEdit] = useState(false);
+
+  const fetchLeads = async () => {
+    try {
+      const res = await axios.get('http://localhost:3001/api/leads', {
+        headers: { userid: user?._id }
+      });
+      setLeads(res.data);
+    } catch (err) {
+      console.error(err);
+      setLeads([]);
+    }
+  };
+
+  useEffect(() => {
+    if (user) fetchLeads();
+  }, [user]);
+
+  const toggleLead = (id: string) => {
+    if (selectedLeads.includes(id)) {
+      setSelectedLeads(selectedLeads.filter(l => l !== id));
+    } else {
+      setSelectedLeads([...selectedLeads, id]);
+    }
+  };
+
+  const toggleAll = () => {
+    if (selectedLeads.length === leads.length && leads.length > 0) {
+      setSelectedLeads([]);
+    } else {
+      setSelectedLeads(leads.map(l => l._id));
+    }
+  };
+
+  // Update lead status in Firestore + Trigger Connected Slack/Teams/CRM Hooks
+  const handleUpdateStatus = async (leadId: string, newStatus: string) => {
+    const targetLead = leads.find(l => l._id === leadId);
+    const leadName = targetLead?.businessName || 'Deal';
+
+    try {
+      setLeads(prev => prev.map(l => l._id === leadId ? { ...l, status: newStatus } : l));
+      await axios.patch(`http://localhost:3001/api/leads/${leadId}`, { status: newStatus }, {
+        headers: { userid: user?._id }
+      });
+
+      if (activeAlertApp) {
+        const channelLabel = activeAlertApp.config?.channel || activeAlertApp.config?.channelName || activeAlertApp.name;
+        await notifyIntegration(
+          activeAlertApp.id,
+          `Pipeline Stage Transition: "${leadName}" moved to [${newStatus}] by ${user?.name || 'Operator'}`,
+          {
+            event: 'deal.stage_changed',
+            businessName: leadName,
+            newStage: newStatus,
+            operator: user?.name || 'Alex Roberts'
+          }
+        );
+        showToast(`Moved "${leadName}" to ${newStatus} • Alert sent to ${activeAlertApp.name} (${channelLabel}) [200 OK]`);
+      } else {
+        showToast(`Moved "${leadName}" to ${newStatus}`);
+      }
+    } catch (err) {
+      console.error('Failed to update lead status:', err);
+      fetchLeads();
+    }
+  };
+
+  // 1-Click Sync Active Pipeline Deals to Connected CRM
+  const handleSyncPipelineToCrm = async () => {
+    if (!activeCrmApp) {
+      navigate('/integrations');
+      return;
+    }
+    const targetIds = selectedLeads.length > 0 ? selectedLeads : filteredLeads.map(l => l._id);
+    if (targetIds.length === 0) {
+      showToast('No pipeline deals to sync.');
+      return;
+    }
+    setIsSyncingCrm(true);
+    const result = await syncLeadsToIntegration(activeCrmApp.id, targetIds);
+    setIsSyncingCrm(false);
+    if (result) {
+      const idSet = new Set(targetIds);
+      setLeads(prev => prev.map(l => {
+        if (!idSet.has(l._id)) return l;
+        const existing = Array.isArray(l.syncedTo) ? l.syncedTo : [];
+        return { ...l, syncedTo: Array.from(new Set([...existing, result.appName])) };
+      }));
+      showToast(`Mirrored ${result.syncedCount} pipeline deal(s) to ${result.appName} [200 OK]`);
+    }
+  };
+
+  // Drag and Drop Event Handlers
+  const handleDragStart = (e: React.DragEvent, leadId: string) => {
+    e.dataTransfer.setData('text/plain', leadId);
+    e.dataTransfer.effectAllowed = 'move';
+    setDraggedLeadId(leadId);
+  };
+
+  const handleDragOver = (e: React.DragEvent, stage: string) => {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'move';
+    if (dragOverStage !== stage) {
+      setDragOverStage(stage);
+    }
+  };
+
+  const handleDragLeave = (e: React.DragEvent, stage: string) => {
+    e.preventDefault();
+    if (e.currentTarget.contains(e.relatedTarget as Node)) return;
+    if (dragOverStage === stage) {
+      setDragOverStage(null);
+    }
+  };
+
+  const handleDrop = async (e: React.DragEvent, targetStage: string) => {
+    e.preventDefault();
+    const leadId = e.dataTransfer.getData('text/plain') || draggedLeadId;
+    setDragOverStage(null);
+    setDraggedLeadId(null);
+
+    if (leadId) {
+      const targetLead = leads.find(l => l._id === leadId);
+      if (targetLead && (targetLead.status || 'New') !== targetStage) {
+        await handleUpdateStatus(leadId, targetStage);
+      }
+    }
+  };
+
+  const handleDragEnd = () => {
+    setDraggedLeadId(null);
+    setDragOverStage(null);
+  };
+
+  // 1-Click Upgrade Record from "Phone-Only" to "Verified Email Lead"
+  const handleSaveCapturedEmail = async (leadId: string) => {
+    if (!capturedEmailInput || !capturedEmailInput.includes('@')) {
+      await alertDialog({
+        title: 'Invalid Email Address',
+        message: 'Please enter a valid email address before upgrading this lead record.',
+        variant: 'warning'
+      });
+      return;
+    }
+
+    setIsUpdating(true);
+    try {
+      setLeads(prev => prev.map(l => l._id === leadId ? { 
+        ...l, 
+        email: capturedEmailInput, 
+        emailStatus: 'Verified Email',
+        status: 'Email Verified & Captured'
+      } : l));
+
+      await axios.patch(`http://localhost:3001/api/leads/${leadId}`, {
+        email: capturedEmailInput,
+        emailStatus: 'Verified Email',
+        status: 'Email Verified & Captured'
+      }, {
+        headers: { userid: user?._id }
+      });
+
+      setCapturingLeadId(null);
+      setCapturedEmailInput('');
+    } catch (err) {
+      console.error('Failed to upgrade email:', err);
+      await alertDialog({
+        title: 'Save Error',
+        message: 'Failed to save captured email address. Please try again.',
+        variant: 'error'
+      });
+      fetchLeads();
+    } finally {
+      setIsUpdating(false);
+    }
+  };
+
+  // Handle Save / Update Lead Details
+  const handleSaveEditLead = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingLead?._id || !user?._id) return;
+    setIsSavingEdit(true);
+    try {
+      const payload = {
+        businessName: editingLead.businessName,
+        email: editingLead.email || '',
+        phone: editingLead.phone || '',
+        website: editingLead.website || '',
+        category: editingLead.category || 'General',
+        location: editingLead.location || '',
+        status: editingLead.status || 'New'
+      };
+      const res = await axios.patch(`http://localhost:3001/api/leads/${editingLead._id}`, payload, {
+        headers: { userid: user?._id }
+      });
+      const updated = res.data?.lead || { ...editingLead, ...payload };
+      setLeads(prev => prev.map(l => l._id === editingLead._id ? updated : l));
+      if (selectedLeadDetails?._id === editingLead._id) {
+        setSelectedLeadDetails(updated);
+      }
+      setEditingLead(null);
+    } catch (err) {
+      console.error('Failed to update lead:', err);
+      await alertDialog({
+        title: 'Update Error',
+        message: 'Failed to update lead details. Please try again.',
+        variant: 'error'
+      });
+    } finally {
+      setIsSavingEdit(false);
+    }
+  };
+
+  // 1-Click Launch WhatsApp with Convenience-Framing Script
+  const handleLaunchWhatsApp = (lead: any) => {
+    const cleanPhone = (lead.phone || '').replace(/[^0-9]/g, '');
+    const message = `Hey ${lead.firstName || lead.businessName}! Came across ${lead.businessName} in ${lead.location}. ${EMAIL_CAPTURE_BRIDGE_SCRIPT}`;
+    const url = `https://wa.me/${cleanPhone}?text=${encodeURIComponent(message)}`;
+    
+    // Auto-advance stage to WhatsApp Contacted
+    handleUpdateStatus(lead._id, 'WhatsApp Contacted');
+    window.open(url, '_blank');
+  };
+
+  const filteredLeads = leads.filter(l => {
+    const bName = l.businessName || '';
+    const cat = l.category || '';
+    const loc = l.location || '';
+    return bName.toLowerCase().includes(searchQuery.toLowerCase()) || 
+           cat.toLowerCase().includes(searchQuery.toLowerCase()) ||
+           loc.toLowerCase().includes(searchQuery.toLowerCase());
+  });
+
+  const getStatusColor = (status: string) => {
+    switch(status) {
+      case 'New': return 'bg-blue-50 text-blue-700 border-blue-200/60';
+      case 'WhatsApp Contacted': return 'bg-violet-50 text-violet-700 border-violet-200/60';
+      case 'Replied / Awaiting Email': return 'bg-cyan-50 text-cyan-700 border-cyan-200/60';
+      case 'Email Verified & Captured': return 'bg-indigo-50 text-indigo-700 border-indigo-200/60';
+      case 'Proposal Sent': return 'bg-purple-50 text-purple-700 border-purple-200/60';
+      case 'Closed Won': return 'bg-emerald-50 text-emerald-700 border-emerald-200/60';
+      default: return 'bg-slate-50 text-slate-700 border-slate-200';
+    }
+  };
+
+  return (
+    <div className="flex w-full h-screen overflow-hidden bg-transparent font-sans text-slate-900">
+      <Sidebar />
+
+      <div className="flex-1 flex flex-col h-full overflow-hidden">
+        <Header title="Unified B2B Pipeline & Smart WhatsApp Bridge" />
+
+        <div className="flex-1 flex flex-col p-6 sm:p-8 overflow-hidden space-y-6">
+          
+          {toastMessage && (
+            <div className="fixed top-6 right-6 z-50 bg-slate-900 text-white px-3.5 py-2 rounded-md shadow-xl border border-slate-800 text-xs font-delight font-medium flex items-center gap-2 animate-in fade-in">
+              <Sparkles className="w-3.5 h-3.5 text-emerald-400" />
+              <span>{toastMessage}</span>
+            </div>
+          )}
+
+          {/* Top Stage Progression Bar */}
+          <div className="grid grid-cols-2 sm:grid-cols-6 gap-2 shrink-0">
+            {KANBAN_STAGES.map((stage, idx) => {
+              const count = leads.filter(l => (l.status || 'New') === stage).length;
+              const pips = ['bg-blue-500', 'bg-violet-500', 'bg-cyan-500', 'bg-amber-500', 'bg-purple-500', 'bg-emerald-500'];
+              return (
+                <div key={stage} className="bg-white border border-slate-200/90 rounded-lg p-2.5 shadow-[0_1px_2px_rgba(0,0,0,0.01)] hover:border-slate-300 transition-colors">
+                  <div className="flex items-center justify-between mb-1">
+                    <span className="text-[10px] text-slate-500 font-delight font-bold uppercase tracking-wider truncate">{stage}</span>
+                    <span className={`w-1.5 h-1.5 rounded-full ${pips[idx % pips.length]}`}></span>
+                  </div>
+                  <div className="text-base font-delight font-bold text-slate-900">{count}</div>
+                </div>
+              );
+            })}
+          </div>
+
+          {/* Control Bar */}
+          <div className="flex flex-wrap items-center justify-between gap-4 shrink-0">
+            <div className="flex flex-wrap items-center gap-3">
+              <div className="relative w-72 sm:w-84">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-400" />
+                <input 
+                  type="text" 
+                  placeholder="Search business, location, category..."
+                  className="w-full bg-white border border-slate-200 rounded-md py-1.5 pl-9 pr-3 text-xs font-medium text-slate-900 focus:border-slate-400 outline-none shadow-xs"
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                />
+              </div>
+
+              <span className="text-xs text-slate-500 font-delight font-normal hidden sm:inline-block">
+                {filteredLeads.length} leads
+              </span>
+
+              {activeAlertApp && (
+                <span
+                  onClick={() => navigate('/integrations')}
+                  className="hidden lg:inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-emerald-50/90 border border-emerald-200/80 text-[10px] font-delight font-medium text-emerald-700 cursor-pointer hover:bg-emerald-100/70 transition-colors"
+                  title="Stage transitions automatically alert your connected workspace channel"
+                >
+                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
+                  <span>Stage Alerts: <b>{activeAlertApp.name}</b> ({activeAlertApp.config?.channel || 'Live'})</span>
+                </span>
+              )}
+            </div>
+
+            {/* View Switcher & Action Controls */}
+            <div className="flex items-center gap-2.5">
+              {selectedLeads.length > 0 && (
+                <button 
+                  onClick={async () => {
+                    for (const id of selectedLeads) {
+                      await axios.delete(`http://localhost:3001/api/leads/${id}`, { headers: { userid: user?._id } }).catch(() => {});
+                    }
+                    setSelectedLeads([]);
+                    fetchLeads();
+                  }}
+                  className="bg-rose-50 text-rose-700 hover:bg-rose-100 px-3 py-1.5 rounded-md text-xs font-semibold transition-colors border border-rose-200 cursor-pointer font-delight"
+                >
+                  Delete ({selectedLeads.length})
+                </button>
+              )}
+
+              {activeCrmApp && (
+                <button
+                  onClick={handleSyncPipelineToCrm}
+                  disabled={isSyncingCrm}
+                  className="bg-white hover:bg-blue-50/70 text-blue-700 border border-blue-200 px-3 py-1.5 rounded-lg text-xs font-delight font-semibold transition-all shadow-2xs flex items-center gap-1.5 cursor-pointer"
+                >
+                  <Sparkles className="w-3.5 h-3.5 text-blue-600" />
+                  <span>{isSyncingCrm ? 'Syncing...' : `Mirror to ${activeCrmApp.name}`}</span>
+                </button>
+              )}
+
+              <button
+                onClick={() => navigate('/finder')}
+                className="bg-blue-600 hover:bg-blue-700 text-white px-3.5 py-1.5 rounded-lg text-xs font-semibold transition-all shadow-xs shadow-blue-500/20 flex items-center gap-1.5 cursor-pointer"
+              >
+                <Plus className="w-3.5 h-3.5 text-blue-100" />
+                <span>New Harvest</span>
+              </button>
+
+              <div className="flex items-center bg-white border border-slate-200 rounded-md p-0.5 shadow-xs">
+                <button 
+                  onClick={() => setViewMode('kanban')}
+                  className={`flex items-center gap-1.5 px-2.5 py-1 rounded text-xs font-medium transition-all cursor-pointer ${
+                    viewMode === 'kanban' ? 'bg-slate-900 text-white shadow-xs' : 'text-slate-500 hover:text-slate-900'
+                  }`}
+                >
+                  <Kanban className="w-3.5 h-3.5" /> 
+                  <span>Kanban</span>
+                </button>
+                <button 
+                  onClick={() => setViewMode('table')}
+                  className={`flex items-center gap-1.5 px-2.5 py-1 rounded text-xs font-medium transition-all cursor-pointer ${
+                    viewMode === 'table' ? 'bg-slate-900 text-white shadow-xs' : 'text-slate-500 hover:text-slate-900'
+                  }`}
+                >
+                  <List className="w-3.5 h-3.5" /> 
+                  <span>Table</span>
+                </button>
+              </div>
+            </div>
+          </div>
+
+          {/* KANBAN VIEW (Compact, Sharp Developer-Grade Geometry) */}
+          {viewMode === 'kanban' && (
+            <div className="flex-1 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-3 min-h-0 h-full overflow-hidden">
+              {KANBAN_STAGES.map(stage => {
+                const stageLeads = filteredLeads.filter(l => (l.status || 'New') === stage);
+                const isOver = dragOverStage === stage;
+                
+                return (
+                  <div 
+                    key={stage} 
+                    onDragOver={(e) => handleDragOver(e, stage)}
+                    onDragLeave={(e) => handleDragLeave(e, stage)}
+                    onDrop={(e) => handleDrop(e, stage)}
+                    className={`flex flex-col h-full rounded-md border transition-all duration-150 overflow-hidden min-w-0 ${
+                      isOver 
+                        ? 'bg-slate-100 border-slate-900 border-2' 
+                        : 'bg-slate-50/70 border-slate-200'
+                    }`}
+                  >
+                    
+                    {/* Column Header */}
+                    <div className="px-3 py-2 border-b flex items-center justify-between shrink-0 bg-white border-slate-200">
+                      <div className="flex items-center gap-1.5 min-w-0">
+                        <span className="w-1.5 h-1.5 rounded-xs bg-slate-900 shrink-0"></span>
+                        <h3 className="font-bold text-xs text-slate-900 truncate tracking-tight" title={stage}>{stage}</h3>
+                      </div>
+                      <span className="text-[10px] font-delight font-bold px-1.5 py-0.5 rounded-sm border bg-slate-100 text-slate-700 border-slate-200 shrink-0">
+                        {stageLeads.length}
+                      </span>
+                    </div>
+
+                    {/* Column Cards Container (Vertical Scroll only) */}
+                    <div className="flex-1 p-2 overflow-y-auto custom-scrollbar space-y-2">
+                      {stageLeads.length === 0 ? (
+                        <div className={`p-4 text-center text-[11px] rounded-md border border-dashed transition-all font-delight font-medium ${
+                          isOver 
+                            ? 'border-accent text-accent font-bold bg-accent/5' 
+                            : 'border-slate-200 text-slate-400'
+                        }`}>
+                          {isOver ? 'Drop lead here' : 'No leads'}
+                        </div>
+                      ) : (
+                        stageLeads.map((lead) => {
+                          const isPhoneOnly = !lead.email || lead.email.includes('no_email') || lead.emailStatus === 'Phone Only / No Email Found';
+                          const isBeingDragged = draggedLeadId === lead._id;
+                          
+                          return (
+                            <div 
+                              key={lead._id}
+                              draggable={true}
+                              onDragStart={(e) => handleDragStart(e, lead._id)}
+                              onDragEnd={handleDragEnd}
+                              onClick={() => setSelectedLeadDetails(lead)}
+                              className={`bg-white border rounded-md p-2.5 transition-colors space-y-2 group cursor-pointer select-none hover:border-slate-400 ${
+                                isBeingDragged 
+                                  ? 'opacity-40 border-dashed border-accent' 
+                                  : 'border-slate-200'
+                              }`}
+                            >
+                              {/* Top Row: Drag Handle + Name */}
+                              <div className="flex items-start gap-1.5 min-w-0">
+                                <GripVertical className="w-3.5 h-3.5 text-slate-300 group-hover:text-slate-500 shrink-0 mt-0.5 cursor-grab active:cursor-grabbing" />
+                                <div className="min-w-0 flex-1">
+                                  <h4 className="font-bold text-xs text-slate-900 group-hover:text-accent transition-colors break-words whitespace-normal leading-snug tracking-tight" title={lead.businessName}>
+                                    {lead.businessName}
+                                  </h4>
+                                  <div className="text-[10px] text-slate-400 font-medium truncate flex items-center gap-1 mt-0.5 font-delight">
+                                    <MapPin className="w-2.5 h-2.5 shrink-0 text-slate-400" />
+                                    <span className="truncate">{lead.location}</span>
+                                  </div>
+                                </div>
+                              </div>
+
+                              {/* Middle Row: Category + Rating */}
+                              <div className="flex items-center justify-between gap-1 text-[10px]">
+                                <span className="font-delight font-medium px-1.5 py-0.5 bg-slate-100 rounded-sm text-slate-600 truncate max-w-[100px] border border-slate-200">
+                                  {lead.category || 'Local'}
+                                </span>
+                                <span className="text-amber-500 font-delight font-bold shrink-0 flex items-center gap-0.5">
+                                  <Star className="w-2.5 h-2.5 fill-current" />
+                                  <span>{lead.rating || '4.8'}</span>
+                                </span>
+                              </div>
+
+                              {/* Bottom Row: Contact Status Badge + Synced Indicator + Click hint */}
+                              <div className="pt-1.5 border-t border-slate-100 flex items-center justify-between text-[10px] gap-1">
+                                <div className="flex items-center gap-1 min-w-0">
+                                  {isPhoneOnly ? (
+                                    <span className="font-delight font-medium text-[9px] text-amber-700 bg-amber-50 px-1.5 py-0.5 rounded-sm border border-amber-200 flex items-center gap-1 truncate max-w-[90px]">
+                                      <Phone className="w-2.5 h-2.5 shrink-0" />
+                                      <span className="truncate">WA</span>
+                                    </span>
+                                  ) : (
+                                    <span className="font-delight font-medium text-[9px] text-slate-700 bg-slate-50 px-1.5 py-0.5 rounded-sm border border-slate-200 flex items-center gap-1 truncate max-w-[90px]">
+                                      <ShieldCheck className="w-2.5 h-2.5 text-slate-500 shrink-0" />
+                                      <span className="truncate">Email</span>
+                                    </span>
+                                  )}
+                                  {Array.isArray(lead.syncedTo) && lead.syncedTo.length > 0 && (
+                                    <span className="font-delight font-medium text-[8px] text-emerald-700 bg-emerald-50 px-1 py-0.5 rounded-sm border border-emerald-200 truncate max-w-[70px]" title={`Synced: ${lead.syncedTo.join(', ')}`}>
+                                      ✓ {lead.syncedTo[0]}
+                                    </span>
+                                  )}
+                                </div>
+
+                                <span className="text-[9px] font-delight font-normal text-slate-400 group-hover:text-slate-900 flex items-center gap-0.5 shrink-0">
+                                  View →
+                                </span>
+                              </div>
+
+                            </div>
+                          );
+                        })
+                      )}
+                    </div>
+
+                  </div>
+                );
+              })}
+            </div>
+          )}
+
+          {/* TABLE VIEW */}
+          {viewMode === 'table' && (
+            <div className="flex-1 bg-white border border-slate-200 rounded-md shadow-xs overflow-hidden flex flex-col">
+              <div className="flex-1 overflow-auto custom-scrollbar">
+                <table className="w-full text-left border-collapse text-xs">
+                  <thead className="sticky top-0 bg-slate-50 border-b border-slate-200 z-10">
+                    <tr className="text-slate-500 font-delight font-semibold uppercase text-[10px] tracking-wider">
+                      <th className="py-3 px-4 w-10 cursor-pointer" onClick={toggleAll}>
+                        <input 
+                          type="checkbox" 
+                          checked={selectedLeads.length === filteredLeads.length && filteredLeads.length > 0} 
+                          readOnly 
+                          className="w-3.5 h-3.5 rounded-sm text-accent cursor-pointer" 
+                        />
+                      </th>
+                      <th className="py-3 px-3">Business Profile</th>
+                      <th className="py-3 px-3">Direct Phone / WhatsApp</th>
+                      <th className="py-3 px-3">Location</th>
+                      <th className="py-3 px-3">Pipeline Stage</th>
+                      <th className="py-3 px-4 text-right">Instant Outreach</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-100">
+                    {filteredLeads.map((lead, i) => {
+                      return (
+                        <tr key={lead._id || i} className={`hover:bg-slate-50/80 transition-colors ${selectedLeads.includes(lead._id) ? 'bg-accent/5' : ''}`}>
+                          <td className="py-3 px-4 cursor-pointer" onClick={() => toggleLead(lead._id)}>
+                            <input 
+                              type="checkbox" 
+                              checked={selectedLeads.includes(lead._id)} 
+                              readOnly 
+                              className="w-3.5 h-3.5 rounded-sm text-accent cursor-pointer" 
+                            />
+                          </td>
+                          <td className="py-3 px-3 cursor-pointer" onClick={() => setSelectedLeadDetails(lead)}>
+                            <div className="font-bold text-slate-900 text-xs hover:text-accent transition-colors tracking-tight max-w-[280px] sm:max-w-[380px] break-words whitespace-normal leading-snug">{lead.businessName}</div>
+                            <div className="text-slate-400 text-[10px] font-delight font-normal flex items-center gap-1 mt-0.5">
+                              <Globe className="w-3 h-3" /> 
+                              <span className="truncate max-w-[180px]">{lead.website}</span>
+                            </div>
+                          </td>
+                          <td className="py-3 px-3">
+                            <div className="font-delight font-medium text-slate-800 text-xs flex items-center gap-1.5">
+                              <Phone className="w-3 h-3 text-emerald-600" />
+                              <span>{lead.phone || 'Phone on request'}</span>
+                            </div>
+                          </td>
+                          <td className="py-3 px-3 font-medium text-slate-600 text-xs">
+                            {lead.location}
+                          </td>
+                          <td className="py-3 px-3">
+                            <select 
+                              value={lead.status || 'New'}
+                              onChange={(e) => handleUpdateStatus(lead._id, e.target.value)}
+                              className={`px-2 py-1 rounded-sm text-[11px] font-delight font-medium border border-slate-200 outline-none cursor-pointer ${getStatusColor(lead.status)}`}
+                            >
+                              {KANBAN_STAGES.map(st => (
+                                <option key={st} value={st}>{st}</option>
+                              ))}
+                            </select>
+                          </td>
+                          <td className="py-3 px-4 text-right">
+                            <div className="flex items-center justify-end gap-1.5">
+                              <button 
+                                onClick={() => setEditingLead({ ...lead })}
+                                className="bg-white hover:bg-slate-100 text-slate-700 p-1.5 rounded-md text-xs font-bold transition-colors cursor-pointer border border-slate-200"
+                                title="Edit Contact & Business Details"
+                              >
+                                <Edit3 className="w-3.5 h-3.5" />
+                              </button>
+                              <button 
+                                onClick={() => handleLaunchWhatsApp(lead)}
+                                className="bg-slate-900 hover:bg-slate-800 text-white p-1.5 rounded-md text-xs font-bold transition-colors cursor-pointer border border-slate-900"
+                                title="Send WhatsApp Hook"
+                              >
+                                <MessageCircle className="w-3.5 h-3.5" />
+                              </button>
+                              <button 
+                                onClick={() => navigate('/outreach')}
+                                className="bg-accent hover:bg-accent-dark text-white p-1.5 rounded-md text-xs font-bold transition-colors cursor-pointer border border-accent"
+                                title="Send Email Template"
+                              >
+                                <Send className="w-3.5 h-3.5" />
+                              </button>
+                            </div>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          )}
+
+        </div>
+      </div>
+
+      {/* ======================================================== */}
+      {/* ======================================================== */}
+      {/* CLICK-TO-VIEW COMPREHENSIVE LEAD DETAILS MODAL           */}
+      {/* ======================================================== */}
+      {selectedLeadDetails && (
+        <div 
+          onClick={() => setSelectedLeadDetails(null)}
+          className="fixed inset-0 bg-slate-900/40 backdrop-blur-xs flex items-center justify-center z-50 p-4 animate-in fade-in duration-150 cursor-pointer"
+        >
+          <div 
+            onClick={(e) => e.stopPropagation()}
+            className="bg-white rounded-md border border-slate-200 w-full max-w-xl shadow-xl overflow-hidden flex flex-col cursor-default animate-in zoom-in-95 duration-150 max-h-[90vh]"
+          >
+            {/* Modal Header */}
+            <div className="p-5 border-b border-slate-200 bg-slate-50 flex items-start justify-between relative">
+              <div className="space-y-1.5 max-w-[85%]">
+                <div className="flex flex-wrap items-center gap-2">
+                  <span className="px-2 py-0.5 rounded-sm bg-slate-900 text-white font-delight text-[10px] font-medium uppercase tracking-wider">
+                    {selectedLeadDetails.category || 'Local Business'}
+                  </span>
+                  <span className="text-amber-500 font-delight font-bold text-xs flex items-center gap-1">
+                    <Star className="w-3.5 h-3.5 fill-current" />
+                    <span>{selectedLeadDetails.rating || '4.8'}</span>
+                  </span>
+                </div>
+                <h2 className="text-base sm:text-lg font-bold text-slate-900 tracking-tight break-words whitespace-normal leading-snug max-w-md sm:max-w-lg">
+                  {selectedLeadDetails.businessName}
+                </h2>
+                <div className="text-xs text-slate-500 font-delight font-normal flex items-center gap-1.5">
+                  <MapPin className="w-3.5 h-3.5 text-slate-400 shrink-0" />
+                  <span>{selectedLeadDetails.location}</span>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-1.5 shrink-0">
+                <button
+                  onClick={() => setEditingLead({ ...selectedLeadDetails })}
+                  className="px-2.5 py-1 rounded-md bg-white hover:bg-slate-100 text-slate-700 border border-slate-200 text-xs font-delight font-medium flex items-center gap-1.5 transition-colors cursor-pointer"
+                  title="Edit Contact & Business Details"
+                >
+                  <Edit3 className="w-3.5 h-3.5" />
+                  <span>Edit</span>
+                </button>
+                <button 
+                  onClick={() => setSelectedLeadDetails(null)}
+                  className="w-7 h-7 rounded-md bg-white hover:bg-slate-100 text-slate-500 border border-slate-200 flex items-center justify-center transition-colors cursor-pointer"
+                  title="Close (Esc)"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+            </div>
+
+            {/* Modal Body */}
+            <div className="p-5 overflow-y-auto custom-scrollbar space-y-5">
+              
+              {/* 1. Stage Switcher Strip */}
+              <div className="space-y-2">
+                <label className="text-[11px] font-delight font-medium text-slate-500 uppercase tracking-wider">
+                  Current Pipeline Stage:
+                </label>
+                <div className="grid grid-cols-2 sm:grid-cols-3 gap-1.5">
+                  {KANBAN_STAGES.map((st) => {
+                    const isActive = (selectedLeadDetails.status || 'New') === st;
+                    return (
+                      <button
+                        key={st}
+                        onClick={async () => {
+                          await handleUpdateStatus(selectedLeadDetails._id, st);
+                          setSelectedLeadDetails({ ...selectedLeadDetails, status: st });
+                        }}
+                        className={`px-2.5 py-1.5 rounded-md text-xs font-delight font-medium transition-all text-left flex items-center justify-between cursor-pointer border ${
+                          isActive 
+                            ? 'bg-slate-900 text-white border-slate-900 font-medium' 
+                            : 'bg-slate-50 text-slate-700 hover:bg-slate-100 border-slate-200'
+                        }`}
+                      >
+                        <span className="truncate">{st}</span>
+                        {isActive && <Check className="w-3.5 h-3.5 shrink-0" />}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* 2. Contact Intelligence Matrix */}
+              <div className="space-y-3 p-4 bg-slate-50 rounded-md border border-slate-200">
+                <h4 className="text-[11px] font-delight font-bold text-slate-700 uppercase tracking-wider">
+                  Contact Intelligence & Verification
+                </h4>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
+                  {/* Phone Block */}
+                  <div className="bg-white p-3 rounded-md border border-slate-200 space-y-1">
+                    <span className="text-[10px] text-slate-400 font-delight font-semibold uppercase">Contact Phone</span>
+                    <div className="font-delight text-slate-900 font-medium flex items-center gap-1.5">
+                      <Phone className="w-3.5 h-3.5 text-slate-500" />
+                      <span>{selectedLeadDetails.phone}</span>
+                    </div>
+                  </div>
+
+                  {/* Rating / Scope Block */}
+                  <div className="bg-white p-3 rounded-md border border-slate-200 space-y-1">
+                    <span className="text-[10px] text-slate-400 font-delight font-semibold uppercase">Harvest Scope</span>
+                    <div className="font-delight font-medium text-slate-800 text-xs">
+                      {selectedLeadDetails.scope === 'deep' ? 'Deep Multi-Tier Crawl' : 'Quick Scan'}
+                    </div>
+                  </div>
+                </div>
+
+                {/* Email Verification / Upgrade Box */}
+                <div className="bg-white p-3.5 rounded-md border border-slate-200 space-y-2">
+                  <div className="flex items-center justify-between">
+                    <span className="text-[10px] text-slate-400 font-delight font-semibold uppercase">Verified Email Address</span>
+                    {selectedLeadDetails.emailStatus === 'Verified Email' ? (
+                      <span className="text-[10px] font-delight font-medium bg-emerald-50 text-emerald-700 border border-emerald-200 px-1.5 py-0.5 rounded-sm flex items-center gap-1">
+                        <ShieldCheck className="w-3 h-3 text-emerald-600" /> Verified
+                      </span>
+                    ) : (
+                      <span className="text-[10px] font-delight font-medium bg-amber-50 text-amber-800 border border-amber-200 px-1.5 py-0.5 rounded-sm">
+                        Phone Only
+                      </span>
+                    )}
+                  </div>
+
+                  {capturingLeadId === selectedLeadDetails._id ? (
+                    <div className="space-y-2 pt-1">
+                      <input 
+                        type="email"
+                        value={capturedEmailInput}
+                        onChange={(e) => setCapturedEmailInput(e.target.value)}
+                        placeholder="e.g. contact@business.com"
+                        className="w-full px-3 py-1.5 bg-slate-50 border border-slate-200 rounded-md text-xs font-delight font-medium outline-none focus:border-slate-400"
+                        autoFocus
+                      />
+                      <div className="flex justify-end gap-2">
+                        <button
+                          onClick={() => setCapturingLeadId(null)}
+                          className="px-3 py-1.5 rounded-md text-xs font-delight font-medium text-slate-600 hover:bg-slate-100 border border-slate-200 cursor-pointer"
+                        >
+                          Cancel
+                        </button>
+                        <button
+                          onClick={async () => {
+                            await handleSaveCapturedEmail(selectedLeadDetails._id);
+                            setSelectedLeadDetails({
+                              ...selectedLeadDetails,
+                              email: capturedEmailInput,
+                              emailStatus: 'Verified Email',
+                              status: 'Email Verified & Captured'
+                            });
+                          }}
+                          disabled={isUpdating}
+                          className="px-3 py-1.5 rounded-md text-xs font-delight font-medium bg-slate-900 text-white hover:bg-slate-800 flex items-center gap-1 cursor-pointer"
+                        >
+                          <Check className="w-3.5 h-3.5" />
+                          <span>Save & Upgrade</span>
+                        </button>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="flex items-center justify-between pt-1">
+                      <span className="font-delight font-medium text-xs text-slate-800">
+                        {selectedLeadDetails.email || 'No email on file'}
+                      </span>
+                      <button
+                        onClick={() => {
+                          setCapturingLeadId(selectedLeadDetails._id);
+                          setCapturedEmailInput(selectedLeadDetails.email || '');
+                        }}
+                        className="text-xs font-delight font-medium text-accent hover:underline flex items-center gap-1 cursor-pointer"
+                      >
+                        <Edit3 className="w-3 h-3" />
+                        <span>{selectedLeadDetails.email ? 'Edit Email' : '+ Add Email'}</span>
+                      </button>
+                    </div>
+                  )}
+                </div>
+
+                {/* Website Link */}
+                {selectedLeadDetails.website && (
+                  <div className="flex items-center justify-between text-xs pt-1">
+                    <span className="text-slate-500 font-delight font-normal text-[11px]">Web Presence:</span>
+                    <a 
+                      href={selectedLeadDetails.website} 
+                      target="_blank" 
+                      rel="noopener noreferrer"
+                      className="text-slate-800 font-delight font-medium text-xs hover:text-accent hover:underline flex items-center gap-1 truncate max-w-[260px]"
+                    >
+                      <Globe className="w-3.5 h-3.5 shrink-0" />
+                      <span className="truncate">{selectedLeadDetails.website}</span>
+                      <ExternalLink className="w-3 h-3 shrink-0" />
+                    </a>
+                  </div>
+                )}
+              </div>
+
+              {/* 3. Primary Outreach Action Bar */}
+              <div className="space-y-2">
+                <label className="text-[11px] font-delight font-medium text-slate-500 uppercase tracking-wider">
+                  Outreach Dispatch Actions:
+                </label>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                  <button
+                    onClick={() => {
+                      handleLaunchWhatsApp(selectedLeadDetails);
+                      setSelectedLeadDetails({ ...selectedLeadDetails, status: 'WhatsApp Contacted' });
+                    }}
+                    className="py-2.5 px-4 rounded-md bg-slate-900 hover:bg-slate-800 text-white font-medium text-xs flex items-center justify-center gap-2 border border-slate-900 transition-colors cursor-pointer"
+                  >
+                    <MessageCircle className="w-4 h-4" />
+                    <span>Launch WhatsApp Hook</span>
+                  </button>
+
+                  <button
+                    onClick={() => {
+                      setSelectedLeadDetails(null);
+                      navigate('/outreach');
+                    }}
+                    className="py-2.5 px-4 rounded-md bg-accent hover:bg-accent-dark text-white font-medium text-xs flex items-center justify-center gap-2 border border-accent transition-colors cursor-pointer"
+                  >
+                    <Send className="w-4 h-4" />
+                    <span>Open Email Studio</span>
+                  </button>
+                </div>
+              </div>
+
+            </div>
+
+            {/* Modal Footer */}
+            <div className="p-4 bg-slate-50 border-t border-slate-200 flex justify-between items-center">
+              <button
+                onClick={async () => {
+                  const confirmed = await confirmDialog({
+                    title: 'Delete Lead from Pipeline?',
+                    message: `Are you sure you want to permanently delete "${selectedLeadDetails.businessName}" from your CRM Pipeline?`,
+                    confirmText: 'Delete Lead',
+                    cancelText: 'Cancel',
+                    variant: 'danger'
+                  });
+                  if (confirmed) {
+                    await axios.delete(`http://localhost:3001/api/leads/${selectedLeadDetails._id}`, {
+                      headers: { userid: user?._id }
+                    }).catch(() => {});
+                    setSelectedLeadDetails(null);
+                    fetchLeads();
+                  }
+                }}
+                className="text-rose-600 hover:text-rose-700 text-xs font-delight font-medium flex items-center gap-1.5 p-1.5 rounded-md hover:bg-rose-50 transition-colors cursor-pointer"
+              >
+                <Trash2 className="w-3.5 h-3.5" />
+                <span>Delete Lead</span>
+              </button>
+
+              <button
+                onClick={() => setSelectedLeadDetails(null)}
+                className="bg-slate-900 hover:bg-slate-800 text-white px-4 py-1.5 rounded-md text-xs font-delight font-medium transition-colors cursor-pointer border border-slate-900"
+              >
+                Done
+              </button>
+            </div>
+
+          </div>
+        </div>
+      )}
+
+      {/* ================= MODAL: EDIT LEAD / CONTACT DETAILS ================= */}
+      {editingLead && (
+        <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-xs flex items-center justify-center p-4 z-50 animate-in fade-in duration-150">
+          <div className="bg-white rounded-md shadow-xl border border-slate-200 max-w-lg w-full p-5 space-y-4 animate-in zoom-in-95 duration-150">
+            <div className="flex items-center justify-between pb-3 border-b border-slate-200">
+              <div className="flex items-center gap-2">
+                <div className="w-7 h-7 rounded-md bg-slate-900 text-white flex items-center justify-center font-bold">
+                  <Edit3 className="w-4 h-4" />
+                </div>
+                <div>
+                  <h3 className="text-sm font-bold text-slate-900 tracking-tight">Edit Contact & Business Details</h3>
+                  <p className="text-[11px] font-delight font-normal text-slate-400">Shorten listing title, edit email, phone, location & stage</p>
+                </div>
+              </div>
+              <button 
+                onClick={() => setEditingLead(null)} 
+                className="w-7 h-7 rounded-md bg-white hover:bg-slate-100 text-slate-500 border border-slate-200 flex items-center justify-center cursor-pointer"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            <form onSubmit={handleSaveEditLead} className="space-y-3">
+              <div>
+                <label className="block text-[11px] font-delight font-semibold text-slate-600 mb-1">
+                  Business / Listing Title *
+                </label>
+                <textarea 
+                  rows={2}
+                  required
+                  value={editingLead.businessName || ''}
+                  onChange={(e) => setEditingLead({ ...editingLead, businessName: e.target.value })}
+                  placeholder="e.g. Digital Keddy"
+                  className="w-full p-2 border border-slate-200 rounded-md text-xs font-delight font-medium outline-none focus:border-slate-400 leading-snug"
+                />
+                <span className="text-[10px] text-slate-400 font-delight font-normal">
+                  Tip: Shorten long Google Places keyword titles to the clean brand name.
+                </span>
+              </div>
+
+              <div className="grid grid-cols-2 gap-2.5">
+                <div>
+                  <label className="block text-[11px] font-delight font-semibold text-slate-600 mb-1">Phone / WhatsApp</label>
+                  <input 
+                    type="text"
+                    value={editingLead.phone || ''}
+                    onChange={(e) => setEditingLead({ ...editingLead, phone: e.target.value })}
+                    className="w-full h-8 px-2.5 border border-slate-200 rounded-md text-xs font-delight font-medium outline-none focus:border-slate-400"
+                  />
+                </div>
+                <div>
+                  <label className="block text-[11px] font-delight font-semibold text-slate-600 mb-1">Direct Email</label>
+                  <input 
+                    type="email"
+                    value={editingLead.email || ''}
+                    onChange={(e) => setEditingLead({ ...editingLead, email: e.target.value })}
+                    placeholder="contact@business.com"
+                    className="w-full h-8 px-2.5 border border-slate-200 rounded-md text-xs font-delight font-medium outline-none focus:border-slate-400"
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-2.5">
+                <div>
+                  <label className="block text-[11px] font-delight font-semibold text-slate-600 mb-1">Category</label>
+                  <input 
+                    type="text"
+                    value={editingLead.category || ''}
+                    onChange={(e) => setEditingLead({ ...editingLead, category: e.target.value })}
+                    className="w-full h-8 px-2.5 border border-slate-200 rounded-md text-xs font-delight font-medium outline-none focus:border-slate-400"
+                  />
+                </div>
+                <div>
+                  <label className="block text-[11px] font-delight font-semibold text-slate-600 mb-1">Location</label>
+                  <input 
+                    type="text"
+                    value={editingLead.location || ''}
+                    onChange={(e) => setEditingLead({ ...editingLead, location: e.target.value })}
+                    className="w-full h-8 px-2.5 border border-slate-200 rounded-md text-xs font-delight font-medium outline-none focus:border-slate-400"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-[11px] font-delight font-semibold text-slate-600 mb-1">Website URL</label>
+                <input 
+                  type="url"
+                  value={editingLead.website || ''}
+                  onChange={(e) => setEditingLead({ ...editingLead, website: e.target.value })}
+                  placeholder="https://company.com"
+                  className="w-full h-8 px-2.5 border border-slate-200 rounded-md text-xs font-delight font-medium outline-none focus:border-slate-400"
+                />
+              </div>
+
+              <div>
+                <label className="block text-[11px] font-delight font-semibold text-slate-600 mb-1">Pipeline Stage</label>
+                <select
+                  value={editingLead.status || 'New'}
+                  onChange={(e) => setEditingLead({ ...editingLead, status: e.target.value })}
+                  className="w-full h-8 px-2.5 border border-slate-200 rounded-md text-xs font-delight font-medium outline-none focus:border-slate-400 bg-white cursor-pointer"
+                >
+                  {KANBAN_STAGES.map(st => (
+                    <option key={st} value={st}>{st}</option>
+                  ))}
+                </select>
+              </div>
+
+              <div className="pt-2 flex justify-end gap-2 border-t border-slate-200">
+                <button 
+                  type="button" 
+                  onClick={() => setEditingLead(null)}
+                  className="px-3 py-1.5 rounded-md border border-slate-200 text-slate-600 font-delight font-medium text-xs hover:bg-slate-50 cursor-pointer"
+                >
+                  Cancel
+                </button>
+                <button 
+                  type="submit" 
+                  disabled={isSavingEdit}
+                  className="px-3.5 py-1.5 bg-slate-900 text-white rounded-md font-delight font-medium text-xs hover:bg-slate-800 transition-colors disabled:opacity-50 border border-slate-900 cursor-pointer"
+                >
+                  {isSavingEdit ? 'Saving...' : 'Save Changes'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+    </div>
+  );
+};
+
+export default CrmPipeline;
+

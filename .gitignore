@@ -1,0 +1,55 @@
+# Dependencies
+node_modules/
+/.pnp
+.pnp.js
+
+# Environment variables & secrets
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+*.env
+
+# Firebase & Google Cloud Service Account Credentials
+serviceAccountKey.json
+*serviceAccount*.json
+*.pem
+*.key
+*.cert
+firebase-debug.log
+firestore-debug.log
+ui-debug.log
+
+# Build & Dist
+dist/
+dist-ssr/
+build/
+*.local
+
+# Logs
+logs/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+
+# Editor & OS files
+.DS_Store
+Thumbs.db
+.vscode/
+!.vscode/extensions.json
+.idea/
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+
+# Local workspace reference folders (already copied into client/public/)
+/screenshots/
+/fonts/
+/integrations-icons/
+

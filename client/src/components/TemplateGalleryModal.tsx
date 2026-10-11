@@ -1,0 +1,329 @@
+import { useState } from 'react';
+import { 
+  X, Check, Layout, ArrowRight
+} from 'lucide-react';
+import { EMAIL_TEMPLATES } from '../data/emailTemplates';
+import type { TemplateId } from '../data/emailTemplates';
+
+interface GalleryModalProps {
+  isOpen: boolean;
+  onClose: () => void;
+  selectedTemplateId: TemplateId;
+  onSelectTemplate: (id: TemplateId) => void;
+}
+
+const TemplateGalleryModal = ({ 
+  isOpen, 
+  onClose, 
+  selectedTemplateId, 
+  onSelectTemplate 
+}: GalleryModalProps) => {
+  const [filterCategory, setFilterCategory] = useState<'all' | 'direct' | 'promotional' | 'newsletter' | 'ecommerce'>('all');
+
+  if (!isOpen) return null;
+
+  const templateList = Object.values(EMAIL_TEMPLATES);
+  const filteredTemplates = filterCategory === 'all' 
+    ? templateList 
+    : templateList.filter(t => t.category === filterCategory);
+
+  // Structural Wireframe Diagrams corresponding to Link Mobility specifications
+  const renderWireframe = (id: TemplateId) => {
+    switch (id) {
+      case 'text_only':
+        return (
+          <div className="w-full h-32 bg-slate-50 border border-slate-200 rounded-md p-3 flex flex-col justify-between">
+            <div className="w-12 h-2.5 bg-slate-300 rounded-xs mb-2" />
+            <div className="w-3/4 h-3 bg-slate-800 rounded-xs mb-2" />
+            <div className="space-y-1.5 mb-2">
+              <div className="w-full h-1.5 bg-slate-300 rounded-xs" />
+              <div className="w-5/6 h-1.5 bg-slate-300 rounded-xs" />
+              <div className="w-4/6 h-1.5 bg-slate-300 rounded-xs" />
+            </div>
+            <div className="space-y-1 mb-2 pl-2 border-l-2 border-blue-600">
+              <div className="w-3/4 h-1.5 bg-slate-400 rounded-xs" />
+              <div className="w-2/3 h-1.5 bg-slate-400 rounded-xs" />
+            </div>
+            <div className="w-full h-2 bg-slate-200 rounded-xs pt-0.5" />
+          </div>
+        );
+
+      case 'one_column':
+        return (
+          <div className="w-full h-32 bg-slate-50 border border-slate-200 rounded-md p-3 flex flex-col items-center justify-between">
+            <div className="w-12 h-2.5 bg-slate-300 rounded-xs" />
+            <div className="w-4/5 h-3 bg-slate-800 rounded-xs" />
+            <div className="w-full h-11 bg-blue-50 border border-blue-200 rounded-sm flex items-center justify-center text-[9px] font-delight font-bold text-blue-700">
+              Hero Banner Image
+            </div>
+            <div className="w-24 h-4 bg-slate-900 text-white rounded-sm flex items-center justify-center text-[8px] font-delight font-bold">
+              Primary CTA
+            </div>
+            <div className="w-full h-1.5 bg-slate-200 rounded-xs" />
+          </div>
+        );
+
+      case 'two_column':
+        return (
+          <div className="w-full h-32 bg-slate-50 border border-slate-200 rounded-md p-3 flex flex-col justify-between">
+            <div className="flex justify-between items-center">
+              <div className="w-12 h-2.5 bg-slate-300 rounded-xs" />
+              <div className="w-20 h-2 bg-slate-400 rounded-xs" />
+            </div>
+            <div className="grid grid-cols-2 gap-2 my-1">
+              <div className="bg-white border border-slate-200 p-1.5 rounded-sm flex flex-col items-center space-y-1">
+                <div className="w-full h-8 bg-blue-100 rounded-xs" />
+                <div className="w-3/4 h-2 bg-slate-700 rounded-xs" />
+                <div className="w-12 h-3 bg-blue-600 rounded-xs" />
+              </div>
+              <div className="bg-white border border-slate-200 p-1.5 rounded-sm flex flex-col items-center space-y-1">
+                <div className="w-full h-8 bg-purple-100 rounded-xs" />
+                <div className="w-3/4 h-2 bg-slate-700 rounded-xs" />
+                <div className="w-12 h-3 bg-purple-600 rounded-xs" />
+              </div>
+            </div>
+            <div className="w-full h-1.5 bg-slate-200 rounded-xs" />
+          </div>
+        );
+
+      case 'hybrid':
+        return (
+          <div className="w-full h-32 bg-slate-50 border border-slate-200 rounded-md p-3 flex flex-col justify-between">
+            <div className="w-10 h-2 bg-slate-300 rounded-xs" />
+            <div className="w-full h-9 bg-blue-50 border border-blue-200 rounded-sm p-1 flex items-center justify-between px-2">
+              <div className="w-1/2 h-2 bg-blue-600 rounded-xs" />
+              <div className="w-10 h-3 bg-blue-600 rounded-xs" />
+            </div>
+            <div className="grid grid-cols-2 gap-2">
+              <div className="bg-white border border-slate-200 p-1 rounded-sm flex items-center gap-1">
+                <div className="w-5 h-5 bg-slate-200 rounded-xs shrink-0" />
+                <div className="w-full space-y-0.5">
+                  <div className="w-3/4 h-1.5 bg-slate-700 rounded-xs" />
+                  <div className="w-1/2 h-1 bg-slate-300 rounded-xs" />
+                </div>
+              </div>
+              <div className="bg-white border border-slate-200 p-1 rounded-sm flex items-center gap-1">
+                <div className="w-5 h-5 bg-slate-200 rounded-xs shrink-0" />
+                <div className="w-full space-y-0.5">
+                  <div className="w-3/4 h-1.5 bg-slate-700 rounded-xs" />
+                  <div className="w-1/2 h-1 bg-slate-300 rounded-xs" />
+                </div>
+              </div>
+            </div>
+            <div className="w-full h-1.5 bg-slate-200 rounded-xs" />
+          </div>
+        );
+
+      case 'inverted_pyramid':
+        return (
+          <div className="w-full h-32 bg-slate-50 border border-slate-200 rounded-md p-3 flex flex-col items-center justify-between">
+            {/* Wide Base at Top */}
+            <div className="w-full h-10 bg-amber-50 border border-amber-200 rounded-sm flex items-center justify-center text-[8px] font-delight font-bold text-amber-800">
+              Broad Hero Visual (Wide Top)
+            </div>
+            {/* Tapering Copy (Middle) */}
+            <div className="w-3/4 h-2 bg-slate-800 rounded-xs" />
+            <div className="w-1/2 h-1.5 bg-slate-400 rounded-xs" />
+            {/* Focused Vertex CTA */}
+            <div className="w-28 h-4 bg-amber-600 text-white rounded-sm flex items-center justify-center text-[8px] font-delight font-bold">
+              Single Focused CTA ▼
+            </div>
+            <div className="w-full h-1.5 bg-slate-200 rounded-xs" />
+          </div>
+        );
+
+      case 'zig_zag':
+        return (
+          <div className="w-full h-32 bg-slate-50 border border-slate-200 rounded-md p-2.5 flex flex-col justify-between">
+            {/* Row 1: Left Image, Right Text */}
+            <div className="flex items-center gap-2">
+              <div className="w-12 h-9 bg-emerald-50 border border-emerald-200 rounded-xs shrink-0" />
+              <div className="flex-1 space-y-1">
+                <div className="w-4/5 h-2 bg-slate-700 rounded-xs" />
+                <div className="w-full h-1 bg-slate-300 rounded-xs" />
+                <div className="w-10 h-2 bg-emerald-600 rounded-xs" />
+              </div>
+            </div>
+            {/* Row 2: Left Text, Right Image */}
+            <div className="flex items-center gap-2">
+              <div className="flex-1 space-y-1 text-right flex flex-col items-end">
+                <div className="w-4/5 h-2 bg-slate-700 rounded-xs" />
+                <div className="w-full h-1 bg-slate-300 rounded-xs" />
+                <div className="w-10 h-2 bg-emerald-600 rounded-xs" />
+              </div>
+              <div className="w-12 h-9 bg-emerald-50 border border-emerald-200 rounded-xs shrink-0" />
+            </div>
+            <div className="w-full h-1.5 bg-slate-200 rounded-xs" />
+          </div>
+        );
+
+      case 'f_pattern':
+        return (
+          <div className="w-full h-32 bg-slate-50 border border-slate-200 rounded-md p-3 flex flex-col justify-between">
+            {/* Top Bar of F */}
+            <div className="w-full h-3 bg-slate-900 rounded-xs" />
+            {/* Left scan spine + Middle bar of F */}
+            <div className="flex gap-2">
+              <div className="w-1.5 h-12 bg-red-500 rounded-xs shrink-0" />
+              <div className="flex-1 space-y-1.5">
+                <div className="w-3/4 h-2 bg-slate-700 rounded-xs" />
+                <div className="w-full h-1.5 bg-slate-300 rounded-xs" />
+                <div className="w-2/3 h-1.5 bg-slate-300 rounded-xs" />
+                <div className="w-16 h-3 bg-red-600 rounded-xs" />
+              </div>
+            </div>
+            {/* Bottom visual */}
+            <div className="w-full h-5 bg-slate-200 rounded-xs" />
+          </div>
+        );
+
+      case 'dynamic_product_feed':
+        return (
+          <div className="w-full h-32 bg-slate-50 border border-slate-200 rounded-md p-3 flex flex-col justify-between">
+            <div className="flex justify-between items-center">
+              <div className="w-14 h-2 bg-slate-700 rounded-xs" />
+              <div className="w-10 h-2.5 bg-blue-100 rounded-xs" />
+            </div>
+            {/* 3-Column Product Grid */}
+            <div className="grid grid-cols-3 gap-1.5 my-1">
+              {[1, 2, 3].map((item) => (
+                <div key={item} className="bg-white border border-slate-200 rounded-sm p-1 text-center space-y-1">
+                  <div className="w-full h-6 bg-slate-200 rounded-xs" />
+                  <div className="w-full h-1.5 bg-slate-700 rounded-xs" />
+                  <div className="w-2/3 mx-auto h-1.5 bg-blue-600 rounded-xs" />
+                </div>
+              ))}
+            </div>
+            <div className="w-full h-1.5 bg-slate-200 rounded-xs" />
+          </div>
+        );
+
+      default:
+        return null;
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-xs flex items-center justify-center z-50 p-4 overflow-y-auto">
+      <div className="bg-white rounded-md border border-slate-200 w-full max-w-5xl shadow-xl overflow-hidden my-6 animate-in fade-in zoom-in-95 duration-150">
+        
+        {/* Header */}
+        <div className="p-5 sm:p-6 bg-slate-950 text-white flex items-start justify-between border-b border-slate-800">
+          <div>
+            <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-sm bg-blue-500/10 border border-blue-500/20 text-blue-400 font-delight text-[11px] font-semibold mb-2">
+              <Layout className="w-3.5 h-3.5" />
+              <span>Email Template Studio (Link Mobility Standards)</span>
+            </div>
+            <h2 className="text-xl sm:text-2xl font-bold tracking-tight text-white">
+              Select an Email Layout Architecture
+            </h2>
+            <p className="text-xs text-slate-400 mt-1 max-w-2xl leading-relaxed">
+              Choose from the 8 industry-standard structural templates. Each layout is engineered with responsive desktop/mobile breakpoints and automatic CAN-SPAM compliance footers.
+            </p>
+          </div>
+
+          <button 
+            onClick={onClose}
+            className="w-7 h-7 rounded-md bg-slate-900 hover:bg-slate-800 border border-slate-800 flex items-center justify-center text-slate-400 hover:text-white transition-colors cursor-pointer"
+          >
+            <X className="w-4 h-4" />
+          </button>
+        </div>
+
+        {/* Filter Categories */}
+        <div className="p-3 bg-slate-50 border-b border-slate-200 flex flex-wrap gap-2 items-center px-6">
+          <span className="text-xs font-delight font-medium text-slate-500 uppercase tracking-wider mr-2">Filter By:</span>
+          {(['all', 'direct', 'promotional', 'newsletter', 'ecommerce'] as const).map((cat) => (
+            <button
+              key={cat}
+              onClick={() => setFilterCategory(cat)}
+              className={`px-3 py-1 rounded-md text-xs font-delight font-medium transition-all cursor-pointer ${
+                filterCategory === cat 
+                  ? 'bg-slate-900 text-white border border-slate-900 shadow-xs' 
+                  : 'bg-white border border-slate-200 text-slate-600 hover:bg-slate-100'
+              }`}
+            >
+              {cat === 'all' ? 'All 8 Structures' : cat}
+            </button>
+          ))}
+        </div>
+
+        {/* Template Grid (8 Templates) */}
+        <div className="p-6 max-h-[65vh] overflow-y-auto custom-scrollbar">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+            {filteredTemplates.map((template) => {
+              const isSelected = selectedTemplateId === template.id;
+
+              return (
+                <div 
+                  key={template.id}
+                  onClick={() => {
+                    onSelectTemplate(template.id);
+                    onClose();
+                  }}
+                  className={`rounded-md border p-3.5 cursor-pointer transition-all flex flex-col justify-between hover:border-slate-400 group ${
+                    isSelected 
+                      ? 'border-blue-600 bg-blue-50/20 ring-1 ring-blue-600' 
+                      : 'border-slate-200 bg-white hover:border-slate-300'
+                  }`}
+                >
+                  <div>
+                    {/* Visual Wireframe Preview */}
+                    <div className="mb-3 relative overflow-hidden rounded-md border border-slate-200">
+                      {renderWireframe(template.id)}
+                      {isSelected && (
+                        <div className="absolute top-2 right-2 w-5 h-5 rounded-sm bg-blue-600 text-white flex items-center justify-center shadow-xs">
+                          <Check className="w-3.5 h-3.5" />
+                        </div>
+                      )}
+                    </div>
+
+                    <h4 className="font-bold text-sm text-slate-900 mb-0.5 group-hover:text-blue-600 transition-colors">
+                      {template.name}
+                    </h4>
+                    <p className="text-[11px] font-delight text-blue-600 mb-2 font-medium">
+                      {template.tagline}
+                    </p>
+                    <p className="text-xs text-slate-500 leading-snug mb-3">
+                      {template.purpose}
+                    </p>
+                  </div>
+
+                  <div className="pt-2 border-t border-slate-100">
+                    <span className="text-[10px] font-delight font-normal text-slate-400 block mb-2">
+                      Best For: <strong className="text-slate-700 font-semibold">{template.bestFor}</strong>
+                    </span>
+                    <button 
+                      className={`w-full py-1.5 rounded-md text-xs font-delight font-medium transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
+                        isSelected 
+                          ? 'bg-blue-600 text-white shadow-xs' 
+                          : 'bg-slate-100 text-slate-700 group-hover:bg-slate-900 group-hover:text-white'
+                      }`}
+                    >
+                      <span>{isSelected ? 'Active Template' : 'Select Layout'}</span>
+                      <ArrowRight className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+
+        {/* Footer */}
+        <div className="p-3.5 bg-slate-50 border-t border-slate-200 flex items-center justify-between px-6 text-xs text-slate-500 font-delight font-normal">
+          <span>Standards Grounded in Link Mobility Design Framework</span>
+          <button 
+            onClick={onClose}
+            className="px-4 py-1.5 bg-white border border-slate-200 hover:bg-slate-100 rounded-md font-delight font-medium text-xs text-slate-700 transition-colors cursor-pointer"
+          >
+            Close Gallery
+          </button>
+        </div>
+
+      </div>
+    </div>
+  );
+};
+
+export default TemplateGalleryModal;
