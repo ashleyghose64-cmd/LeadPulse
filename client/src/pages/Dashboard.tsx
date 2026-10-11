@@ -98,7 +98,7 @@ const Dashboard = () => {
                   <span className="text-[11px] font-delight uppercase tracking-wider font-semibold text-[#6E675F]">Credit Quota</span>
                   <Compass className="w-3.5 h-3.5 text-[#9C9488]" />
                 </div>
-                <div className="text-2xl font-bold font-delight tracking-tight text-[#191716] tabular-nums mt-2">{user?.lead_credits ?? 50}</div>
+                <div className="text-2xl font-bold font-delight tracking-tight text-[#191716] tabular-nums mt-2">{user?.lead_credits ?? 15}</div>
                 <div className="text-[11px] mt-1.5 flex items-center gap-1.5 font-delight font-medium text-[#6E675F]">
                   <span className="w-1.5 h-1.5 rounded-full bg-[#C85A32]"></span>
                   <span className="text-[#191716] font-semibold uppercase">Tier: {user?.plan || 'Free'}</span>

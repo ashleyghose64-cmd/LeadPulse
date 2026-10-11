@@ -384,7 +384,7 @@ const Team = () => {
                       {plan === 'free' && <span className="text-[10px] font-delight font-medium bg-blue-100 text-blue-800 px-1.5 py-0.5 rounded-sm">Current</span>}
                     </div>
                     <p className="text-[11px] text-slate-600 mb-2"><strong>2 Workspace Seats</strong> fixed allowance.</p>
-                    <span className="text-[10px] font-delight font-normal text-slate-400">Fixed limit • 50 token trial pool</span>
+                    <span className="text-[10px] font-delight font-normal text-slate-400">Fixed limit • 15 token trial pool</span>
                   </div>
 
                   <div className={`p-3 rounded-md border ${plan === 'basic' ? 'bg-white border-blue-500 shadow-xs' : 'bg-white border-slate-200'}`}>
@@ -1080,9 +1080,9 @@ const Team = () => {
                 <div className={`p-3 rounded-md border flex items-center justify-between ${plan === 'free' ? 'bg-amber-50/50 border-amber-300' : 'bg-slate-50 border-slate-200'}`}>
                   <div>
                     <div className="font-bold font-delight text-slate-900">Free Tier</div>
-                    <div className="text-[11px] text-slate-500">Fixed limit of <strong>2 seats</strong></div>
+                    <div className="text-[11px] text-slate-500">Fixed limit of <strong>2 seats</strong> • <strong>15 tokens</strong> pool</div>
                   </div>
-                  <span className="text-[10px] font-delight font-medium px-2 py-0.5 rounded-sm bg-slate-200 text-slate-700">2 Seats</span>
+                  <span className="text-[10px] font-delight font-medium px-2 py-0.5 rounded-sm bg-slate-200 text-slate-700">2 Seats • 15 Tokens</span>
                 </div>
 
                 {/* Basic */}

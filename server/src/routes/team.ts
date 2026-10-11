@@ -58,7 +58,7 @@ router.get('/limits', async (req, res) => {
     const seatsSelected = Number(userData.seats_selected) || 6; // default registration seats selection
 
     let maxSeats = 2; // Free tier has 2 seats
-    let universalTokens = userData.lead_credits || 50;
+    let universalTokens = userData.lead_credits ?? 15;
     let seatPercent = null;
 
     if (plan === 'basic') {

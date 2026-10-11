@@ -745,7 +745,7 @@ const Landing = ({ onLogin }: { onLogin: () => void }) => {
               <section className="space-y-1">
                 <h4 className="font-bold text-xs uppercase tracking-wider text-[#191716] font-delight">3. Lead Credits &amp; Subscription Quotas</h4>
                 <p>
-                  Lead credits are consumed when exporting or enriching verified contact records. Free tier plans receive automated monthly pool refreshes. Paid tiers provide expanded quotas, team seat allocation, and high-frequency scraper execution.
+                  Lead tokens and credits are consumed when harvesting or enriching verified contact records. Free tier plans receive 15 Lead Tokens / Credits with automated 4-day pool refreshes. Paid tiers provide expanded quotas, team seat allocation, and high-frequency scraper execution.
                 </p>
               </section>
 

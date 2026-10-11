@@ -511,7 +511,7 @@ const Dashboard = () => {
                   {currentPlan === 'free' ? '₹0 / Forever' : currentPlan === 'basic' ? '₹699 / mo' : '₹1,999 / mo'}
                 </div>
                 <p className="text-[11px] text-gray-400 mt-1">
-                  {isFree ? '50 lead pool • Refreshes every 4 days' : 'Continuous daily limits & unlimited exports'}
+                  {isFree ? '15 token / lead pool • Refreshes every 4 days' : 'Continuous daily limits & unlimited exports'}
                 </p>
               </div>
 

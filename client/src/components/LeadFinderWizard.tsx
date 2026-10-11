@@ -112,8 +112,8 @@ const LeadFinderWizard = ({ onHarvestStarted }: WizardProps) => {
 
   const currentPlan = user?.plan || 'free';
   const isFree = currentPlan === 'free';
-  const credits = user?.lead_credits ?? 50;
-  const maxPool = isFree ? '50' : (currentPlan === 'basic' ? '600' : 'Unlimited');
+  const credits = user?.lead_credits ?? 15;
+  const maxPool = isFree ? '15' : (currentPlan === 'basic' ? '600' : 'Unlimited');
   const perQueryLimit = isFree ? 10 : 20;
 
   const locationPresets = ['Kalyan West', 'Bandra West, Mumbai', 'Andheri East', 'Bangalore Indiranagar', 'South Delhi'];

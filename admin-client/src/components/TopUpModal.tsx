@@ -126,7 +126,7 @@ const TopUpModal = () => {
               Unlock Unlimited B2B Lead Acquisition
             </h2>
             <p className="text-xs sm:text-sm text-gray-300 mt-1.5 leading-relaxed">
-              Scale past the Free 50-lead pool. Upgrade to continuous daily harvesting limits, automated multi-channel sequences, and PhonePe instant micro-top-ups.
+              Scale past the Free 15-token pool. Upgrade to continuous daily harvesting limits, automated multi-channel sequences, and PhonePe instant micro-top-ups.
             </p>
           </div>
 
@@ -210,7 +210,7 @@ const TopUpModal = () => {
                   <ul className="space-y-3 text-xs">
                     <li className="flex items-center gap-2 text-gray-700">
                       <Check className="w-4 h-4 text-emerald-500 shrink-0" />
-                      <span><strong>50 Saved Leads Pool</strong> (Refreshes every 4d)</span>
+                      <span><strong>15 Tokens / Saved Leads Pool</strong> (Refreshes every 4d)</span>
                     </li>
                     <li className="flex items-center gap-2 text-gray-700">
                       <Check className="w-4 h-4 text-emerald-500 shrink-0" />
@@ -387,7 +387,7 @@ const TopUpModal = () => {
                   <tbody className="divide-y divide-[#E4E4E7]">
                     <tr>
                       <td className="p-3.5 pl-5 font-semibold text-gray-800">Saved Leads Capacity & Pool</td>
-                      <td className="p-3.5 text-center text-gray-600">50 Saved Leads (4-day pool)</td>
+                      <td className="p-3.5 text-center text-gray-600">15 Tokens / Leads (4-day pool)</td>
                       <td className="p-3.5 text-center font-bold text-accent">600 Saved Leads</td>
                       <td className="p-3.5 text-center font-bold text-purple-700">Unlimited Saved Leads</td>
                     </tr>

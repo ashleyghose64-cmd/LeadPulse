@@ -82,7 +82,7 @@ const MODULES: DocModule[] = [
         desc: 'Click "Add to Pipeline" on individual prospect rows, or select multiple prospects and click "Save Selected Leads".',
         details: [
           'Each prospect saved into your CRM consumes exactly 1 Lead Credit.',
-          'Free-tier accounts receive 50 Lead Credits that automatically refresh on a 4-day rolling cycle.',
+          'Free-tier accounts receive 15 Lead Tokens / Credits that automatically refresh on a 4-day rolling cycle.',
           'Saved prospects transition immediately into the "New" stage in your CRM Kanban board.'
         ],
         note: 'Saved leads are immediately preserved in your workspace database and are never duplicated.'
@@ -470,7 +470,7 @@ const MODULES: DocModule[] = [
       {
         step: 'Step 2',
         title: 'Free-Tier Automatic Refresh Schedule',
-        desc: 'Free accounts receive 50 Lead Credits every 4 days.',
+        desc: 'Free accounts receive 15 Lead Tokens / Credits every 4 days.',
         details: [
           'The 4-day timer starts from the moment your credits replenish.',
           'You can view your remaining days and current quota in the top dashboard metric card.'
@@ -510,7 +510,7 @@ const FAQS: FAQItem[] = [
   {
     question: 'How do Free Tier lead credits refresh?',
     category: 'Billing & Upgrades',
-    answer: 'Free accounts receive 50 Lead Credits automatically every 4 days on a rolling cycle. You do not need to take any action; the system checks your last refresh timestamp and restores your balance to 50 credits automatically.'
+    answer: 'Free accounts receive 15 Lead Tokens / Credits automatically every 4 days on a rolling cycle. You do not need to take any action; the system checks your last refresh timestamp and restores your balance to 15 tokens automatically.'
   },
   {
     question: 'Why did my lead query return 0 or fewer results than expected?',
@@ -722,7 +722,7 @@ const HelpCenter = () => {
                   <span className="font-bold font-delight text-xs text-slate-900">Lead Harvesting</span>
                 </div>
                 <p className="text-[11px] text-slate-500 font-sans leading-relaxed text-left">
-                  Query Google Maps & business registries. Free tier refreshes with 50 credits every 4 days.
+                  Query Google Maps & business registries. Free tier refreshes with 15 tokens / credits every 4 days.
                 </p>
               </div>
 

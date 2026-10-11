@@ -133,7 +133,7 @@ router.get('/settings', async (req, res) => {
     if (!configDoc.exists) {
       // Default system workflow settings
       const defaults = {
-        freeCreditsOnSignup: 100,
+        freeCreditsOnSignup: 15,
         creditCostPerSearch: 1,
         scraperConcurrency: 2,
         scrapeTimeoutSecs: 30,

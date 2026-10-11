@@ -23,7 +23,7 @@ router.post('/google', async (req, res) => {
         email,
         name,
         role,
-        lead_credits: 50,
+        lead_credits: 15,
         plan: 'free',
         pool_refreshed_at: new Date().toISOString(),
         onboarding_complete: false,
@@ -41,10 +41,10 @@ router.post('/google', async (req, res) => {
       const lastRefresh = data.pool_refreshed_at ? new Date(data.pool_refreshed_at).getTime() : 0;
       if ((data.plan || 'free') === 'free' && (Date.now() - lastRefresh >= fourDaysMs || !data.pool_refreshed_at)) {
         await snapshot.docs[0].ref.update({
-          lead_credits: 50,
+          lead_credits: 15,
           pool_refreshed_at: new Date().toISOString()
         });
-        data.lead_credits = 50;
+        data.lead_credits = 15;
         data.pool_refreshed_at = new Date().toISOString();
       }
       userDoc = { _id: userId, ...data };
@@ -106,7 +106,7 @@ router.post('/register', async (req, res) => {
       password: hashedPassword,
       name,
       role,
-      lead_credits: 50,
+      lead_credits: 15,
       plan: 'free',
       pool_refreshed_at: new Date().toISOString(),
       onboarding_complete: false,
@@ -154,10 +154,10 @@ router.post('/login', async (req, res) => {
     const lastRefresh = userDoc.pool_refreshed_at ? new Date(userDoc.pool_refreshed_at).getTime() : 0;
     if ((userDoc.plan || 'free') === 'free' && (Date.now() - lastRefresh >= fourDaysMs || !userDoc.pool_refreshed_at)) {
       await doc.ref.update({
-        lead_credits: 50,
+        lead_credits: 15,
         pool_refreshed_at: new Date().toISOString()
       });
-      userDoc.lead_credits = 50;
+      userDoc.lead_credits = 15;
       userDoc.pool_refreshed_at = new Date().toISOString();
     }
     

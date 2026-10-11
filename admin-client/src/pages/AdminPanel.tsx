@@ -38,7 +38,7 @@ const AdminPanel = () => {
 
   // 3. System Workflow Settings State
   const [settings, setSettings] = useState({
-    freeCreditsOnSignup: 100,
+    freeCreditsOnSignup: 15,
     creditCostPerSearch: 1,
     scraperConcurrency: 2,
     scrapeTimeoutSecs: 30,

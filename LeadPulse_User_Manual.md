@@ -11,8 +11,8 @@ The Dashboard is your command center. It is where you discover new potential cli
 
 * **How to Find Leads:** 
   At the top of your Dashboard, you will see a search bar. Simply type what you are looking for (e.g., *"Plumbers in New York"* or *"Coffee shops in London"*) and click **Search**. LeadPulse connects directly to Google Maps behind the scenes to pull up highly accurate business profiles, including their names, ratings, websites, and phone numbers.
-* **Lead Credits:** 
-  Every time you add a lead to your CRM, it costs 1 "Lead Credit." Don't worry! Free accounts automatically refresh with 50 new credits every 4 days.
+* **Lead Credits / Tokens:** 
+  Every time you add a lead to your CRM, it costs 1 "Lead Credit / Token." Don't worry! Free accounts automatically refresh with 15 new tokens / credits every 4 days.
 
 ---
 

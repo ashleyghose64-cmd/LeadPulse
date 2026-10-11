@@ -118,10 +118,10 @@ router.post('/scrape', async (req, res) => {
         const fourDaysMs = 4 * 24 * 60 * 60 * 1000;
         const lastRefresh = data.pool_refreshed_at ? new Date(data.pool_refreshed_at).getTime() : 0;
         if (Date.now() - lastRefresh >= fourDaysMs) {
-          currentCredits = 50;
+          currentCredits = 15;
           poolRefreshedAt = new Date().toISOString();
           t.update(userRef, {
-            lead_credits: 50,
+            lead_credits: 15,
             pool_refreshed_at: poolRefreshedAt
           });
         }

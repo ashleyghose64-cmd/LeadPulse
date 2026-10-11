@@ -219,7 +219,7 @@ const TopUpModal = () => {
                     </li>
                     <li className="flex items-center gap-2 text-slate-700">
                       <Check className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
-                      <span><strong>50 Saved Leads Pool</strong> (Refreshes every 4d)</span>
+                      <span><strong>15 Tokens / Saved Leads Pool</strong> (Refreshes every 4d)</span>
                     </li>
                     <li className="flex items-center gap-2 text-slate-700">
                       <Check className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
@@ -404,7 +404,7 @@ const TopUpModal = () => {
                   <tbody className="divide-y divide-slate-100">
                     <tr>
                       <td className="p-3 pl-4 font-semibold text-slate-800">Saved Leads Capacity & Pool</td>
-                      <td className="p-3 text-center font-delight font-medium text-slate-600">50 Saved Leads (4-day pool)</td>
+                      <td className="p-3 text-center font-delight font-medium text-slate-600">15 Tokens / Leads (4-day pool)</td>
                       <td className="p-3 text-center font-delight font-bold text-blue-600">600 Saved Leads</td>
                       <td className="p-3 text-center font-delight font-bold text-purple-700">Unlimited Saved Leads</td>
                     </tr>

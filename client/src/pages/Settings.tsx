@@ -175,7 +175,7 @@ const Settings = () => {
 
   const currentPlan = user?.plan || 'free';
   const isFree = currentPlan === 'free';
-  const credits = user?.lead_credits ?? 50;
+  const credits = user?.lead_credits ?? 15;
 
   return (
     <div className="flex w-full min-h-screen bg-transparent font-sans text-slate-900">
@@ -645,7 +645,7 @@ const Settings = () => {
                   </div>
                   <p className="text-xs text-slate-400">
                     {isFree 
-                      ? '50 Saved Leads Pool (Auto-refreshes every 4 days) • Max 10 leads / query'
+                      ? '15 Tokens / Saved Leads Pool (Auto-refreshes every 4 days) • Max 10 leads / query'
                       : currentPlan === 'basic' 
                         ? '600 Saved Leads & continuous daily harvesting • Unlimited CSV exports'
                         : 'Unlimited Saved Leads & 1,000 daily velocity • Dedicated Priority Worker'
@@ -676,7 +676,7 @@ const Settings = () => {
                 <div className="p-3.5 bg-slate-50 rounded-md border border-slate-200 space-y-1">
                   <span className="text-slate-400 font-semibold uppercase text-[10px]">Saved Leads Limit</span>
                   <div className="text-xl font-bold text-purple-700">
-                    {isFree ? '50 Leads' : currentPlan === 'basic' ? '600 Leads' : 'Unlimited'}
+                    {isFree ? '15 Tokens / Leads' : currentPlan === 'basic' ? '600 Leads' : 'Unlimited'}
                   </div>
                   <span className="text-[11px] text-slate-500 font-sans">CRM capacity</span>
                 </div>
