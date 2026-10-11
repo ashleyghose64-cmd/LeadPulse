@@ -336,9 +336,6 @@ const Team = () => {
             {isAtCapacity && (
               <div className="bg-amber-50/80 border border-amber-200 rounded-md p-3.5 flex flex-wrap items-center justify-between gap-3 text-xs">
                 <div className="flex items-center gap-2.5">
-                  <div className="w-7 h-7 rounded-md bg-amber-100 text-amber-800 flex items-center justify-center font-bold shrink-0 border border-amber-200">
-                    <AlertCircle className="w-4 h-4" />
-                  </div>
                   <div>
                     <span className="font-bold text-amber-900 font-sans">Workspace Seat Limit Reached ({members.length}/{maxSeats} seats used)</span>
                     <p className="text-amber-800/80 font-sans text-[11px] mt-0.5">
@@ -445,9 +442,6 @@ const Team = () => {
                       {members.length} / {maxSeats} Seats
                     </h3>
                   </div>
-                  <div className="w-8 h-8 rounded-md bg-slate-100 text-slate-700 flex items-center justify-center font-bold border border-slate-200">
-                    <Users className="w-4 h-4" />
-                  </div>
                 </div>
                 
                 <div className="mt-3 pt-2.5 border-t border-slate-100">
@@ -479,9 +473,6 @@ const Team = () => {
                       {limits ? limits.universalTokens.toLocaleString() : '0'} Tokens
                     </h3>
                   </div>
-                  <div className="w-8 h-8 rounded-md bg-slate-100 text-slate-700 flex items-center justify-center font-bold border border-slate-200">
-                    <Zap className="w-4 h-4 text-amber-500" />
-                  </div>
                 </div>
 
                 <div className="mt-3 pt-2.5 border-t border-slate-100 flex items-center justify-between text-[11px]">
@@ -500,9 +491,6 @@ const Team = () => {
                     <h3 className="text-2xl font-bold font-display text-slate-900 mt-1 tracking-tight">
                       {totalAssigned} Leads
                     </h3>
-                  </div>
-                  <div className="w-8 h-8 rounded-md bg-slate-100 text-slate-700 flex items-center justify-center font-bold border border-slate-200">
-                    <Briefcase className="w-4 h-4" />
                   </div>
                 </div>
 
@@ -678,9 +666,6 @@ const Team = () => {
           <div className="bg-white rounded-md shadow-xl border border-slate-200 max-w-md w-full p-5 space-y-4 animate-in zoom-in-95 duration-150">
             <div className="flex items-center justify-between pb-3 border-b border-slate-200">
               <div className="flex items-center gap-2">
-                <div className="w-7 h-7 rounded-md bg-slate-900 text-white flex items-center justify-center font-bold">
-                  <UserPlus className="w-3.5 h-3.5" />
-                </div>
                 <div>
                   <h3 className="text-sm font-bold font-display text-slate-900">Add Team Member</h3>
                   <p className="text-[10px] font-delight font-normal text-slate-400">
@@ -868,9 +853,6 @@ const Team = () => {
           <div className="bg-white rounded-md shadow-xl border border-slate-200 max-w-md w-full p-5 space-y-4 animate-in zoom-in-95 duration-150">
             <div className="flex items-center justify-between pb-3 border-b border-slate-200">
               <div className="flex items-center gap-2">
-                <div className="w-7 h-7 rounded-md bg-slate-900 text-white flex items-center justify-center font-bold">
-                  <Edit3 className="w-3.5 h-3.5" />
-                </div>
                 <div>
                   <h3 className="text-sm font-bold font-display text-slate-900">Manage Role & Permissions</h3>
                   <p className="text-[11px] font-delight font-normal text-slate-500">{activeMember.name} • {activeMember.email}</p>
@@ -998,9 +980,6 @@ const Team = () => {
           <div className="bg-white rounded-md shadow-xl border border-slate-200 max-w-md w-full p-5 space-y-4 animate-in zoom-in-95 duration-150">
             <div className="flex items-center justify-between pb-3 border-b border-slate-200">
               <div className="flex items-center gap-2">
-                <div className="w-7 h-7 rounded-md bg-red-100 text-red-700 flex items-center justify-center font-bold">
-                  <Trash2 className="w-3.5 h-3.5" />
-                </div>
                 <h3 className="text-sm font-bold font-display text-slate-900">Remove Team Member</h3>
               </div>
               <button 
@@ -1052,9 +1031,6 @@ const Team = () => {
           <div className="bg-white rounded-md shadow-xl border border-slate-200 max-w-lg w-full p-6 space-y-4 animate-in zoom-in-95 duration-150">
             <div className="flex items-center justify-between pb-3 border-b border-slate-200">
               <div className="flex items-center gap-2">
-                <div className="w-8 h-8 rounded-md bg-amber-100 text-amber-800 flex items-center justify-center font-bold">
-                  <Users className="w-4 h-4" />
-                </div>
                 <div>
                   <h3 className="text-sm font-bold font-display text-slate-900">Workspace Seat Limit Reached</h3>
                   <p className="text-[11px] font-delight font-normal text-slate-500">

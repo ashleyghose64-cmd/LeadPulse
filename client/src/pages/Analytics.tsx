@@ -129,9 +129,6 @@ const Analytics = () => {
             <div className="p-5 hover:bg-slate-50/70 transition-colors space-y-2">
               <div className="flex items-center justify-between">
                 <span className="text-[11px] font-delight font-semibold text-slate-500 uppercase tracking-wider">Total CRM Leads</span>
-                <div className="w-7 h-7 rounded-md bg-slate-100 text-slate-700 flex items-center justify-center border border-slate-200">
-                  <Users className="w-3.5 h-3.5" />
-                </div>
               </div>
               <div>
                 <div className="text-2xl sm:text-3xl font-bold font-delight tracking-tight text-slate-900 tabular-nums">{totalLeads}</div>
@@ -146,9 +143,6 @@ const Analytics = () => {
             <div className="p-5 hover:bg-slate-50/70 transition-colors space-y-2">
               <div className="flex items-center justify-between">
                 <span className="text-[11px] font-delight font-semibold text-slate-500 uppercase tracking-wider">Verified Email Rate</span>
-                <div className="w-7 h-7 rounded-md bg-slate-100 text-slate-700 flex items-center justify-center border border-slate-200">
-                  <ShieldCheck className="w-3.5 h-3.5" />
-                </div>
               </div>
               <div>
                 <div className="text-2xl sm:text-3xl font-bold font-delight tracking-tight text-slate-900 tabular-nums">{emailVerificationRate}%</div>
@@ -162,9 +156,6 @@ const Analytics = () => {
             <div className="p-5 hover:bg-slate-50/70 transition-colors space-y-2">
               <div className="flex items-center justify-between">
                 <span className="text-[11px] font-delight font-semibold text-slate-500 uppercase tracking-wider">Win Rate / Closed Deals</span>
-                <div className="w-7 h-7 rounded-md bg-slate-100 text-slate-700 flex items-center justify-center border border-slate-200">
-                  <Target className="w-3.5 h-3.5" />
-                </div>
               </div>
               <div>
                 <div className="text-2xl sm:text-3xl font-bold font-delight tracking-tight text-slate-900 tabular-nums">{conversionRate}%</div>
@@ -178,9 +169,6 @@ const Analytics = () => {
             <div className="p-5 hover:bg-slate-50/70 transition-colors space-y-2">
               <div className="flex items-center justify-between">
                 <span className="text-[11px] font-delight font-semibold text-slate-500 uppercase tracking-wider">Estimated Pipeline Value</span>
-                <div className="w-7 h-7 rounded-md bg-blue-50 text-blue-600 flex items-center justify-center border border-blue-200">
-                  <TrendingUp className="w-3.5 h-3.5" />
-                </div>
               </div>
               <div>
                 <div className="text-2xl sm:text-3xl font-bold font-delight tracking-tight text-blue-600 tabular-nums">
@@ -369,14 +357,9 @@ const Analytics = () => {
           {/* 4. AI GROWTH ADVISOR */}
           <div className="bg-slate-950 border border-slate-800 text-white p-5 rounded-md space-y-3">
             <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2.5">
-                <div className="w-7 h-7 rounded-md bg-blue-500/10 border border-blue-500/20 text-blue-400 flex items-center justify-center">
-                  <Sparkles className="w-3.5 h-3.5 fill-current" />
-                </div>
-                <div>
-                  <h3 className="font-bold text-sm text-white">LeadPulse AI Growth Recommendations</h3>
-                  <p className="text-xs text-slate-400 font-sans">Actionable advice based on real-time pipeline telemetry</p>
-                </div>
+              <div>
+                <h3 className="font-bold text-sm text-white">LeadPulse AI Growth Recommendations</h3>
+                <p className="text-xs text-slate-400 font-sans">Actionable advice based on real-time pipeline telemetry</p>
               </div>
               <span className="text-[10px] font-delight font-bold bg-blue-600 text-white px-2 py-0.5 rounded-sm uppercase tracking-wider">
                 Automated Insights

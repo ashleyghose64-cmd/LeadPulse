@@ -727,9 +727,6 @@ const Settings = () => {
                 {/* Cloud Firestore Sync Status */}
                 <div className="p-4 rounded-md bg-emerald-50 border border-emerald-200 flex items-center justify-between">
                   <div className="flex items-center gap-3">
-                    <div className="w-7 h-7 rounded-md bg-emerald-600 text-white flex items-center justify-center font-bold flex-shrink-0">
-                      <Check className="w-4 h-4" />
-                    </div>
                     <div>
                       <strong className="text-xs font-semibold text-emerald-950 block">Google Cloud Firestore Synchronized</strong>
                       <span className="text-[11px] text-emerald-800 font-sans">Your CRM data is automatically backed up and persisted with production service account credentials.</span>

@@ -241,19 +241,6 @@ const LeadFinderWizard = ({ onHarvestStarted }: WizardProps) => {
             
             <div className="flex items-center justify-between gap-2">
               <div className="flex items-center gap-2.5">
-                {activeJob.status === 'completed' ? (
-                  <div className="w-7 h-7 rounded-md bg-emerald-600 text-white flex items-center justify-center font-bold">
-                    <CheckCircle2 className="w-4 h-4" />
-                  </div>
-                ) : activeJob.status === 'failed' ? (
-                  <div className="w-7 h-7 rounded-md bg-rose-600 text-white flex items-center justify-center font-bold">
-                    <AlertCircle className="w-4 h-4" />
-                  </div>
-                ) : (
-                  <div className="w-7 h-7 rounded-md bg-slate-900 text-white flex items-center justify-center font-bold">
-                    <Loader2 className="w-4 h-4 animate-spin" />
-                  </div>
-                )}
                 <div>
                   <h3 className="font-bold text-xs text-slate-900 tracking-tight">
                     {activeJob.status === 'completed' 

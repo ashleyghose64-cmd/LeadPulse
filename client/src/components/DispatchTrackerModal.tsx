@@ -184,9 +184,6 @@ const DispatchTrackerModal = ({
               {/* Template Blueprint Summary */}
               <div className="bg-slate-50 border border-slate-200 rounded-md p-3.5 flex flex-wrap items-center justify-between gap-3">
                 <div className="flex items-center gap-3">
-                  <div className="w-8 h-8 rounded-md bg-slate-900 text-white flex items-center justify-center font-delight font-bold text-xs">
-                    LP
-                  </div>
                   <div>
                     <span className="text-[10px] font-delight font-semibold uppercase tracking-wider text-slate-400 block">Selected Structure:</span>
                     <h4 className="text-xs font-bold text-slate-900">{templateName}</h4>
@@ -371,9 +368,6 @@ const DispatchTrackerModal = ({
               {/* Success Banner */}
               <div className="bg-emerald-50 border border-emerald-200 rounded-md p-4 flex items-center justify-between gap-4">
                 <div className="flex items-center gap-3">
-                  <div className="w-9 h-9 rounded-md bg-emerald-600 text-white flex items-center justify-center shrink-0">
-                    <CheckCircle2 className="w-5 h-5" />
-                  </div>
                   <div>
                     <h3 className="text-sm font-bold text-emerald-950">
                       Campaign Dispatched Directly to Inboxes!
@@ -509,9 +503,6 @@ const DispatchTrackerModal = ({
           {/* 4. ERROR VIEW */}
           {dispatchState === 'error' && (
             <div className="p-6 text-center space-y-3 bg-red-50 border border-red-200 rounded-md">
-              <div className="w-9 h-9 rounded-md bg-red-100 text-red-600 flex items-center justify-center mx-auto border border-red-200">
-                <AlertCircle className="w-5 h-5" />
-              </div>
               <h3 className="text-sm font-bold text-red-950">Dispatch Encountered an Error</h3>
               <p className="text-xs text-red-700 max-w-md mx-auto">{errorMessage}</p>
               <button

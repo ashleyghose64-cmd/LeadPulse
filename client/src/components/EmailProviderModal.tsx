@@ -165,9 +165,6 @@ const EmailProviderModal = ({ isOpen, onClose, user, onSaved }: EmailProviderMod
         {/* Header */}
         <div className="px-5 py-4 border-b border-slate-200 bg-slate-50 flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <div className="w-8 h-8 rounded-md bg-slate-900 text-white flex items-center justify-center font-bold">
-              <Mail className="w-4 h-4" />
-            </div>
             <div>
               <h2 className="font-bold text-sm text-slate-900">Email Dispatch Provider Settings</h2>
               <p className="text-xs text-slate-500">Configure your real SMTP or API gateway for direct inbox placement.</p>

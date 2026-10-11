@@ -275,14 +275,9 @@ const Dashboard = () => {
                       onClick={() => navigate('/finder')}
                       className="w-full p-3.5 bg-white hover:bg-[#FAF8F5] text-left transition-colors flex items-center justify-between group cursor-pointer"
                     >
-                      <div className="flex items-center gap-3">
-                        <div className="w-8 h-8 rounded-md bg-[#F5F2EB] border border-[#E5E0D5] text-[#191716] group-hover:bg-[#C85A32] group-hover:text-white group-hover:border-[#C85A32] flex items-center justify-center transition-colors">
-                          <Target className="w-3.5 h-3.5" />
-                        </div>
-                        <div>
-                          <div className="text-xs font-bold font-delight text-[#191716] group-hover:text-[#C85A32] transition-colors">Launch Lead Harvester</div>
-                          <div className="text-[11px] text-[#6E675F]">Scrape geo-targeted B2B listings</div>
-                        </div>
+                      <div>
+                        <div className="text-xs font-bold font-delight text-[#191716] group-hover:text-[#C85A32] transition-colors">Launch Lead Harvester</div>
+                        <div className="text-[11px] text-[#6E675F]">Scrape geo-targeted B2B listings</div>
                       </div>
                       <ArrowRight className="w-3.5 h-3.5 text-[#9C9488] group-hover:text-[#C85A32] group-hover:translate-x-0.5 transition-all" />
                     </button>
@@ -291,14 +286,9 @@ const Dashboard = () => {
                       onClick={() => navigate('/outreach')}
                       className="w-full p-3.5 bg-white hover:bg-[#FAF8F5] text-left transition-colors flex items-center justify-between group cursor-pointer"
                     >
-                      <div className="flex items-center gap-3">
-                        <div className="w-8 h-8 rounded-md bg-[#F5F2EB] border border-[#E5E0D5] text-[#191716] group-hover:bg-[#C85A32] group-hover:text-white group-hover:border-[#C85A32] flex items-center justify-center transition-colors">
-                          <Send className="w-3.5 h-3.5" />
-                        </div>
-                        <div>
-                          <div className="text-xs font-bold font-delight text-[#191716] group-hover:text-[#C85A32] transition-colors">Outreach Studio</div>
-                          <div className="text-[11px] text-[#6E675F]">Launch email or WhatsApp campaign</div>
-                        </div>
+                      <div>
+                        <div className="text-xs font-bold font-delight text-[#191716] group-hover:text-[#C85A32] transition-colors">Outreach Studio</div>
+                        <div className="text-[11px] text-[#6E675F]">Launch email or WhatsApp campaign</div>
                       </div>
                       <ArrowRight className="w-3.5 h-3.5 text-[#9C9488] group-hover:text-[#C85A32] group-hover:translate-x-0.5 transition-all" />
                     </button>
@@ -307,14 +297,9 @@ const Dashboard = () => {
                       onClick={() => navigate('/audience')}
                       className="w-full p-3.5 bg-white hover:bg-[#FAF8F5] text-left transition-colors flex items-center justify-between group cursor-pointer"
                     >
-                      <div className="flex items-center gap-3">
-                        <div className="w-8 h-8 rounded-md bg-[#F5F2EB] border border-[#E5E0D5] text-[#191716] group-hover:bg-[#C85A32] group-hover:text-white group-hover:border-[#C85A32] flex items-center justify-center transition-colors">
-                          <Users className="w-3.5 h-3.5" />
-                        </div>
-                        <div>
-                          <div className="text-xs font-bold font-delight text-[#191716] group-hover:text-[#C85A32] transition-colors">Audience &amp; Contacts</div>
-                          <div className="text-[11px] text-[#6E675F]">Manage direct contact coordinates</div>
-                        </div>
+                      <div>
+                        <div className="text-xs font-bold font-delight text-[#191716] group-hover:text-[#C85A32] transition-colors">Audience &amp; Contacts</div>
+                        <div className="text-[11px] text-[#6E675F]">Manage direct contact coordinates</div>
                       </div>
                       <ArrowRight className="w-3.5 h-3.5 text-[#9C9488] group-hover:text-[#C85A32] group-hover:translate-x-0.5 transition-all" />
                     </button>

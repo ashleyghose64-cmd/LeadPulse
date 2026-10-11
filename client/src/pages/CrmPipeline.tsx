@@ -919,9 +919,6 @@ const CrmPipeline = () => {
           <div className="bg-white rounded-md shadow-xl border border-slate-200 max-w-lg w-full p-5 space-y-4 animate-in zoom-in-95 duration-150">
             <div className="flex items-center justify-between pb-3 border-b border-slate-200">
               <div className="flex items-center gap-2">
-                <div className="w-7 h-7 rounded-md bg-slate-900 text-white flex items-center justify-center font-bold">
-                  <Edit3 className="w-4 h-4" />
-                </div>
                 <div>
                   <h3 className="text-sm font-bold text-slate-900 tracking-tight">Edit Contact & Business Details</h3>
                   <p className="text-[11px] font-delight font-normal text-slate-400">Shorten listing title, edit email, phone, location & stage</p>

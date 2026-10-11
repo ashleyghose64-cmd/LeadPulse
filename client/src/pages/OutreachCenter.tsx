@@ -514,9 +514,6 @@ const OutreachCenter = () => {
           {dispatchNotification && (
             <div className="p-3.5 rounded-md border border-slate-200 bg-white shadow-xs flex flex-wrap items-center justify-between gap-3 animate-in fade-in duration-150">
               <div className="flex items-center gap-2.5 text-slate-800">
-                <div className="w-7 h-7 rounded-sm bg-slate-100 border border-slate-200 text-slate-900 flex items-center justify-center font-delight font-medium text-xs shrink-0">
-                  <CheckCircle2 className="w-4 h-4 text-emerald-600" />
-                </div>
                 <div>
                   <div className="font-delight text-xs font-semibold text-slate-900">Direct Dispatch Status</div>
                   <div className="text-xs text-slate-600">{dispatchNotification.message}</div>
@@ -915,9 +912,6 @@ const OutreachCenter = () => {
                           className="group border border-slate-200 hover:border-[#191716] bg-slate-50/60 hover:bg-white rounded-md px-4 py-3 flex items-center justify-between gap-3 cursor-pointer transition-all"
                         >
                           <div className="flex items-center gap-3 min-w-0">
-                            <div className="w-8 h-8 rounded bg-[#191716] text-white flex items-center justify-center shrink-0">
-                              <Wand2 className="w-4 h-4" />
-                            </div>
                             <div className="min-w-0">
                               <div className="flex items-center gap-2">
                                 <span className="text-xs font-delight font-bold text-[#191716]">
@@ -948,9 +942,6 @@ const OutreachCenter = () => {
                           {/* Card View Top Header */}
                           <div className="bg-[#191716] text-white px-4 py-3.5 flex items-center justify-between gap-3">
                             <div className="flex items-center gap-2.5">
-                              <div className="w-7 h-7 rounded bg-white/10 border border-white/15 flex items-center justify-center text-white">
-                                <Sparkles className="w-3.5 h-3.5" />
-                              </div>
                               <div>
                                 <div className="flex items-center gap-2">
                                   <h4 className="text-sm font-bold text-white font-delight tracking-tight">

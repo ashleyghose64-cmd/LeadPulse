@@ -1,21 +1,10 @@
 import { 
-  BarChart3, Database, MessageSquare, Play, Send, 
-  Sparkles, Users, Zap, ShieldCheck, Waypoints, 
-  Search, Target, Layers, FileText, X, Check, Shield, Mail
+  Play, Sparkles, Layers, X, Check
 } from 'lucide-react';
 import { motion, useScroll, useTransform } from 'framer-motion';
 import { useRef, useState } from 'react';
 import MeshBackground from '../components/MeshBackground';
 import { useStore } from '../store/useStore';
-
-const companies = [
-  { name: 'Acme Corp', icon: Database },
-  { name: 'Globex', icon: BarChart3 },
-  { name: 'Soylent', icon: Users },
-  { name: 'Initech', icon: Zap },
-  { name: 'Umbrella', icon: ShieldCheck },
-  { name: 'Massive Dynamic', icon: Sparkles },
-];
 
 const Landing = ({ onLogin }: { onLogin: () => void }) => {
   const { token } = useStore();
@@ -206,9 +195,6 @@ const Landing = ({ onLogin }: { onLogin: () => void }) => {
                     <div className="text-xs font-delight font-bold text-[#191716]">MQL Conversion Rate</div>
                     <div className="text-[10.5px] font-delight text-[#78716A]">+24.8% vs prior cohort</div>
                   </div>
-                  <div className="w-7 h-7 rounded-[5px] bg-[#FDF3EF] text-[#C85A32] border border-[#F2D0C2] flex items-center justify-center">
-                    <BarChart3 className="w-3.5 h-3.5" />
-                  </div>
                 </div>
                 <div className="flex items-end gap-1.5 h-20 mt-2">
                   {[42, 68, 50, 92, 74].map((h, i) => (
@@ -236,9 +222,6 @@ const Landing = ({ onLogin }: { onLogin: () => void }) => {
               transition={{ duration: 4.6, repeat: Infinity, ease: "easeInOut", delay: 1.2 }}
               className="absolute bottom-5 left-5 bg-[#191716] p-3.5 rounded-[7px] shadow-xl flex items-center gap-3 z-30 text-[#FAF8F5] border border-[#332E2B]"
             >
-              <div className="w-8.5 h-8.5 rounded-[5px] bg-[#C85A32]/20 border border-[#E07A5F]/40 flex items-center justify-center text-[#E07A5F]">
-                <Send className="w-4 h-4" />
-              </div>
               <div>
                 <div className="text-xs font-delight font-bold text-white">Campaign Dispatched</div>
                 <div className="text-[10.5px] font-delight text-[#A8A096] tabular-nums">
@@ -251,43 +234,8 @@ const Landing = ({ onLogin }: { onLogin: () => void }) => {
         </div>
       </section>
 
-      {/* ================= 3. MARQUEE SECTION ================= */}
-      <section className="py-10 border-y border-[#E5E0D5] bg-[#F5F2EB] overflow-hidden w-full relative z-10">
-        <p className="text-center text-[11px] font-delight font-bold text-[#78716A] mb-7 uppercase tracking-[0.14em]">
-          Powering revenue teams at modern commercial organizations
-        </p>
-        <div className="w-full inline-flex flex-nowrap overflow-hidden pointer-events-none select-none [mask-image:_linear-gradient(to_right,transparent_0,_black_128px,_black_calc(100%-128px),transparent_100%)]">
-          <div className="flex items-center shrink-0 w-max gap-16 pr-16 animate-marquee">
-            {[...companies, ...companies].map((company, i) => {
-              const Icon = company.icon;
-              return (
-                <div key={i} className="flex items-center gap-3 opacity-85">
-                  <div className="w-7 h-7 rounded-[5px] bg-white border border-[#D6CFC2] flex items-center justify-center text-[#C85A32]">
-                    <Icon className="w-4 h-4" />
-                  </div>
-                  <span className="text-xl font-extrabold tracking-tight text-[#191716]">{company.name}</span>
-                </div>
-              );
-            })}
-          </div>
-          <div className="flex items-center shrink-0 w-max gap-16 pr-16 animate-marquee" aria-hidden="true">
-            {[...companies, ...companies].map((company, i) => {
-              const Icon = company.icon;
-              return (
-                <div key={i + 'dup'} className="flex items-center gap-3 opacity-85">
-                  <div className="w-7 h-7 rounded-[5px] bg-white border border-[#D6CFC2] flex items-center justify-center text-[#C85A32]">
-                    <Icon className="w-4 h-4" />
-                  </div>
-                  <span className="text-xl font-extrabold tracking-tight text-[#191716]">{company.name}</span>
-                </div>
-              );
-            })}
-          </div>
-        </div>
-      </section>
-
-      {/* ================= 4. PLATFORM ARCHITECTURE SHOWCASE (id="product") ================= */}
-      <section id="product" className="py-22 px-6 md:px-12 max-w-7xl mx-auto w-full relative z-10 scroll-mt-20">
+      {/* ================= 3. PLATFORM ARCHITECTURE SHOWCASE (id="product") ================= */}
+      <section id="product" className="py-22 px-6 md:px-12 max-w-7xl mx-auto w-full relative z-10 scroll-mt-20 border-t border-[#E5E0D5]">
         <div className="text-left mb-12 max-w-2xl">
           <div className="inline-flex items-center gap-2 px-2.5 py-1 rounded-[5px] border border-[#E5E0D5] bg-[#F5F2EB] text-[11px] font-delight font-bold text-[#57524B] mb-3.5">
             <Layers className="w-3.5 h-3.5 text-[#C85A32]" />
@@ -307,9 +255,6 @@ const Landing = ({ onLogin }: { onLogin: () => void }) => {
           {/* Pillar 1 */}
           <div className="p-8 hover:bg-[#FAF8F5]/70 transition-colors flex flex-col justify-between space-y-6">
             <div className="space-y-3">
-              <div className="w-9.5 h-9.5 rounded-[6px] bg-[#F5F2EB] text-[#C85A32] border border-[#D6CFC2] flex items-center justify-center mb-4">
-                <Search className="w-4 h-4" />
-              </div>
               <span className="text-[10.5px] font-delight font-bold uppercase tracking-wider text-[#C85A32] block">
                 Pillar 01 // Discovery
               </span>
@@ -334,9 +279,6 @@ const Landing = ({ onLogin }: { onLogin: () => void }) => {
           {/* Pillar 2 */}
           <div className="p-8 hover:bg-[#FAF8F5]/70 transition-colors flex flex-col justify-between space-y-6">
             <div className="space-y-3">
-              <div className="w-9.5 h-9.5 rounded-[6px] bg-[#FDF3EF] text-[#C85A32] border border-[#F2D0C2] flex items-center justify-center mb-4">
-                <Send className="w-4 h-4" />
-              </div>
               <span className="text-[10.5px] font-delight font-bold uppercase tracking-wider text-[#C85A32] block">
                 Pillar 02 // Dispatch
               </span>
@@ -361,9 +303,6 @@ const Landing = ({ onLogin }: { onLogin: () => void }) => {
           {/* Pillar 3 */}
           <div className="p-8 hover:bg-[#FAF8F5]/70 transition-colors flex flex-col justify-between space-y-6">
             <div className="space-y-3">
-              <div className="w-9.5 h-9.5 rounded-[6px] bg-[#F5F2EB] text-[#C85A32] border border-[#D6CFC2] flex items-center justify-center mb-4">
-                <Waypoints className="w-4 h-4" />
-              </div>
               <span className="text-[10.5px] font-delight font-bold uppercase tracking-wider text-[#C85A32] block">
                 Pillar 03 // Pipeline
               </span>
@@ -414,9 +353,6 @@ const Landing = ({ onLogin }: { onLogin: () => void }) => {
             className="md:col-span-2 bg-white border border-[#E5E0D5] rounded-lg overflow-hidden relative flex flex-col justify-between p-8 hover:border-[#D6CFC2] transition-colors"
           >
             <div>
-              <div className="w-10 h-10 bg-[#F5F2EB] border border-[#D6CFC2] rounded-[6px] flex items-center justify-center mb-5 text-[#C85A32]">
-                <Search className="w-4.5 h-4.5" />
-              </div>
               <h3 className="text-xl font-extrabold text-[#191716] mb-2 tracking-tight">Real-Time Lead Harvesting</h3>
               <p className="text-[13.5px] text-[#57524B] leading-relaxed max-w-xl">
                 Query verified commercial listings on demand. Filter by targeted metropolitan regions, industry categories, and operational status without relying on stale third-party databases.
@@ -458,9 +394,6 @@ const Landing = ({ onLogin }: { onLogin: () => void }) => {
             className="bg-[#F5F2EB] border border-[#E5E0D5] rounded-lg p-8 relative overflow-hidden flex flex-col justify-between hover:border-[#D6CFC2] transition-colors"
           >
             <div>
-              <div className="w-10 h-10 bg-white border border-[#D6CFC2] rounded-[6px] flex items-center justify-center mb-5 text-[#191716]">
-                <Waypoints className="w-4.5 h-4.5" />
-              </div>
               <h3 className="text-xl font-extrabold text-[#191716] mb-2 tracking-tight">Automated Journeys</h3>
               <p className="text-[13px] text-[#57524B] leading-relaxed">
                 Design multi-stage nurturing sequences triggered by prospect engagement, status transitions, and custom delays.
@@ -488,9 +421,6 @@ const Landing = ({ onLogin }: { onLogin: () => void }) => {
             className="bg-[#F5F2EB] border border-[#E5E0D5] rounded-lg p-8 relative overflow-hidden flex flex-col justify-between hover:border-[#D6CFC2] transition-colors"
           >
             <div>
-              <div className="w-10 h-10 bg-white border border-[#D6CFC2] rounded-[6px] flex items-center justify-center mb-5 text-[#191716]">
-                <MessageSquare className="w-4.5 h-4.5" />
-              </div>
               <h3 className="text-xl font-extrabold text-[#191716] mb-2 tracking-tight">Multi-Channel Delivery</h3>
               <p className="text-[13px] text-[#57524B] leading-relaxed">
                 Reach decision-makers via verified corporate email relays and direct WhatsApp conversational frameworks.
@@ -522,9 +452,6 @@ const Landing = ({ onLogin }: { onLogin: () => void }) => {
             className="md:col-span-2 bg-white border border-[#E5E0D5] rounded-lg p-8 relative overflow-hidden flex flex-col justify-between hover:border-[#D6CFC2] transition-colors"
           >
             <div>
-              <div className="w-10 h-10 bg-[#FDF3EF] border border-[#F2D0C2] rounded-[6px] flex items-center justify-center mb-5 text-[#C85A32]">
-                <Sparkles className="w-4.5 h-4.5" />
-              </div>
               <h3 className="text-xl font-extrabold text-[#191716] mb-2 tracking-tight">
                 Contextual AI Copilot (Delight Auto-Fill Engine)
               </h3>
@@ -534,15 +461,10 @@ const Landing = ({ onLogin }: { onLogin: () => void }) => {
             </div>
 
             <div className="mt-6 bg-[#191716] border border-[#2E2A27] rounded-[6px] p-4 text-[#FAF8F5] flex flex-wrap items-center justify-between gap-3">
-              <div className="flex items-center gap-3">
-                <div className="w-7.5 h-7.5 rounded-[5px] bg-[#C85A32] text-white flex items-center justify-center font-delight font-bold text-xs">
-                  ✦
-                </div>
-                <div>
-                  <div className="text-xs font-delight font-bold text-white">AI Email Copilot • Auto-Fill Studio Card</div>
-                  <div className="text-[10.5px] font-delight text-[#A8A096]">
-                    Tone: Direct Executive • Hook: Google Maps Reputation + Audit
-                  </div>
+              <div>
+                <div className="text-xs font-delight font-bold text-white">AI Email Copilot • Auto-Fill Studio Card</div>
+                <div className="text-[10.5px] font-delight text-[#A8A096]">
+                  Tone: Direct Executive • Hook: Google Maps Reputation + Audit
                 </div>
               </div>
               <button
@@ -622,9 +544,6 @@ const Landing = ({ onLogin }: { onLogin: () => void }) => {
       <footer className="py-9 px-6 md:px-12 border-t border-[#E5E0D5] bg-[#F5F2EB] relative z-10">
         <div className="max-w-7xl mx-auto flex flex-col md:flex-row items-center justify-between gap-6">
           <div className="flex items-center gap-2.5">
-            <div className="w-6.5 h-6.5 rounded-[4px] bg-[#C85A32] text-white flex items-center justify-center font-delight font-extrabold text-[11px] shadow-xs">
-              <Target className="w-3.5 h-3.5" />
-            </div>
             <span className="font-extrabold tracking-tight text-[#191716] text-sm">LeadPulse</span>
             <span className="text-[10.5px] font-delight font-semibold text-[#78716A]">
               // ENTERPRISE OPERATING SYSTEM
@@ -655,14 +574,9 @@ const Landing = ({ onLogin }: { onLogin: () => void }) => {
         <div className="fixed inset-0 bg-[#191716]/65 backdrop-blur-xs flex items-center justify-center p-4 z-50 font-sans">
           <div className="bg-white rounded-lg shadow-xl border border-[#D6CFC2] max-w-2xl w-full max-h-[85vh] flex flex-col overflow-hidden text-[#191716]">
             <div className="p-5 border-b border-[#E5E0D5] flex items-center justify-between bg-[#F5F2EB]">
-              <div className="flex items-center gap-3">
-                <div className="w-8 h-8 rounded-[5px] bg-[#191716] text-white flex items-center justify-center font-bold">
-                  <Shield className="w-4 h-4" />
-                </div>
-                <div>
-                  <h3 className="text-base font-extrabold tracking-tight text-[#191716]">LeadPulse Privacy Policy</h3>
-                  <p className="text-[11px] font-delight text-[#78716A]">Effective Date: October 2026 • GDPR &amp; CCPA Compliant</p>
-                </div>
+              <div>
+                <h3 className="text-base font-extrabold tracking-tight text-[#191716]">LeadPulse Privacy Policy</h3>
+                <p className="text-[11px] font-delight text-[#78716A]">Effective Date: October 2026 • GDPR &amp; CCPA Compliant</p>
               </div>
               <button onClick={() => setIsPrivacyOpen(false)} className="text-[#78716A] hover:text-[#191716] transition-colors cursor-pointer">
                 <X className="w-4 h-4" />
@@ -713,14 +627,9 @@ const Landing = ({ onLogin }: { onLogin: () => void }) => {
         <div className="fixed inset-0 bg-[#191716]/65 backdrop-blur-xs flex items-center justify-center p-4 z-50 font-sans">
           <div className="bg-white rounded-lg shadow-xl border border-[#D6CFC2] max-w-2xl w-full max-h-[85vh] flex flex-col overflow-hidden text-[#191716]">
             <div className="p-5 border-b border-[#E5E0D5] flex items-center justify-between bg-[#F5F2EB]">
-              <div className="flex items-center gap-3">
-                <div className="w-8 h-8 rounded-[5px] bg-[#191716] text-white flex items-center justify-center font-bold">
-                  <FileText className="w-4 h-4" />
-                </div>
-                <div>
-                  <h3 className="text-base font-extrabold tracking-tight text-[#191716]">Terms of Service</h3>
-                  <p className="text-[11px] font-delight text-[#78716A]">Master Subscription Agreement • LeadPulse Inc.</p>
-                </div>
+              <div>
+                <h3 className="text-base font-extrabold tracking-tight text-[#191716]">Terms of Service</h3>
+                <p className="text-[11px] font-delight text-[#78716A]">Master Subscription Agreement • LeadPulse Inc.</p>
               </div>
               <button onClick={() => setIsTermsOpen(false)} className="text-[#78716A] hover:text-[#191716] transition-colors cursor-pointer">
                 <X className="w-4 h-4" />
@@ -771,14 +680,9 @@ const Landing = ({ onLogin }: { onLogin: () => void }) => {
         <div className="fixed inset-0 bg-[#191716]/65 backdrop-blur-xs flex items-center justify-center p-4 z-50 font-sans">
           <div className="bg-white rounded-lg shadow-xl border border-[#D6CFC2] max-w-md w-full p-5 space-y-5 text-[#191716]">
             <div className="flex items-center justify-between pb-3 border-b border-[#E5E0D5]">
-              <div className="flex items-center gap-2.5">
-                <div className="w-8 h-8 rounded-[5px] bg-[#191716] text-white flex items-center justify-center font-bold">
-                  <Mail className="w-4 h-4" />
-                </div>
-                <div>
-                  <h3 className="text-sm font-extrabold tracking-tight text-[#191716]">Technical Support &amp; Inquiries</h3>
-                  <p className="text-[10px] font-delight text-[#78716A]">LeadPulse Engineering Relay</p>
-                </div>
+              <div>
+                <h3 className="text-sm font-extrabold tracking-tight text-[#191716]">Technical Support &amp; Inquiries</h3>
+                <p className="text-[10px] font-delight text-[#78716A]">LeadPulse Engineering Relay</p>
               </div>
               <button onClick={() => setIsContactOpen(false)} className="text-[#78716A] hover:text-[#191716] transition-colors cursor-pointer">
                 <X className="w-4 h-4" />

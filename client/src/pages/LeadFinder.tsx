@@ -255,7 +255,6 @@ const LeadFinder = () => {
                 </div>
               ) : filteredLeads.length === 0 ? (
                 <div className="py-16 text-center space-y-2">
-                  <Building2 className="w-10 h-10 text-gray-300 mx-auto" />
                   <p className="text-xs font-bold text-gray-500">No leads found for this search yet.</p>
                   <p className="text-[11px] text-gray-400">Launch the Harvest Wizard above to scrape verified business listings.</p>
                 </div>
@@ -407,9 +406,6 @@ const LeadFinder = () => {
           <div className="bg-white rounded-md shadow-xl border border-slate-200 max-w-lg w-full p-5 space-y-4 animate-in zoom-in-95 duration-150">
             <div className="flex items-center justify-between pb-3 border-b border-slate-200">
               <div className="flex items-center gap-2">
-                <div className="w-7 h-7 rounded-md bg-slate-900 text-white flex items-center justify-center font-bold">
-                  <Edit3 className="w-4 h-4" />
-                </div>
                 <div>
                   <h3 className="text-sm font-bold text-slate-900 tracking-tight">Edit Contact Details</h3>
                   <p className="text-[11px] font-delight font-normal text-slate-400">Shorten long titles or add direct contact info</p>

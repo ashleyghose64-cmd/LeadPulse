@@ -716,9 +716,6 @@ const HelpCenter = () => {
             <div className="w-full grid grid-cols-1 sm:grid-cols-3 gap-3 text-left">
               <div className="p-3.5 bg-white border border-slate-200 rounded-md space-y-1 text-left">
                 <div className="flex items-center gap-2">
-                  <div className="w-6 h-6 rounded-md bg-blue-50 text-blue-600 flex items-center justify-center font-bold border border-blue-100">
-                    <Search className="w-3.5 h-3.5" />
-                  </div>
                   <span className="font-bold font-delight text-xs text-slate-900">Lead Harvesting</span>
                 </div>
                 <p className="text-[11px] text-slate-500 font-sans leading-relaxed text-left">
@@ -728,9 +725,6 @@ const HelpCenter = () => {
 
               <div className="p-3.5 bg-white border border-slate-200 rounded-md space-y-1 text-left">
                 <div className="flex items-center gap-2">
-                  <div className="w-6 h-6 rounded-md bg-purple-50 text-purple-600 flex items-center justify-center font-bold border border-purple-100">
-                    <Send className="w-3.5 h-3.5" />
-                  </div>
                   <span className="font-bold font-delight text-xs text-slate-900">Email & WhatsApp</span>
                 </div>
                 <p className="text-[11px] text-slate-500 font-sans leading-relaxed text-left">
@@ -740,9 +734,6 @@ const HelpCenter = () => {
 
               <div className="p-3.5 bg-white border border-slate-200 rounded-md space-y-1 text-left">
                 <div className="flex items-center gap-2">
-                  <div className="w-6 h-6 rounded-md bg-emerald-50 text-emerald-600 flex items-center justify-center font-bold border border-emerald-100">
-                    <Users className="w-3.5 h-3.5" />
-                  </div>
                   <span className="font-bold font-delight text-xs text-slate-900">Team & Universal Tokens</span>
                 </div>
                 <p className="text-[11px] text-slate-500 font-sans leading-relaxed text-left">
@@ -781,7 +772,6 @@ const HelpCenter = () => {
               )}
 
               {filteredModules.map((module) => {
-                const IconComponent = module.icon;
                 return (
                   <div 
                     key={module.id} 
@@ -791,9 +781,6 @@ const HelpCenter = () => {
                     {/* Module Title Header */}
                     <div className="p-4 sm:p-5 border-b border-slate-100 flex flex-wrap items-center justify-between gap-3 bg-slate-50/60 text-left">
                       <div className="flex items-start gap-3 text-left">
-                        <div className="w-8 h-8 rounded-md bg-slate-900 text-white flex items-center justify-center font-bold shrink-0 mt-0.5">
-                          <IconComponent className="w-4 h-4 text-blue-400" />
-                        </div>
                         <div className="text-left">
                           <div className="flex items-center gap-2">
                             <span className="text-[10px] font-delight text-slate-500 uppercase tracking-wider font-semibold">

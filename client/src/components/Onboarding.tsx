@@ -70,7 +70,7 @@ const Onboarding = () => {
             <input 
               type="text" 
               required
-              placeholder="e.g. Acme Agency"
+              placeholder="e.g. Apex Agency"
               className="w-full border border-slate-300 rounded-sm p-2 text-xs focus:ring-1 focus:ring-blue-600 focus:border-blue-600 outline-none transition-colors"
               value={companyName}
               onChange={(e) => setCompanyName(e.target.value)}

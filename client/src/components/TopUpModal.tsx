@@ -131,7 +131,7 @@ const TopUpModal = () => {
               Unlock Unlimited B2B Lead Acquisition
             </h2>
             <p className="text-xs text-slate-400 mt-1 leading-relaxed">
-              Scale past the Free 50-lead pool. Upgrade to continuous daily harvesting limits, automated multi-channel sequences, and PhonePe instant micro-top-ups.
+              Scale past the Free 15-token pool. Upgrade to continuous daily harvesting limits, automated multi-channel sequences, and PhonePe instant micro-top-ups.
             </p>
           </div>
 
@@ -173,9 +173,6 @@ const TopUpModal = () => {
 
         {phonePeStep === 'success' && (
           <div className="p-16 text-center space-y-4">
-            <div className="w-12 h-12 rounded-md bg-emerald-100 text-emerald-600 flex items-center justify-center mx-auto border border-emerald-200">
-              <CheckCircle2 className="w-6 h-6" />
-            </div>
             <h3 className="text-xl font-bold tracking-tight text-slate-900">Payment Verified by PhonePe!</h3>
             <p className="text-xs text-slate-600 max-w-md mx-auto">
               Successfully activated <span className="font-bold text-slate-900">{successItemName}</span>. Your account compute pool has been updated!

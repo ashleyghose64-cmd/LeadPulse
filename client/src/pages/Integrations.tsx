@@ -669,9 +669,6 @@ const Integrations = () => {
                     <span>Synced across Audience, CRM &amp; Outreach</span>
                   </p>
                 </div>
-                <div className="w-9 h-9 rounded-md bg-slate-100 border border-slate-200 text-[#191716] flex items-center justify-center shrink-0">
-                  <CheckCircle2 className="w-4 h-4 text-[#C85A32]" />
-                </div>
               </div>
 
               {/* Column 2: Live Delivery Telemetry */}
@@ -688,9 +685,6 @@ const Integrations = () => {
                   <p className="text-[11px] text-slate-500 mt-0.5">
                     Inspect <span className="text-emerald-600 font-delight font-semibold">200 OK</span> JSON payloads
                   </p>
-                </div>
-                <div className="w-9 h-9 rounded-md bg-slate-100 text-[#191716] border border-slate-200 flex items-center justify-center shrink-0">
-                  <Zap className="w-4 h-4 text-[#C85A32]" />
                 </div>
               </div>
 
@@ -710,9 +704,6 @@ const Integrations = () => {
                   <p className="text-[11px] text-slate-500 mt-0.5 font-delight font-normal truncate max-w-[210px]">
                     Key: {apiKey.substring(0, 14)}...
                   </p>
-                </div>
-                <div className="w-9 h-9 rounded-md bg-slate-100 text-[#191716] border border-slate-200 flex items-center justify-center shrink-0">
-                  <Webhook className="w-4 h-4 text-[#191716]" />
                 </div>
               </div>
             </div>
@@ -814,7 +805,6 @@ const Integrations = () => {
             {/* Apps Display — Compact 4-Column Grid View OR Sleek List View (Alphabetical Default) */}
             {filteredApps.length === 0 ? (
               <div className="bg-white border border-slate-200 rounded-md p-10 text-center space-y-2">
-                <Layers className="w-8 h-8 text-slate-300 mx-auto" />
                 <p className="text-sm font-delight text-slate-700 font-semibold">No connectors matching "{searchQuery}"</p>
                 <p className="text-xs text-slate-400">Try searching for CRM, AI providers, databases, or clear the search query.</p>
                 <button
@@ -1316,9 +1306,6 @@ const Integrations = () => {
             
             <div className="p-4 border-b border-slate-200 flex items-center justify-between bg-slate-50">
               <div className="flex items-center gap-2.5">
-                <div className="w-7 h-7 rounded-md bg-slate-900 text-white flex items-center justify-center font-bold">
-                  <Terminal className="w-4 h-4" />
-                </div>
                 <div>
                   <h3 className="text-sm font-bold text-slate-900 tracking-tight">LeadPulse Developer REST API</h3>
                   <p className="text-[11px] font-delight font-normal text-slate-400">REST endpoints for programmatic CRM sync and outreach dispatch.</p>
@@ -1346,8 +1333,8 @@ const Integrations = () => {
   -H "Content-Type: application/json" \\
   -H "userid: ${user?._id || 'YOUR_USER_ID'}" \\
   -d '{
-    "businessName": "Acme Innovations",
-    "email": "contact@acme.io",
+    "businessName": "Apex Innovations",
+    "email": "contact@apex.io",
     "phone": "+1 555-0192",
     "category": "SaaS",
     "status": "New"
@@ -1409,9 +1396,6 @@ const Integrations = () => {
             
             <div className="p-4 sm:p-5 border-b border-slate-200 flex items-center justify-between bg-slate-50/70">
               <div className="flex items-center gap-3">
-                <div className="w-8 h-8 rounded-md bg-blue-600 text-white flex items-center justify-center font-bold shadow-2xs">
-                  <Zap className="w-4 h-4" />
-                </div>
                 <div>
                   <div className="flex items-center gap-2">
                     <h3 className="text-sm sm:text-base font-bold text-slate-900 tracking-tight font-display">

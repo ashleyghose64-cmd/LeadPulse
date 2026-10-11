@@ -433,9 +433,6 @@ const Automations = () => {
                   <p className="text-[10px] font-delight font-semibold text-slate-500 uppercase tracking-wider">Active Sequences</p>
                   <h3 className="text-xl font-delight font-bold text-slate-900 mt-1 tracking-tight">{activeCount} / {journeys.length}</h3>
                 </div>
-                <div className="w-8 h-8 rounded-md bg-slate-100 text-slate-700 flex items-center justify-center font-bold border border-slate-200">
-                  <Zap className="w-4 h-4" />
-                </div>
               </div>
 
               <div className="bg-white border border-slate-200 rounded-md p-3.5 flex items-center justify-between">
@@ -443,18 +440,12 @@ const Automations = () => {
                   <p className="text-[10px] font-delight font-semibold text-slate-500 uppercase tracking-wider">Prospects Enrolled</p>
                   <h3 className="text-xl font-delight font-bold text-slate-900 mt-1 tracking-tight">{totalEnrolled}</h3>
                 </div>
-                <div className="w-8 h-8 rounded-md bg-slate-100 text-slate-700 flex items-center justify-center font-bold border border-slate-200">
-                  <Send className="w-4 h-4" />
-                </div>
               </div>
 
               <div className="bg-white border border-slate-200 rounded-md p-3.5 flex items-center justify-between">
                 <div>
                   <p className="text-[10px] font-delight font-semibold text-slate-500 uppercase tracking-wider">Automated Conversions</p>
                   <h3 className="text-xl font-delight font-bold text-slate-900 mt-1 tracking-tight">{totalConversions}</h3>
-                </div>
-                <div className="w-8 h-8 rounded-md bg-slate-100 text-slate-700 flex items-center justify-center font-bold border border-slate-200">
-                  <CheckCircle2 className="w-4 h-4" />
                 </div>
               </div>
             </div>
@@ -468,9 +459,6 @@ const Automations = () => {
 
               {journeys.length === 0 ? (
                 <div className="p-12 text-center space-y-3 font-delight font-medium">
-                  <div className="w-10 h-10 bg-slate-100 text-slate-700 rounded-md flex items-center justify-center mx-auto border border-slate-200">
-                    <Waypoints className="w-5 h-5" />
-                  </div>
                   <div className="space-y-1">
                     <h3 className="text-sm font-bold text-slate-900 tracking-tight">No automation workflows configured</h3>
                     <p className="text-slate-500 text-xs max-w-sm mx-auto">
@@ -584,14 +572,9 @@ const Automations = () => {
 
             {/* Template Presets Banner */}
             <div className="border border-dashed border-slate-300 rounded-md p-5 bg-white flex flex-col md:flex-row items-center justify-between gap-4">
-              <div className="flex items-center gap-3">
-                <div className="w-9 h-9 bg-slate-50 rounded-md border border-slate-200 flex items-center justify-center text-slate-700">
-                  <Layers className="w-4 h-4" />
-                </div>
-                <div>
-                  <h3 className="font-bold text-slate-900 text-sm tracking-tight">Explore Pre-built Outreach Journeys</h3>
-                  <p className="text-xs text-slate-500 mt-0.5">Deploy proven sequences for cold acquisition, post-proposal follow-ups, and inbound conversions in 1 click.</p>
-                </div>
+              <div>
+                <h3 className="font-bold text-slate-900 text-sm tracking-tight">Explore Pre-built Outreach Journeys</h3>
+                <p className="text-xs text-slate-500 mt-0.5">Deploy proven sequences for cold acquisition, post-proposal follow-ups, and inbound conversions in 1 click.</p>
               </div>
               <button 
                 onClick={() => setIsTemplateModalOpen(true)}
@@ -612,25 +595,20 @@ const Automations = () => {
             
             {/* Canvas Header */}
             <div className="p-4 border-b border-slate-200 flex items-center justify-between bg-slate-50">
-              <div className="flex items-center gap-2.5">
-                <div className="w-7 h-7 rounded-md bg-slate-900 text-white flex items-center justify-center font-bold">
-                  <Waypoints className="w-4 h-4" />
+              <div>
+                <div className="flex items-center gap-2.5">
+                  <h3 className="text-sm font-bold text-slate-900 tracking-tight">{activeJourney.name}</h3>
+                  <span className={`px-1.5 py-0.5 rounded-sm text-[10px] font-delight font-medium border ${
+                    activeJourney.status === 'active' ? 'bg-emerald-50 text-emerald-700 border-emerald-200' : 'bg-slate-100 text-slate-600 border-slate-200'
+                  }`}>
+                    {activeJourney.status}
+                  </span>
                 </div>
-                <div>
-                  <div className="flex items-center gap-2.5">
-                    <h3 className="text-sm font-bold text-slate-900 tracking-tight">{activeJourney.name}</h3>
-                    <span className={`px-1.5 py-0.5 rounded-sm text-[10px] font-delight font-medium border ${
-                      activeJourney.status === 'active' ? 'bg-emerald-50 text-emerald-700 border-emerald-200' : 'bg-slate-100 text-slate-600 border-slate-200'
-                    }`}>
-                      {activeJourney.status}
-                    </span>
-                  </div>
-                  <p className="text-[11px] font-delight font-normal text-slate-400 mt-0.5 flex items-center gap-1.5">
-                    <span>Trigger: {activeJourney.trigger}</span>
-                    <span>•</span>
-                    <span>{activeJourney.totalEnrolled || 0} Contacts Enrolled</span>
-                  </p>
-                </div>
+                <p className="text-[11px] font-delight font-normal text-slate-400 mt-0.5 flex items-center gap-1.5">
+                  <span>Trigger: {activeJourney.trigger}</span>
+                  <span>•</span>
+                  <span>{activeJourney.totalEnrolled || 0} Contacts Enrolled</span>
+                </p>
               </div>
 
               <div className="flex items-center gap-2">
@@ -665,27 +643,9 @@ const Automations = () => {
                     {/* Node Card */}
                     <div className="w-full bg-white rounded-md p-4 border border-slate-200 shadow-2xs hover:border-slate-400 transition-colors space-y-2.5 relative group">
                       <div className="flex items-start justify-between">
-                        <div className="flex items-center gap-2.5">
-                          <div className={`w-7 h-7 rounded-md flex items-center justify-center border font-bold ${
-                            step.type === 'trigger' ? 'bg-amber-50 text-amber-700 border-amber-200' :
-                            step.type === 'email' ? 'bg-indigo-50 text-indigo-700 border-indigo-200' :
-                            step.type === 'whatsapp' ? 'bg-emerald-50 text-emerald-700 border-emerald-200' :
-                            step.type === 'delay' ? 'bg-blue-50 text-blue-700 border-blue-200' :
-                            step.type === 'integration' ? 'bg-emerald-50 text-emerald-700 border-emerald-300' :
-                            'bg-purple-50 text-purple-700 border-purple-200'
-                          }`}>
-                            {step.type === 'trigger' && <Zap className="w-3.5 h-3.5" />}
-                            {step.type === 'email' && <Mail className="w-3.5 h-3.5" />}
-                            {step.type === 'whatsapp' && <MessageSquare className="w-3.5 h-3.5" />}
-                            {step.type === 'delay' && <Clock className="w-3.5 h-3.5" />}
-                            {step.type === 'condition' && <GitBranch className="w-3.5 h-3.5" />}
-                            {step.type === 'crm_update' && <CheckCircle2 className="w-3.5 h-3.5" />}
-                            {step.type === 'integration' && <Waypoints className="w-3.5 h-3.5" />}
-                          </div>
-                          <div>
-                            <span className="text-[10px] font-delight font-semibold uppercase tracking-wider text-slate-400">Step {idx + 1}</span>
-                            <h4 className="font-bold text-xs text-slate-900 tracking-tight">{step.title}</h4>
-                          </div>
+                        <div>
+                          <span className="text-[10px] font-delight font-semibold uppercase tracking-wider text-slate-400">Step {idx + 1}</span>
+                          <h4 className="font-bold text-xs text-slate-900 tracking-tight">{step.title}</h4>
                         </div>
                         {step.type === 'integration' && step.config.integrationName && (
                           <span className="text-[10px] font-delight font-bold bg-emerald-50 text-emerald-700 border border-emerald-200 px-2 py-0.5 rounded-sm">
@@ -802,12 +762,7 @@ const Automations = () => {
         <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-xs flex items-center justify-center p-4 z-50 animate-in fade-in duration-150">
           <div className="bg-white rounded-md shadow-xl border border-slate-200 max-w-lg w-full p-5 space-y-4 animate-in zoom-in-95 duration-150">
             <div className="flex items-center justify-between pb-3 border-b border-slate-200">
-              <div className="flex items-center gap-2">
-                <div className="w-7 h-7 rounded-md bg-slate-900 text-white flex items-center justify-center font-bold">
-                  <Waypoints className="w-4 h-4" />
-                </div>
-                <h3 className="text-sm font-bold text-slate-900 tracking-tight">Create Automation Journey</h3>
-              </div>
+              <h3 className="text-sm font-bold text-slate-900 tracking-tight">Create Automation Journey</h3>
               <button onClick={() => setIsCreateModalOpen(false)} className="w-7 h-7 rounded-md bg-white hover:bg-slate-100 text-slate-500 border border-slate-200 flex items-center justify-center cursor-pointer">
                 <X className="w-4 h-4" />
               </button>
@@ -879,14 +834,9 @@ const Automations = () => {
         <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-xs flex items-center justify-center p-4 z-50 animate-in fade-in duration-150">
           <div className="bg-white rounded-md shadow-xl border border-slate-200 max-w-2xl w-full p-5 space-y-4 animate-in zoom-in-95 duration-150">
             <div className="flex items-center justify-between pb-3 border-b border-slate-200">
-              <div className="flex items-center gap-2">
-                <div className="w-7 h-7 rounded-md bg-slate-900 text-white flex items-center justify-center font-bold">
-                  <Layers className="w-4 h-4" />
-                </div>
-                <div>
-                  <h3 className="text-sm font-bold text-slate-900 tracking-tight">Journey Templates Library</h3>
-                  <p className="text-[11px] font-delight font-normal text-slate-400">Deploy battle-tested multi-channel workflows in 1 click.</p>
-                </div>
+              <div>
+                <h3 className="text-sm font-bold text-slate-900 tracking-tight">Journey Templates Library</h3>
+                <p className="text-[11px] font-delight font-normal text-slate-400">Deploy battle-tested multi-channel workflows in 1 click.</p>
               </div>
               <button onClick={() => setIsTemplateModalOpen(false)} className="w-7 h-7 rounded-md bg-white hover:bg-slate-100 text-slate-500 border border-slate-200 flex items-center justify-center cursor-pointer">
                 <X className="w-4 h-4" />

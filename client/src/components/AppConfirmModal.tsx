@@ -161,32 +161,6 @@ const AppConfirmModal = () => {
         <div className="p-5">
           <div className="flex items-start justify-between gap-3.5">
             <div className="flex items-start gap-3.5">
-              <div
-                className={`w-9 h-9 rounded-md border flex items-center justify-center shrink-0 mt-0.5 ${
-                  isDanger
-                    ? 'bg-red-50 text-red-600 border-red-200'
-                    : isWarning
-                    ? 'bg-amber-50 text-amber-600 border-amber-200'
-                    : isSuccess
-                    ? 'bg-emerald-50 text-emerald-600 border-emerald-200'
-                    : 'bg-blue-50 text-[#C85A32] border-blue-200'
-                }`}
-              >
-                {isDanger ? (
-                  mode === 'confirm' ? (
-                    <Trash2 className="w-4 h-4" />
-                  ) : (
-                    <ShieldAlert className="w-4 h-4" />
-                  )
-                ) : isWarning ? (
-                  <AlertTriangle className="w-4 h-4" />
-                ) : isSuccess ? (
-                  <CheckCircle2 className="w-4 h-4" />
-                ) : (
-                  <Info className="w-4 h-4" />
-                )}
-              </div>
-
               <div className="space-y-1">
                 <h3 className="text-sm font-bold text-[#191716] font-delight tracking-tight">
                   {title}

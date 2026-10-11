@@ -559,7 +559,6 @@ const Audience = () => {
                   <p className="text-[10px] font-delight font-semibold text-slate-500 uppercase tracking-wider">Total Audience</p>
                   <h3 className="text-xl font-delight font-bold text-slate-900 mt-1 tracking-tight tabular-nums">{totalContacts}</h3>
                 </div>
-                <Users className="w-4 h-4 text-slate-400" />
               </div>
 
               <div className="p-3.5 flex items-center justify-between">
@@ -567,7 +566,6 @@ const Audience = () => {
                   <p className="text-[10px] font-delight font-semibold text-slate-500 uppercase tracking-wider">Email Verified</p>
                   <h3 className="text-xl font-delight font-bold text-slate-900 mt-1 tracking-tight tabular-nums">{verifiedEmails}</h3>
                 </div>
-                <Mail className="w-4 h-4 text-[#C85A32]" />
               </div>
 
               <div className="p-3.5 flex items-center justify-between">
@@ -575,7 +573,6 @@ const Audience = () => {
                   <p className="text-[10px] font-delight font-semibold text-slate-500 uppercase tracking-wider">WhatsApp Ready</p>
                   <h3 className="text-xl font-delight font-bold text-slate-900 mt-1 tracking-tight tabular-nums">{phoneContacts}</h3>
                 </div>
-                <Phone className="w-4 h-4 text-emerald-600" />
               </div>
 
               <div className="p-3.5 flex items-center justify-between">
@@ -583,7 +580,6 @@ const Audience = () => {
                   <p className="text-[10px] font-delight font-semibold text-slate-500 uppercase tracking-wider">Hot Pipeline</p>
                   <h3 className="text-xl font-delight font-bold text-slate-900 mt-1 tracking-tight tabular-nums">{hotLeads}</h3>
                 </div>
-                <Sparkles className="w-4 h-4 text-[#C85A32]" />
               </div>
             </div>
 
@@ -663,9 +659,6 @@ const Audience = () => {
                 {/* Contacts Table */}
                 {filteredContacts.length === 0 ? (
                   <div className="p-12 text-center space-y-3 font-delight font-medium">
-                    <div className="w-10 h-10 bg-slate-100 text-slate-700 rounded-md flex items-center justify-center mx-auto border border-slate-200">
-                      <Users className="w-5 h-5" />
-                    </div>
                     <div className="space-y-1">
                       <h3 className="text-sm font-bold text-slate-900 tracking-tight">No contacts found</h3>
                       <p className="text-slate-500 text-xs max-w-sm mx-auto">
@@ -873,9 +866,6 @@ const Audience = () => {
                       >
                         <div className="flex items-start justify-between">
                           <div className="flex items-center gap-2.5">
-                            <div className="w-8 h-8 rounded-md bg-slate-100 text-slate-700 flex items-center justify-center border border-slate-200">
-                              <Tag className="w-4 h-4" />
-                            </div>
                             <div>
                               <h3 className="font-bold text-slate-900 text-sm group-hover:text-accent transition-colors tracking-tight">{seg.title}</h3>
                               <p className="text-[11px] font-delight font-normal text-slate-400">Click to filter contacts</p>
@@ -916,10 +906,7 @@ const Audience = () => {
                     }}
                     className="border border-dashed border-slate-300 hover:border-slate-400 rounded-md p-6 flex flex-col items-center justify-center text-center cursor-pointer bg-white hover:bg-slate-50/50 transition-colors min-h-[240px] group"
                   >
-                    <div className="w-10 h-10 bg-slate-50 rounded-md border border-slate-200 flex items-center justify-center mb-3 text-slate-700 group-hover:text-slate-900 transition-colors">
-                      <Plus className="w-5 h-5" />
-                    </div>
-                    <h3 className="font-bold text-slate-900 text-sm mb-1 tracking-tight">Create New Form</h3>
+                    <h3 className="font-bold text-slate-900 text-sm mb-1 tracking-tight">+ Create New Form</h3>
                     <p className="text-xs text-slate-500 font-normal">Popup, Embedded, or Landing Page</p>
                   </div>
 
@@ -1003,9 +990,6 @@ const Audience = () => {
           <div className="bg-white rounded-md shadow-xl border border-slate-200 max-w-md w-full p-5 space-y-4 animate-in zoom-in-95 duration-150">
             <div className="flex items-center justify-between pb-3 border-b border-slate-200">
               <div className="flex items-center gap-2">
-                <div className="w-7 h-7 rounded-md bg-slate-900 text-white flex items-center justify-center font-bold">
-                  <Plus className="w-4 h-4" />
-                </div>
                 <h3 className="text-sm font-bold text-slate-900 tracking-tight">Add New Contact</h3>
               </div>
               <button onClick={() => setIsAddContactOpen(false)} className="w-7 h-7 rounded-md bg-white hover:bg-slate-100 text-slate-500 border border-slate-200 flex items-center justify-center cursor-pointer">
@@ -1126,9 +1110,6 @@ const Audience = () => {
           <div className="bg-white rounded-md shadow-xl border border-slate-200 max-w-lg w-full p-5 space-y-4 animate-in zoom-in-95 duration-150">
             <div className="flex items-center justify-between pb-3 border-b border-slate-200">
               <div className="flex items-center gap-2">
-                <div className="w-7 h-7 rounded-md bg-slate-900 text-white flex items-center justify-center font-bold">
-                  <LayoutTemplate className="w-4 h-4" />
-                </div>
                 <h3 className="text-sm font-bold text-slate-900 tracking-tight">Design Inbound Form</h3>
               </div>
               <button onClick={() => setIsFormModalOpen(false)} className="w-7 h-7 rounded-md bg-white hover:bg-slate-100 text-slate-500 border border-slate-200 flex items-center justify-center cursor-pointer">
@@ -1236,9 +1217,6 @@ const Audience = () => {
           <div className="bg-white rounded-md shadow-xl border border-slate-200 max-w-2xl w-full p-5 space-y-4 animate-in zoom-in-95 duration-150">
             <div className="flex items-center justify-between pb-3 border-b border-slate-200">
               <div className="flex items-center gap-2">
-                <div className="w-7 h-7 rounded-md bg-slate-900 text-white flex items-center justify-center font-bold">
-                  <Code className="w-4 h-4" />
-                </div>
                 <div>
                   <h3 className="text-sm font-bold text-slate-900 tracking-tight">Embed Form on Your Website</h3>
                   <p className="text-[11px] font-delight font-normal text-slate-400">Paste this HTML snippet into any Webflow, WordPress, Shopify, or React app.</p>
@@ -1283,9 +1261,6 @@ const Audience = () => {
           <div className="bg-white rounded-md shadow-xl border border-slate-200 max-w-md w-full p-5 space-y-4 animate-in zoom-in-95 duration-150">
             <div className="flex items-center justify-between pb-3 border-b border-slate-200">
               <div className="flex items-center gap-2">
-                <div className="w-7 h-7 rounded-md bg-slate-900 text-white flex items-center justify-center font-bold">
-                  <Eye className="w-4 h-4" />
-                </div>
                 <h3 className="text-sm font-bold text-slate-900 tracking-tight">Test Live Form Submission</h3>
               </div>
               <button onClick={() => setIsTestFormOpen(false)} className="w-7 h-7 rounded-md bg-white hover:bg-slate-100 text-slate-500 border border-slate-200 flex items-center justify-center cursor-pointer">
@@ -1295,10 +1270,7 @@ const Audience = () => {
 
             {testSuccess ? (
               <div className="py-6 text-center space-y-2 font-delight font-medium">
-                <div className="w-10 h-10 bg-emerald-50 text-emerald-600 rounded-md flex items-center justify-center mx-auto border border-emerald-200">
-                  <Check className="w-5 h-5" />
-                </div>
-                <h4 className="text-sm font-bold text-slate-900 tracking-tight">Lead Captured Successfully!</h4>
+                <h4 className="text-sm font-bold text-emerald-700 tracking-tight">Lead Captured Successfully!</h4>
                 <p className="text-xs text-slate-500">Contact has been added to your LeadPulse database.</p>
               </div>
             ) : (
@@ -1338,7 +1310,7 @@ const Audience = () => {
                     type="text" 
                     value={testSubmission.company}
                     onChange={(e) => setTestSubmission({ ...testSubmission, company: e.target.value })}
-                    placeholder="Acme Tech Ventures"
+                    placeholder="Apex Tech Ventures"
                     className="w-full h-8 px-2.5 border border-slate-200 rounded-md text-xs font-delight font-medium outline-none focus:border-slate-400"
                   />
                 </div>
@@ -1365,9 +1337,6 @@ const Audience = () => {
           <div className="bg-white rounded-md shadow-xl border border-slate-200 max-w-md w-full p-5 space-y-4 animate-in zoom-in-95 duration-150">
             <div className="flex items-center justify-between pb-3 border-b border-slate-200">
               <div className="flex items-center gap-2">
-                <div className="w-7 h-7 rounded-md bg-slate-900 text-white flex items-center justify-center font-bold">
-                  <Tag className="w-4 h-4" />
-                </div>
                 <h3 className="text-sm font-bold text-slate-900 tracking-tight">Create Audience Segment</h3>
               </div>
               <button onClick={() => setIsCreateSegmentOpen(false)} className="w-7 h-7 rounded-md bg-white hover:bg-slate-100 text-slate-500 border border-slate-200 flex items-center justify-center cursor-pointer">
@@ -1439,9 +1408,6 @@ const Audience = () => {
           <div className="bg-white rounded-md shadow-xl border border-slate-200 max-w-lg w-full p-5 space-y-4 animate-in zoom-in-95 duration-150">
             <div className="flex items-center justify-between pb-3 border-b border-slate-200">
               <div className="flex items-center gap-2">
-                <div className="w-7 h-7 rounded-md bg-slate-900 text-white flex items-center justify-center font-bold">
-                  <Edit3 className="w-4 h-4" />
-                </div>
                 <div>
                   <h3 className="text-sm font-bold text-slate-900 tracking-tight">Edit Contact & Direct Email</h3>
                   <p className="text-[11px] font-delight font-normal text-slate-400">Update verified contact coordinates</p>
