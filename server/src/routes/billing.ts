@@ -116,12 +116,17 @@ router.post('/webhook', async (req, res) => {
       
       const updates: any = {};
       
+      const baseCredits = (current.plan || 'free') === 'free' && !current.has_topup && (current.lead_credits || 0) > 15
+        ? 15
+        : (current.lead_credits || 0);
+
       if (item.type === 'bundle') {
-        updatedCredits = (current.lead_credits || 0) + (item.credits || 0);
+        updatedCredits = baseCredits + (item.credits || 0);
         updates.lead_credits = updatedCredits;
+        updates.has_topup = true;
       } else if (item.type === 'subscription') {
         newPlan = item.plan!;
-        updatedCredits = (current.lead_credits || 0) + (item.credits || 0);
+        updatedCredits = baseCredits + (item.credits || 0);
         updates.plan = newPlan;
         updates.daily_leads_limit = item.dailyLimit;
         updates.lead_credits = updatedCredits;

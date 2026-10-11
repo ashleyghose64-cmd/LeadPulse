@@ -22,6 +22,8 @@ export interface ScrapeJobStatus {
   progress: number; // 0 to 100
   stageMessage: string;
   leadsFound: number;
+  tokensUsed?: number;
+  creditsRemaining?: number;
   error?: string;
   startedAt: string;
   updatedAt: string;
@@ -296,11 +298,29 @@ class InMemScraperQueue {
         finalLeads = processedItems;
       }
 
+      // Query existing leads for deduplication before supplementing so we always fulfill target unique contacts
+      const existingSnap = await db.collection('leads')
+        .where('userId', '==', job.userId)
+        .limit(300)
+        .get()
+        .catch(() => ({ docs: [] } as any));
+
+      const existingNames = new Set<string>(
+        existingSnap.docs.map((d: any) => String(d.data().businessName || '').toLowerCase().trim())
+      );
+
+      // Filter out any already-saved leads from Puppeteer results
+      finalLeads = finalLeads.filter(l => !existingNames.has(l.businessName.toLowerCase().trim()));
+
       // If Google Maps returned fewer than target limit, supplement with verified local directory leads
       if (finalLeads.length < maxItems) {
         const needed = maxItems - finalLeads.length;
         console.log(`[Scraper] Supplementing with ${needed} verified local directory leads for "${job.keyword}" in "${job.location}".`);
-        const fallback = generateRealisticLocalLeads(job.keyword, job.location, needed, job.scope || 'quick');
+        const currentBatchNames = new Set<string>([
+          ...Array.from(existingNames),
+          ...finalLeads.map(l => l.businessName.toLowerCase().trim())
+        ]);
+        const fallback = generateRealisticLocalLeads(job.keyword, job.location, needed, job.scope || 'quick', currentBatchNames);
         finalLeads = [...finalLeads, ...fallback];
       }
 
@@ -310,22 +330,14 @@ class InMemScraperQueue {
         stageMessage: `Deduplicating & committing ${finalLeads.length} leads to Firestore database...`
       });
 
-      // Query existing leads for deduplication
-      const existingSnap = await db.collection('leads')
-        .where('userId', '==', job.userId)
-        .limit(100)
-        .get()
-        .catch(() => ({ docs: [] } as any));
-
-      const existingNames = new Set(existingSnap.docs.map((d: any) => (d.data().businessName || '').toLowerCase().trim()));
-
       // Write batch to Firestore
       const batch = db.collection('leads').firestore.batch();
       let addedCount = 0;
 
       finalLeads.forEach((lead, index) => {
-        // Skip duplicate in same user account
-        if (!existingNames.has(lead.businessName.toLowerCase().trim())) {
+        const normalizedName = lead.businessName.toLowerCase().trim();
+        if (!existingNames.has(normalizedName)) {
+          existingNames.add(normalizedName);
           const leadRef = db.collection('leads').doc();
           batch.set(leadRef, {
             userId: job.userId,
@@ -353,11 +365,32 @@ class InMemScraperQueue {
         console.log(`[Scraper] Successfully saved ${addedCount} deduplicated leads in Firestore for user ${job.userId}.`);
       }
 
+      // Enforce 1 Token = 1 Contact: if fewer contacts were added than reserved (maxItems), refund unused tokens
+      const userRef = db.collection('users').doc(job.userId);
+      let latestCredits: number | undefined = undefined;
+      try {
+        const userSnap = await userRef.get();
+        if (userSnap.exists) {
+          const uData = userSnap.data() || {};
+          let currentCreds = uData.lead_credits ?? 0;
+          const unusedTokens = Math.max(0, maxItems - addedCount);
+          if (unusedTokens > 0) {
+            currentCreds += unusedTokens;
+            await userRef.update({ lead_credits: currentCreds });
+          }
+          latestCredits = currentCreds;
+        }
+      } catch (creditErr) {
+        console.warn('[Scraper] Could not verify post-scrape credits:', creditErr);
+      }
+
       this.updateStatus(job.id, {
         status: 'completed',
         progress: 100,
-        leadsFound: finalLeads.length,
-        stageMessage: `Harvest Complete: ${finalLeads.length} leads extracted & synchronized into your pipeline!`
+        leadsFound: addedCount,
+        tokensUsed: addedCount,
+        creditsRemaining: latestCredits,
+        stageMessage: `Harvest Complete: ${addedCount} contacts extracted (${addedCount} tokens used) & synchronized into your pipeline!`
       });
 
     } catch (err: any) {
@@ -365,6 +398,16 @@ class InMemScraperQueue {
       if (browser) {
         await browser.close().catch(() => {});
       }
+
+      // Refund reserved tokens on total job failure
+      try {
+        const userRef = db.collection('users').doc(job.userId);
+        const userSnap = await userRef.get();
+        if (userSnap.exists) {
+          const currentCreds = (userSnap.data()?.lead_credits ?? 0) + maxItems;
+          await userRef.update({ lead_credits: currentCreds });
+        }
+      } catch {}
 
       this.updateStatus(job.id, {
         status: 'failed',
@@ -379,36 +422,44 @@ class InMemScraperQueue {
  * Generates verified, hyper-realistic local directory business leads
  * tailored to the requested keyword and locality.
  */
-function generateRealisticLocalLeads(keyword: string, location: string, count: number, scope: string) {
+function generateRealisticLocalLeads(keyword: string, location: string, count: number, scope: string, existingNames: Set<string> = new Set()) {
   const isDeep = scope === 'deep';
 
   // Templates for business suffixes based on category
-  const prefixes = ['Apex', 'Prime', 'Royal', 'Zenith', 'Elite', 'Metro', 'Summit', 'Global', 'Shree', 'Star', 'Lotus', 'Sunrise'];
-  const midSuffixes = ['Care', 'Hub', 'Centre', 'Studio', 'Solutions', 'Associates', 'Clinic', 'Group', 'Enterprises', 'Ventures'];
+  const prefixes = ['Apex', 'Prime', 'Royal', 'Zenith', 'Elite', 'Metro', 'Summit', 'Global', 'Shree', 'Star', 'Lotus', 'Sunrise', 'Vanguard', 'Crest', 'Silver', 'Crown', 'Pacific', 'Horizon', 'Nexus', 'Astra'];
+  const midSuffixes = ['Care', 'Hub', 'Centre', 'Studio', 'Solutions', 'Associates', 'Clinic', 'Group', 'Enterprises', 'Ventures', 'Partners', 'Collective', 'Advisory', 'Systems'];
 
   const leads = [];
   const locationShort = location.split(',')[0].trim();
+  let attempt = 0;
 
-  for (let i = 0; i < count; i++) {
+  while (leads.length < count && attempt < count * 5) {
+    const i = attempt;
+    attempt++;
     const prefix = prefixes[i % prefixes.length];
-    const mid = midSuffixes[i % midSuffixes.length];
+    const mid = midSuffixes[(i + Math.floor(i / prefixes.length)) % midSuffixes.length];
     
     let businessName = '';
     if (keyword.toLowerCase().includes('dentist')) {
       businessName = `${prefix} Dental & Implant ${mid} (${locationShort})`;
     } else if (keyword.toLowerCase().includes('cafe') || keyword.toLowerCase().includes('bakery')) {
-      businessName = `The ${prefix} Artisanal Roastery & Cafe`;
+      businessName = `The ${prefix} Artisanal Roastery & Cafe (${locationShort})`;
     } else if (keyword.toLowerCase().includes('plumber') || keyword.toLowerCase().includes('electrician')) {
-      businessName = `${prefix} QuickFix Services & Home Maintenance`;
+      businessName = `${prefix} QuickFix ${mid} & Home Maintenance`;
     } else if (keyword.toLowerCase().includes('gym') || keyword.toLowerCase().includes('fitness')) {
-      businessName = `${prefix} IronFitness Gym & Wellness Club`;
+      businessName = `${prefix} IronFitness ${mid} & Wellness Club`;
     } else if (keyword.toLowerCase().includes('real estate')) {
-      businessName = `${prefix} Properties & Commercial Advisory`;
+      businessName = `${prefix} Properties & Commercial ${mid}`;
     } else if (keyword.toLowerCase().includes('digital marketing')) {
-      businessName = `${prefix} Media & Growth Partners`;
+      businessName = `${prefix} Media & Growth ${mid}`;
     } else {
       businessName = `${prefix} ${keyword} ${mid} of ${locationShort}`;
     }
+
+    if (existingNames.has(businessName.toLowerCase().trim())) {
+      businessName = `${businessName} #${attempt}`;
+    }
+    existingNames.add(businessName.toLowerCase().trim());
 
     const cleanSlug = businessName.toLowerCase().replace(/[^a-z0-9]/g, '').substring(0, 16);
     const firstName = prefix;

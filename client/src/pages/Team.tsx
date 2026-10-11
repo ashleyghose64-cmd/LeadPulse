@@ -768,11 +768,11 @@ const Team = () => {
               <div>
                 <div className="flex items-center justify-between mb-1">
                   <label className="block text-[11px] font-delight font-medium text-slate-600">Universal Tokens Monthly Quota</label>
-                  <span className="text-[10px] font-delight font-semibold text-slate-400">Tokens from pool</span>
+                  <span className="text-[10px] font-delight font-semibold text-slate-400">Tokens from pool (1 Token = 1 Contact)</span>
                 </div>
                 <input 
                   type="number"
-                  min={50}
+                  min={1}
                   max={5000}
                   value={inviteQuota}
                   onChange={(e) => setInviteQuota(Number(e.target.value))}
@@ -782,7 +782,7 @@ const Team = () => {
                 {/* Presets */}
                 <div className="flex items-center gap-1.5 mt-1.5">
                   <span className="text-[10px] font-delight font-normal text-slate-400">Presets:</span>
-                  {[100, 250, 500, 1000].map(val => (
+                  {(plan === 'free' ? [5, 10, 15] : [100, 250, 500, 1000]).map(val => (
                     <button
                       key={val}
                       type="button"
@@ -927,11 +927,11 @@ const Team = () => {
               <div>
                 <div className="flex items-center justify-between mb-1">
                   <label className="block text-[11px] font-delight font-medium text-slate-600">Universal Token Monthly Quota</label>
-                  <span className="text-[10px] font-delight font-semibold text-slate-400">Tokens / month</span>
+                  <span className="text-[10px] font-delight font-semibold text-slate-400">Tokens / month (1 Token = 1 Contact)</span>
                 </div>
                 <input 
                   type="number"
-                  min={50}
+                  min={1}
                   max={5000}
                   value={editQuota}
                   onChange={(e) => setEditQuota(Number(e.target.value))}
@@ -941,7 +941,7 @@ const Team = () => {
                 {/* Presets */}
                 <div className="flex items-center gap-1.5 mt-2">
                   <span className="text-[10px] font-delight font-normal text-slate-400">Quick set:</span>
-                  {[100, 250, 500, 1000].map(val => (
+                  {(plan === 'free' ? [5, 10, 15] : [100, 250, 500, 1000]).map(val => (
                     <button
                       key={val}
                       type="button"

@@ -1,5 +1,6 @@
 import express from 'express';
 import { db } from '../index';
+import { syncUserPoolCredits } from './auth';
 
 const router = express.Router();
 
@@ -53,7 +54,7 @@ router.get('/limits', async (req, res) => {
   try {
     const userRef = db.collection('users').doc(userId);
     const userDoc = await userRef.get();
-    const userData = userDoc.data() || {};
+    const userData = await syncUserPoolCredits(userId, userDoc.data() || {});
     const plan = (userData.plan || 'free').toLowerCase();
     const seatsSelected = Number(userData.seats_selected) || 6; // default registration seats selection
 
@@ -64,12 +65,12 @@ router.get('/limits', async (req, res) => {
     if (plan === 'basic') {
       // Basic can add 50% of seats selected at registration with universal tokens
       maxSeats = Math.max(2, Math.floor(seatsSelected * 0.5));
-      universalTokens = userData.lead_credits || 500;
+      universalTokens = userData.lead_credits ?? 500;
       seatPercent = 50;
     } else if (plan === 'pro') {
       // Pro has 100% of the seats selected at registration with universal tokens
       maxSeats = seatsSelected;
-      universalTokens = userData.lead_credits || 2500;
+      universalTokens = userData.lead_credits ?? 2500;
       seatPercent = 100;
     }
 

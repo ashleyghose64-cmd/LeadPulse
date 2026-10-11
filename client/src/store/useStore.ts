@@ -47,6 +47,15 @@ export interface IntegrationLogEntry {
 
 const INITIAL_WORKSPACE_INTEGRATIONS: WorkspaceIntegration[] = [];
 
+const normalizeUserCredits = (user: User | null): User | null => {
+  if (!user) return null;
+  const plan = (user.plan || 'free').toLowerCase();
+  if (plan === 'free' && !(user as any).has_topup && (user.lead_credits === undefined || user.lead_credits > 15)) {
+    return { ...user, lead_credits: 15 };
+  }
+  return user;
+};
+
 interface AppState {
   user: User | null;
   token: string | null;
@@ -60,6 +69,7 @@ interface AppState {
   setToken: (token: string | null) => void;
   setActiveFilter: (filter: string) => void;
   updateCredits: (credits: number) => void;
+  refreshUserProfile: (userId?: string) => Promise<void>;
   setTopUpOpen: (isOpen: boolean) => void;
   setUpgradeModalOpen: (isOpen: boolean) => void;
   setUpgradeTab: (tab: 'plans' | 'topup') => void;
@@ -82,12 +92,26 @@ export const useStore = create<AppState>()(
       upgradeTab: 'plans',
       integrations: INITIAL_WORKSPACE_INTEGRATIONS,
       integrationLogs: [],
-      setUser: (user) => set({ user }),
+      setUser: (user) => set({ user: normalizeUserCredits(user) }),
       setToken: (token) => set({ token }),
       setActiveFilter: (filter) => set({ activeFilter: filter }),
       updateCredits: (credits) => set((state) => ({ 
-        user: state.user ? { ...state.user, lead_credits: credits } : null 
+        user: state.user ? normalizeUserCredits({ ...state.user, lead_credits: credits }) : null 
       })),
+      refreshUserProfile: async (overrideUserId?: string) => {
+        const uid = overrideUserId || get().user?._id;
+        if (!uid) return;
+        try {
+          const res = await axios.get('http://localhost:3001/api/auth/me', {
+            headers: { userid: uid }
+          });
+          if (res.data?.user) {
+            set({ user: normalizeUserCredits(res.data.user) });
+          }
+        } catch (err) {
+          console.error('Failed to sync user profile & token pool:', err);
+        }
+      },
       setTopUpOpen: (isOpen) => set({ isTopUpOpen: isOpen, isUpgradeModalOpen: isOpen, upgradeTab: 'topup' }),
       setUpgradeModalOpen: (isOpen) => set({ isUpgradeModalOpen: isOpen, isTopUpOpen: isOpen }),
       setUpgradeTab: (tab) => set({ upgradeTab: tab }),
@@ -164,12 +188,17 @@ export const useStore = create<AppState>()(
     {
       name: 'leadpulse-storage',
       partialize: (state) => ({
-        user: state.user,
+        user: normalizeUserCredits(state.user),
         token: state.token,
         activeFilter: state.activeFilter,
         integrations: state.integrations,
         integrationLogs: state.integrationLogs,
       }),
+      onRehydrateStorage: () => (state) => {
+        if (state?.user) {
+          state.setUser(normalizeUserCredits(state.user));
+        }
+      },
     }
   )
 );

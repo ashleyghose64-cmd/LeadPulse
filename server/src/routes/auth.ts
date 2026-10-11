@@ -5,6 +5,55 @@ import { db } from '../index';
 const router = express.Router();
 const JWT_SECRET = process.env.JWT_SECRET || 'secret';
 
+export async function syncUserPoolCredits(userId: string, data: any): Promise<any> {
+  const userRef = db.collection('users').doc(userId);
+  const plan = (data.plan || 'free').toLowerCase();
+  const fourDaysMs = 4 * 24 * 60 * 60 * 1000;
+  const lastRefresh = data.pool_refreshed_at ? new Date(data.pool_refreshed_at).getTime() : 0;
+
+  if (plan === 'free') {
+    if (!data.pool_refreshed_at || Date.now() - lastRefresh >= fourDaysMs) {
+      const nowIso = new Date().toISOString();
+      await userRef.update({
+        lead_credits: 15,
+        pool_refreshed_at: nowIso
+      });
+      data.lead_credits = 15;
+      data.pool_refreshed_at = nowIso;
+    } else if (!data.has_topup) {
+      const leadsSnap = await db.collection('leads').where('userId', '==', userId).get().catch(() => ({ size: 0 } as any));
+      const expectedMaxCredits = Math.max(0, 15 - (leadsSnap.size || 0));
+      if (data.lead_credits === undefined || data.lead_credits > 15 || data.lead_credits > expectedMaxCredits) {
+        await userRef.update({
+          lead_credits: expectedMaxCredits
+        });
+        data.lead_credits = expectedMaxCredits;
+      }
+    }
+  }
+  return data;
+}
+
+// GET /api/auth/me - Fetch latest synced user profile & token balance
+router.get('/me', async (req, res) => {
+  const userId = req.headers.userid as string;
+  if (!userId) return res.status(401).json({ error: 'Unauthorized' });
+
+  try {
+    const userRef = db.collection('users').doc(userId);
+    const doc = await userRef.get();
+    if (!doc.exists) return res.status(404).json({ error: 'User not found' });
+
+    const data = await syncUserPoolCredits(userId, doc.data() || {});
+    const userDoc = { _id: doc.id, ...data };
+    delete (userDoc as any).password;
+    res.json({ user: userDoc });
+  } catch (err) {
+    console.error('[Auth] /me error:', err);
+    res.status(500).json({ error: 'Failed to fetch user profile' });
+  }
+});
+
 router.post('/google', async (req, res) => {
   const { googleId, email, name } = req.body;
   
@@ -35,18 +84,7 @@ router.post('/google', async (req, res) => {
       userDoc = { _id: userId, ...newUser };
     } else {
       userId = snapshot.docs[0].id;
-      const data = snapshot.docs[0].data();
-      // Check 4-day auto-refresh for free tier
-      const fourDaysMs = 4 * 24 * 60 * 60 * 1000;
-      const lastRefresh = data.pool_refreshed_at ? new Date(data.pool_refreshed_at).getTime() : 0;
-      if ((data.plan || 'free') === 'free' && (Date.now() - lastRefresh >= fourDaysMs || !data.pool_refreshed_at)) {
-        await snapshot.docs[0].ref.update({
-          lead_credits: 15,
-          pool_refreshed_at: new Date().toISOString()
-        });
-        data.lead_credits = 15;
-        data.pool_refreshed_at = new Date().toISOString();
-      }
+      const data = await syncUserPoolCredits(userId, snapshot.docs[0].data());
       userDoc = { _id: userId, ...data };
     }
     
@@ -79,7 +117,8 @@ router.post('/onboarding', async (req, res) => {
     });
     
     const updated = await userRef.get();
-    res.json({ _id: updated.id, ...updated.data() });
+    const syncedData = await syncUserPoolCredits(userId, updated.data() || {});
+    res.json({ _id: updated.id, ...syncedData });
   } catch (err) {
     res.status(500).json({ error: 'Server error' });
   }
@@ -138,29 +177,19 @@ router.post('/login', async (req, res) => {
     }
     
     const doc = snapshot.docs[0];
-    const userDoc = { _id: doc.id, ...doc.data() } as any;
+    const rawData = doc.data();
     
-    if (!userDoc.password) {
+    if (!rawData.password) {
       return res.status(400).json({ error: 'Please use Login with Google.' });
     }
     
-    const isMatch = await bcrypt.compare(password, userDoc.password);
+    const isMatch = await bcrypt.compare(password, rawData.password);
     if (!isMatch) {
       return res.status(400).json({ error: 'Invalid credentials' });
     }
 
-    // Auto-refresh free tier pool every 4 days
-    const fourDaysMs = 4 * 24 * 60 * 60 * 1000;
-    const lastRefresh = userDoc.pool_refreshed_at ? new Date(userDoc.pool_refreshed_at).getTime() : 0;
-    if ((userDoc.plan || 'free') === 'free' && (Date.now() - lastRefresh >= fourDaysMs || !userDoc.pool_refreshed_at)) {
-      await doc.ref.update({
-        lead_credits: 15,
-        pool_refreshed_at: new Date().toISOString()
-      });
-      userDoc.lead_credits = 15;
-      userDoc.pool_refreshed_at = new Date().toISOString();
-    }
-    
+    const syncedData = await syncUserPoolCredits(doc.id, rawData);
+    const userDoc = { _id: doc.id, ...syncedData } as any;
     delete userDoc.password;
     const token = jwt.sign({ id: userDoc._id, role: userDoc.role }, JWT_SECRET, { expiresIn: '1d' });
     res.json({ token, user: userDoc });
@@ -208,7 +237,8 @@ router.patch('/profile', async (req, res) => {
 
     await userRef.update(updates);
     const updatedDoc = await userRef.get();
-    const userData = { _id: updatedDoc.id, ...updatedDoc.data() };
+    const syncedData = await syncUserPoolCredits(userId, updatedDoc.data() || {});
+    const userData = { _id: updatedDoc.id, ...syncedData };
     delete (userData as any).password;
 
     res.json({ message: 'Profile updated successfully', user: userData });

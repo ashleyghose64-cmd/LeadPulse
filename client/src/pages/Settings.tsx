@@ -173,9 +173,9 @@ const Settings = () => {
     }
   };
 
-  const currentPlan = user?.plan || 'free';
+  const currentPlan = (user?.plan || 'free').toLowerCase();
   const isFree = currentPlan === 'free';
-  const credits = user?.lead_credits ?? 15;
+  const credits = isFree && !(user as any)?.has_topup ? Math.min(user?.lead_credits ?? 15, 15) : (user?.lead_credits ?? 15);
 
   return (
     <div className="flex w-full min-h-screen bg-transparent font-sans text-slate-900">

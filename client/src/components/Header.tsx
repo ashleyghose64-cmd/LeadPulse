@@ -9,10 +9,11 @@ interface HeaderProps {
 
 const Header = ({ title: _title }: HeaderProps) => {
   const navigate = useNavigate();
-  const { user, integrations, fetchWorkspaceIntegrations } = useStore();
+  const { user, integrations, fetchWorkspaceIntegrations, refreshUserProfile } = useStore();
 
   useEffect(() => {
     if (user?._id) {
+      refreshUserProfile(user._id);
       fetchWorkspaceIntegrations(user._id);
     }
   }, [user?._id]);

@@ -27,7 +27,7 @@ interface ActiveJobInfo {
 }
 
 const LeadFinderWizard = ({ onHarvestStarted }: WizardProps) => {
-  const { user, setUser, setUpgradeModalOpen, setUpgradeTab } = useStore();
+  const { user, setUser, updateCredits, refreshUserProfile, setUpgradeModalOpen, setUpgradeTab } = useStore();
 
   // Step state: 1 (Location) -> 2 (Keyword) -> 3 (Scope Proficiency)
   const [currentStep, setCurrentStep] = useState<1 | 2 | 3>(1);
@@ -65,10 +65,11 @@ const LeadFinderWizard = ({ onHarvestStarted }: WizardProps) => {
     return () => clearInterval(interval);
   }, [user?.pool_refreshed_at]);
 
-  // Check for running active job on mount
+  // Check for running active job & sync user pool on mount
   useEffect(() => {
     const checkActiveJob = async () => {
       if (!user?._id) return;
+      refreshUserProfile(user._id);
       try {
         const res = await axios.get('http://localhost:3001/api/leads/active-job', {
           headers: { userid: user._id }
@@ -98,11 +99,19 @@ const LeadFinderWizard = ({ onHarvestStarted }: WizardProps) => {
           clearInterval(pollIntervalRef.current);
           pollIntervalRef.current = null;
           setIsSubmitting(false);
+          if (typeof jobData.creditsRemaining === 'number') {
+            updateCredits(jobData.creditsRemaining);
+          } else if (user?._id) {
+            refreshUserProfile(user._id);
+          }
           onHarvestStarted();
         } else if (jobData.status === 'failed') {
           clearInterval(pollIntervalRef.current);
           pollIntervalRef.current = null;
           setIsSubmitting(false);
+          if (user?._id) {
+            refreshUserProfile(user._id);
+          }
         }
       } catch (err) {
         console.error('Failed to poll job status:', err);
@@ -110,23 +119,26 @@ const LeadFinderWizard = ({ onHarvestStarted }: WizardProps) => {
     }, 600);
   };
 
-  const currentPlan = user?.plan || 'free';
+  const currentPlan = (user?.plan || 'free').toLowerCase();
   const isFree = currentPlan === 'free';
-  const credits = user?.lead_credits ?? 15;
+  const rawCredits = user?.lead_credits ?? 15;
+  const credits = isFree && !(user as any)?.has_topup ? Math.min(rawCredits, 15) : rawCredits;
   const maxPool = isFree ? '15' : (currentPlan === 'basic' ? '600' : 'Unlimited');
   const perQueryLimit = isFree ? 10 : 20;
+  const batchContactsCount = Math.min(perQueryLimit, Math.max(1, credits));
 
   const locationPresets = ['Mumbai', 'Bengaluru', 'Delhi NCR', 'Hyderabad', 'Pune'];
   const keywordPresets = ['SaaS & Software', 'Real Estate Agencies', 'Healthcare Clinics', 'Digital Marketing', 'Legal & Advisory', 'Hospitality'];
 
   const handleLaunchHarvest = async () => {
-    const computeCost = scope === 'deep' ? 2 : 1;
-
-    if (credits < computeCost) {
+    // 1 Token = 1 Contact scraped
+    if (credits < 1) {
       setUpgradeTab('topup');
       setUpgradeModalOpen(true);
       return;
     }
+
+    const expectedBatchLimit = Math.min(perQueryLimit, credits);
 
     setIsSubmitting(true);
     setActiveJob({
@@ -134,10 +146,10 @@ const LeadFinderWizard = ({ onHarvestStarted }: WizardProps) => {
       keyword,
       location,
       scope,
-      limit: perQueryLimit,
+      limit: expectedBatchLimit,
       status: 'queued',
       progress: 5,
-      stageMessage: `Initializing extraction pipeline for "${keyword}" in "${location}"...`,
+      stageMessage: `Initializing extraction pipeline for "${keyword}" in "${location}" (${expectedBatchLimit} contacts = ${expectedBatchLimit} tokens)...`,
       leadsFound: 0
     });
 
@@ -196,13 +208,13 @@ const LeadFinderWizard = ({ onHarvestStarted }: WizardProps) => {
           </div>
 
           <div className="text-xs font-delight font-medium">
-            <span className="text-slate-500">Pool: </span>
+            <span className="text-slate-500">Available Tokens: </span>
             <span className="font-bold text-slate-900">{credits}</span>
             <span className="text-slate-400"> / {maxPool}</span>
           </div>
 
           <div className="text-xs font-delight px-2 py-0.5 rounded-sm bg-slate-100 text-slate-700 border border-slate-200 font-semibold">
-            Max {perQueryLimit} / query
+            1 Token = 1 Contact • Max {perQueryLimit} / search
           </div>
 
           {isFree && (
@@ -493,7 +505,7 @@ const LeadFinderWizard = ({ onHarvestStarted }: WizardProps) => {
                     Primary public business profile, verified phone, address, and ratings.
                   </p>
                   <div className="text-[10px] font-delight text-slate-700 font-semibold pt-2 mt-2 border-t border-slate-200">
-                    1 Credit Cost
+                    1 Token = 1 Contact ({batchContactsCount} Tokens for {batchContactsCount} Contacts)
                   </div>
                 </div>
 
@@ -513,7 +525,7 @@ const LeadFinderWizard = ({ onHarvestStarted }: WizardProps) => {
                     Multi-page website scan, domain verification, and rich metadata.
                   </p>
                   <div className="text-[10px] font-delight text-indigo-700 font-semibold pt-2 mt-2 border-t border-slate-200">
-                    2 Credits Cost
+                    1 Token = 1 Contact ({batchContactsCount} Tokens for {batchContactsCount} Contacts)
                   </div>
                 </div>
               </div>
@@ -521,7 +533,7 @@ const LeadFinderWizard = ({ onHarvestStarted }: WizardProps) => {
               {/* Execution Summary Strip */}
               <div className="p-3 bg-slate-50 rounded-md border border-slate-200 flex items-center justify-between text-xs font-delight font-medium">
                 <span className="text-slate-600 truncate">{keyword} in {location}</span>
-                <span className="font-bold text-slate-900">{perQueryLimit} Max Leads</span>
+                <span className="font-bold text-slate-900">{batchContactsCount} Contacts • {batchContactsCount} Tokens Used</span>
               </div>
 
               <div className="flex justify-between items-center pt-2">

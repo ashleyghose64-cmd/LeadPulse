@@ -41,9 +41,9 @@ const DEFAULT_FORMS: FormTemplate[] = [
     type: 'Popup',
     submissions: 0,
     status: 'Active',
-    headline: 'Claim 50 Free Verified B2B Leads',
+    headline: 'Claim 15 Free Verified B2B Leads',
     subheadline: 'Leave your email and our AI will deliver curated prospects instantly.',
-    buttonText: 'Unlock 50 Leads',
+    buttonText: 'Unlock 15 Leads',
     themeColor: '#C85A32'
   },
   {

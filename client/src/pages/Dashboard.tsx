@@ -92,16 +92,24 @@ const Dashboard = () => {
                 </div>
               </div>
 
-              {/* Metric 4: Available Credits */}
+              {/* Metric 4: Available Tokens */}
               <div className="p-4.5 flex flex-col justify-between">
                 <div className="flex items-center justify-between">
-                  <span className="text-[11px] font-delight uppercase tracking-wider font-semibold text-[#6E675F]">Credit Quota</span>
+                  <span className="text-[11px] font-delight uppercase tracking-wider font-semibold text-[#6E675F]">Available Tokens</span>
                   <Compass className="w-3.5 h-3.5 text-[#9C9488]" />
                 </div>
-                <div className="text-2xl font-bold font-delight tracking-tight text-[#191716] tabular-nums mt-2">{user?.lead_credits ?? 15}</div>
+                <div className="text-2xl font-bold font-delight tracking-tight text-[#191716] tabular-nums mt-2">
+                  {(user?.plan || 'free') === 'free' && !(user as any)?.has_topup
+                    ? Math.min(user?.lead_credits ?? 15, 15)
+                    : (user?.lead_credits ?? 15)}
+                  {(user?.plan || 'free') === 'free' && (
+                    <span className="text-sm font-normal text-[#6E675F]"> / 15</span>
+                  )}
+                </div>
                 <div className="text-[11px] mt-1.5 flex items-center gap-1.5 font-delight font-medium text-[#6E675F]">
                   <span className="w-1.5 h-1.5 rounded-full bg-[#C85A32]"></span>
                   <span className="text-[#191716] font-semibold uppercase">Tier: {user?.plan || 'Free'}</span>
+                  <span>• 1 Token = 1 Contact</span>
                 </div>
               </div>
             </div>

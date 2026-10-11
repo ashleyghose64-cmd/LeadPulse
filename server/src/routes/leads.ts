@@ -1,6 +1,7 @@
 import express from 'express';
 import { db } from '../index';
 import { scraperQueue } from '../services/scraperQueue';
+import { syncUserPoolCredits } from './auth';
 
 const router = express.Router();
 
@@ -98,50 +99,56 @@ router.post('/scrape', async (req, res) => {
 
   try {
     const userRef = db.collection('users').doc(userId);
+    const preSnap = await userRef.get();
+    if (!preSnap.exists) return res.status(404).json({ error: 'User not found' });
+
+    // Normalize Free tier pool (15 tokens max, 1 token = 1 contact) before transaction
+    await syncUserPoolCredits(userId, preSnap.data() || {});
+
     let creditsRemaining = 0;
     let userPlan = 'free';
     let poolRefreshedAt = new Date().toISOString();
-    const computeCost = scope === 'deep' ? 2 : 1;
+    let limit = 10;
+    let tokensUsed = 0;
 
-    // Deduct via Transaction with 4-day auto-refresh check
+    // Deduct 1 Token per Contact scraped (1 Token = 1 Contact)
     await db.runTransaction(async (t) => {
       const doc = await t.get(userRef);
       if (!doc.exists) throw new Error("User not found");
       const data = doc.data()!;
-      userPlan = data.plan || 'free';
+      userPlan = (data.plan || 'free').toLowerCase();
       poolRefreshedAt = data.pool_refreshed_at || new Date().toISOString();
 
-      let currentCredits = data.lead_credits || 0;
+      let currentCredits = data.lead_credits ?? 15;
 
-      // Check 4-day auto-refresh for free tier
+      // Check 4-day auto-refresh & free-tier 15-token cap
       if (userPlan === 'free') {
         const fourDaysMs = 4 * 24 * 60 * 60 * 1000;
         const lastRefresh = data.pool_refreshed_at ? new Date(data.pool_refreshed_at).getTime() : 0;
-        if (Date.now() - lastRefresh >= fourDaysMs) {
+        if (!data.pool_refreshed_at || Date.now() - lastRefresh >= fourDaysMs) {
           currentCredits = 15;
           poolRefreshedAt = new Date().toISOString();
-          t.update(userRef, {
-            lead_credits: 15,
-            pool_refreshed_at: poolRefreshedAt
-          });
+        } else if (!data.has_topup && currentCredits > 15) {
+          currentCredits = 15;
         }
       }
 
-      if (currentCredits < computeCost) {
+      if (currentCredits < 1) {
         throw new Error("Insufficient credits");
       }
-      
-      creditsRemaining = currentCredits - computeCost;
+
+      // Max contacts per query: 10 on Free tier, 20 on Basic/Pro, capped by available tokens (1 Token = 1 Contact)
+      const maxPerQuery = userPlan === 'free' ? 10 : 20;
+      limit = Math.min(maxPerQuery, currentCredits);
+      tokensUsed = limit; // 1 token = 1 contact scraped
+      creditsRemaining = currentCredits - tokensUsed;
+
       t.update(userRef, { 
         lead_credits: creditsRemaining,
         pool_refreshed_at: poolRefreshedAt
       });
     });
     
-    // Compute max query limit according to tier
-    // Free Tier: 10 leads max per query/tag
-    // Basic / Pro: up to 20 per batch
-    const limit = userPlan === 'free' ? 10 : 20;
     const jobId = `job_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`;
 
     scraperQueue.add({ 
@@ -157,6 +164,7 @@ router.post('/scrape', async (req, res) => {
       message: 'Scraping started via Lead Finder Wizard', 
       jobId,
       creditsRemaining,
+      tokensUsed,
       plan: userPlan,
       poolRefreshedAt,
       limit
