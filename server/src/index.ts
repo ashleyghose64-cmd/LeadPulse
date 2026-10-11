@@ -77,6 +77,21 @@ app.use(
 app.use(express.json({ limit: '50mb' }));
 app.use(express.urlencoded({ extended: true, limit: '50mb' }));
 
+// Security Hardening: Strictly block any HTTP attempts to fetch .env, serviceAccount, .git, or key files
+app.use((req, res, next) => {
+  const lowerPath = req.path.toLowerCase();
+  if (
+    lowerPath.includes('.env') ||
+    lowerPath.includes('serviceaccount') ||
+    lowerPath.includes('.git') ||
+    lowerPath.endsWith('.pem') ||
+    lowerPath.endsWith('.key')
+  ) {
+    return res.status(404).json({ error: 'Not Found' });
+  }
+  next();
+});
+
 // API Routes
 app.use('/api/auth', authRoutes);
 app.use('/api/leads', leadRoutes);
@@ -100,7 +115,7 @@ app.get('/health', (_req, res) => {
 // Unified Full-Stack Static Serving: Serve compiled client/dist if present in production
 const clientDistPath = path.resolve(__dirname, '../../client/dist');
 if (fs.existsSync(path.join(clientDistPath, 'index.html'))) {
-  app.use(express.static(clientDistPath));
+  app.use(express.static(clientDistPath, { dotfiles: 'deny' }));
   app.get(/^(?!\/api|\/health).*/, (_req, res) => {
     res.sendFile(path.join(clientDistPath, 'index.html'));
   });
