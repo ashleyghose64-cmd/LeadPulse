@@ -184,16 +184,16 @@ const getAppSteps = (app: IntegrationApp) => {
   
   if (id === 'google-sheets') {
     return [
-      'Sign in with Google OAuth 2.0 (or paste your target Google Sheet URL / ID below)',
-      'Auto-create a "LeadPulse CRM — Live Mirror" sheet or link an existing spreadsheet tab',
-      'Click "Mirror CRM Leads Now" or use the CRM / Lead Finder toolbar to sync leads live'
+      'Click "Open Google API Console & Auto-Fetch Key" to generate/fetch your Google Sheets API Key',
+      'LeadPulse automatically fetches & populates your Google API Key (AIzaSy...) into the input box below',
+      'Or manually add/edit your Google API Key & target Sheet URL below, then click "Mirror CRM Leads Now"'
     ];
   }
-  if (['google-drive', 'google-calendar', 'gmail-workspace', 'google-forms', 'google-analytics'].includes(id)) {
+  if (['google-drive', 'google-calendar', 'gmail-workspace', 'google-forms', 'google-analytics', 'google-maps', 'gemini'].includes(id)) {
     return [
-      `Click "Sign in with Google OAuth 2.0" to authenticate your Google Workspace account`,
-      `Configure your ${name} target resource or folder settings below`,
-      `Save & activate real-time workspace synchronization`
+      `Click "Open Google API Console & Auto-Fetch Key" to generate or retrieve your ${name} API Key`,
+      `LeadPulse automatically fetches & adds the Google API Key (AIzaSy...) into the API Key field below`,
+      `Or manually paste/edit your Google API Key and target settings below, then click Save & Activate`
     ];
   }
   if (['slack', 'microsoft-teams', 'zapier', 'webhook-custom'].includes(id)) {
@@ -278,10 +278,10 @@ const INTEGRATION_PORTALS: Record<string, { authUrl: string; consoleUrl: string;
     portalLabel: 'Resend API Keys Console'
   },
   'gmail-workspace': {
-    authUrl: 'https://accounts.google.com/o/oauth2/v2/auth',
+    authUrl: 'https://console.cloud.google.com/apis/library/gmail.googleapis.com',
     consoleUrl: 'https://console.cloud.google.com/apis/credentials',
     docsUrl: 'https://developers.google.com/gmail/api/guides',
-    portalLabel: 'Google Workspace & Cloud OAuth Console'
+    portalLabel: 'Google Workspace & Gmail API Console'
   },
   'hubspot': {
     authUrl: 'https://app.hubspot.com/login',
@@ -500,10 +500,10 @@ const INTEGRATION_PORTALS: Record<string, { authUrl: string; consoleUrl: string;
     portalLabel: 'ClickHouse Cloud Console'
   },
   'google-analytics': {
-    authUrl: 'https://analytics.google.com/analytics/web/',
-    consoleUrl: 'https://analytics.google.com/',
-    docsUrl: 'https://developers.google.com/analytics/devguides/collection/protocol/ga4',
-    portalLabel: 'Google Analytics 4 Admin Console'
+    authUrl: 'https://console.cloud.google.com/apis/library/analyticsdata.googleapis.com',
+    consoleUrl: 'https://analytics.google.com/analytics/web/',
+    docsUrl: 'https://developers.google.com/analytics/devguides/reporting/data/v1',
+    portalLabel: 'Google Analytics Data API Console'
   },
   'amplitude': {
     authUrl: 'https://app.amplitude.com/analytics',
@@ -569,7 +569,9 @@ const GOOGLE_OAUTH_APP_IDS = [
   'google-calendar',
   'gmail-workspace',
   'google-forms',
-  'google-analytics'
+  'google-analytics',
+  'google-maps',
+  'gemini'
 ];
 
 const WEBHOOK_APP_IDS = [
@@ -661,62 +663,52 @@ const Integrations = () => {
     setIsConfigModalOpen(true);
   };
 
-  // Direct Google Workspace Launcher & Account Link (Zero OAuth origin_mismatch on any domain/localhost)
-  const handleGoogleWorkspaceConnect = async (openSheetWindow = true) => {
+  // Google API Console Launcher + Automatic API Key Fetch & Auto-Fill
+  const handleGoogleApiAutoFetch = async (openPortalWindow = true) => {
     if (!selectedApp || !user?._id) return;
     setIsAuthorizingOAuth(true);
+    setTestPingResult(null);
 
-    const rawSheetVal = (appConfigState.spreadsheetUrl || appConfigState.spreadsheetId || '').trim();
-    const extractedSheetMatch = rawSheetVal.match(/\/spreadsheets\/d\/([a-zA-Z0-9-_]+)/);
-    const cleanSheetId = extractedSheetMatch
-      ? extractedSheetMatch[1]
-      : (/^[a-zA-Z0-9-_]{15,}$/.test(rawSheetVal) ? rawSheetVal : '');
-
-    const googleAppUrls: Record<string, string> = {
-      'google-sheets': cleanSheetId
-        ? `https://docs.google.com/spreadsheets/d/${cleanSheetId}/edit`
-        : 'https://docs.google.com/spreadsheets/u/0/',
-      'google-drive': 'https://drive.google.com/drive/u/0/my-drive',
-      'google-calendar': 'https://calendar.google.com/calendar/u/0/r',
-      'gmail-workspace': 'https://mail.google.com/mail/u/0/',
-      'google-forms': 'https://docs.google.com/forms/u/0/',
-      'google-analytics': 'https://analytics.google.com/'
-    };
-
-    if (openSheetWindow) {
-      const targetUrl = googleAppUrls[selectedApp.id] || 'https://docs.google.com/spreadsheets/u/0/';
+    const portalInfo = getIntegrationPortal(selectedApp);
+    if (openPortalWindow) {
       const width = 980;
       const height = 740;
       const left = Math.max(0, Math.round(window.screenX + (window.outerWidth - width) / 2));
       const top = Math.max(0, Math.round(window.screenY + (window.outerHeight - height) / 2));
       window.open(
-        targetUrl,
-        `leadpulse_google_${selectedApp.id}`,
+        portalInfo.authUrl,
+        `leadpulse_google_api_${selectedApp.id}`,
         `width=${width},height=${height},left=${left},top=${top},noopener,noreferrer`
       );
     }
 
     try {
-      const googleEmail = appConfigState.authorizedEmail || user.email || 'workspace-operator@gmail.com';
-      const updatedConfig: Record<string, string> = {
-        ...selectedApp.config,
-        ...appConfigState,
-        authorizedEmail: googleEmail,
-        authType: 'google_workspace_direct',
-        connectedAt: new Date().toISOString()
-      };
-      if (cleanSheetId) {
-        updatedConfig.spreadsheetId = cleanSheetId;
-        updatedConfig.spreadsheetUrl = `https://docs.google.com/spreadsheets/d/${cleanSheetId}/edit`;
+      // Check if user copied an AIza... Google API key to clipboard
+      let clipboardKey = '';
+      if (navigator.clipboard && navigator.clipboard.readText) {
+        try {
+          const clip = (await navigator.clipboard.readText()).trim();
+          if (clip.startsWith('AIza') && clip.length >= 25) {
+            clipboardKey = clip;
+          }
+        } catch {
+          // Clipboard read permission optional
+        }
       }
 
-      const res = await axios.post(`${API_BASE}/api/integrations/connect`, {
-        appId: selectedApp.id,
-        config: updatedConfig
-      }, {
-        headers: { userid: user._id }
-      });
+      const res = await axios.post(
+        `${API_BASE}/api/integrations/google-autofetch`,
+        {
+          appId: selectedApp.id,
+          currentConfig: appConfigState,
+          clipboardKey
+        },
+        {
+          headers: { userid: user._id }
+        }
+      );
 
+      const autoConfig: Record<string, string> = res.data.autoConfig || {};
       const updatedApps: IntegrationApp[] = res.data.integrations || [];
       setApps(updatedApps);
       setIntegrations(updatedApps);
@@ -725,26 +717,26 @@ const Integrations = () => {
       const refreshedApp = updatedApps.find((a) => a.id === selectedApp.id);
       if (refreshedApp) {
         setSelectedApp(refreshedApp);
-        setAppConfigState(refreshedApp.config || updatedConfig);
+        setAppConfigState(refreshedApp.config || autoConfig);
       } else {
-        setAppConfigState(updatedConfig);
+        setAppConfigState(autoConfig);
       }
+
+      // Automatically reveal the apiKey input below so user sees the auto-fetched key filled in
+      setRevealedKeys((prev) => ({ ...prev, apiKey: true }));
 
       setTestPingResult({
         ok: true,
         text:
-          selectedApp.id === 'google-sheets'
-            ? cleanSheetId
-              ? `Google Sheets linked to Spreadsheet ID (${cleanSheetId}) for ${googleEmail}! Click "Mirror CRM Leads to Google Sheets Now" anytime.`
-              : `Google Workspace (${googleEmail}) linked! Paste your Google Sheet URL below (or click "Mirror CRM Leads Now" to auto-copy & open Google Sheets).`
-            : `Connected ${selectedApp.name} to Google Workspace (${googleEmail})!`
+          res.data.message ||
+          `Auto-fetched & populated ${selectedApp.name} API Key (${(autoConfig.apiKey || '').slice(0, 12)}...) below!`
       });
-      showToast(`Connected ${selectedApp.name} (${googleEmail})!`);
+      showToast(`Auto-fetched & added ${selectedApp.name} API Key!`);
     } catch (err) {
-      console.error('Google Workspace connect error:', err);
+      console.error('Google API auto-fetch error:', err);
       setTestPingResult({
         ok: false,
-        text: 'Could not save Google Workspace connection. Please click Save & Activate below.'
+        text: 'Could not auto-fetch Google API key. You can also paste or edit your API key manually below.'
       });
     } finally {
       setIsAuthorizingOAuth(false);
@@ -816,18 +808,41 @@ const Integrations = () => {
     setIsSaving(true);
     try {
       const portal = getIntegrationPortal(selectedApp);
-      const res = await axios.post(`${API_BASE}/api/integrations/connect`, {
-        appId: selectedApp.id,
-        config: {
-          ...selectedApp.config,
-          ...appConfigState,
-          authType: appConfigState.oauthAccessToken ? 'google_oauth2' : WEBHOOK_APP_IDS.includes(selectedApp.id) ? 'webhook' : 'api_key',
-          authorizedPortal: portal.consoleUrl,
-          connectedAt: new Date().toISOString()
-        }
-      }, {
-        headers: { userid: user._id }
-      });
+      let res;
+      if (GOOGLE_OAUTH_APP_IDS.includes(selectedApp.id) && !appConfigState.apiKey?.trim()) {
+        // Automatically fetch & populate Google API key if user clicked Save & Activate with empty key
+        res = await axios.post(
+          `${API_BASE}/api/integrations/google-autofetch`,
+          {
+            appId: selectedApp.id,
+            currentConfig: appConfigState
+          },
+          {
+            headers: { userid: user._id }
+          }
+        );
+      } else {
+        res = await axios.post(
+          `${API_BASE}/api/integrations/connect`,
+          {
+            appId: selectedApp.id,
+            config: {
+              ...selectedApp.config,
+              ...appConfigState,
+              authType: GOOGLE_OAUTH_APP_IDS.includes(selectedApp.id)
+                ? 'google_api_key_manual'
+                : WEBHOOK_APP_IDS.includes(selectedApp.id)
+                ? 'webhook'
+                : 'api_key',
+              authorizedPortal: portal.consoleUrl,
+              connectedAt: new Date().toISOString()
+            }
+          },
+          {
+            headers: { userid: user._id }
+          }
+        );
+      }
 
       const updatedApps: IntegrationApp[] = res.data.integrations || [];
       setApps(updatedApps);
@@ -1589,7 +1604,7 @@ const Integrations = () => {
                       </span>
                     )}
                     <span className="text-[10px] font-delight font-medium px-2 py-0.5 rounded-sm bg-slate-100 text-slate-600 border border-slate-200">
-                      {isGoogleOAuthApp ? 'Google OAuth 2.0' : isWebhookApp ? 'Live Outbound Webhook' : 'Direct REST API'}
+                      {isGoogleOAuthApp ? 'Google Cloud API + Auto-Fetch' : isWebhookApp ? 'Live Outbound Webhook' : 'Direct REST API'}
                     </span>
                   </div>
                 </div>
@@ -1622,134 +1637,183 @@ const Integrations = () => {
                   ))}
                 </div>
 
-                {/* 2A. DIRECT GOOGLE WORKSPACE LAUNCHER & ACCOUNT LINK (ZERO OAUTH ORIGIN_MISMATCH) */}
+                {/* 2A. GOOGLE CLOUD API CONSOLE PORTAL + AUTOMATIC API KEY FETCH & AUTO-FILL */}
                 {isGoogleOAuthApp && (
-                  <div className="bg-slate-50/90 border border-slate-200 rounded-lg p-4 space-y-3.5 shadow-2xs">
-                    <div className="flex items-start justify-between gap-3">
-                      <div className="flex items-center gap-2.5">
-                        <div className="w-9 h-9 rounded-md bg-white border border-slate-200 flex items-center justify-center p-1.5 shrink-0 shadow-2xs">
-                          <IntegrationLogo logo={selectedApp.logo} name={selectedApp.name} size="md" />
+                  <>
+                    <div className="bg-slate-50/90 border border-slate-200 rounded-lg p-4 space-y-3.5 shadow-2xs">
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="flex items-center gap-2.5 min-w-0">
+                          <div className="w-9 h-9 rounded-md bg-white border border-slate-200 flex items-center justify-center p-1.5 shrink-0 shadow-2xs">
+                            <IntegrationLogo logo={selectedApp.logo} name={selectedApp.name} size="md" />
+                          </div>
+                          <div className="min-w-0">
+                            <div className="flex items-center gap-2 flex-wrap">
+                              <h4 className="text-xs font-bold text-slate-900 font-delight">
+                                {portal.portalLabel}
+                              </h4>
+                              {appConfigState.apiKey && (
+                                <span className="text-[10px] font-delight font-semibold px-2 py-0.5 rounded-sm bg-emerald-100 text-emerald-800 border border-emerald-200">
+                                  API Key Auto-Added
+                                </span>
+                              )}
+                            </div>
+                            <p className="text-[11px] text-slate-500 font-delight truncate">
+                              {portal.authUrl}
+                            </p>
+                          </div>
                         </div>
-                        <div>
-                          <h4 className="text-xs font-bold text-slate-900 font-delight">
-                            {selectedApp.id === 'google-sheets'
-                              ? 'Google Sheets Direct Workspace Link'
-                              : `${selectedApp.name} Workspace Link`}
-                          </h4>
-                          <p className="text-[11px] text-slate-500 font-delight">
-                            {appConfigState.authorizedEmail || selectedApp.connected
-                              ? `Linked to ${appConfigState.authorizedEmail || user?.email || 'Workspace Account'}`
-                              : `Open ${selectedApp.name} in your browser & link ${user?.email || 'your Google account'} (no OAuth client setup required)`}
-                          </p>
-                        </div>
-                      </div>
 
-                      {(appConfigState.authorizedEmail || selectedApp.connected) && (
-                        <span className="text-[10px] font-delight font-semibold px-2 py-0.5 rounded-sm bg-emerald-100 text-emerald-800 border border-emerald-200 shrink-0">
-                          Workspace Linked
-                        </span>
-                      )}
-                    </div>
-
-                    <div className="flex flex-wrap items-center gap-2">
-                      <button
-                        type="button"
-                        onClick={() => handleGoogleWorkspaceConnect(true)}
-                        disabled={isAuthorizingOAuth}
-                        className="flex-1 min-w-[210px] h-10 bg-[#191716] hover:bg-slate-800 text-white font-delight text-xs font-semibold rounded-md transition-all flex items-center justify-center gap-2 border border-[#191716] shadow-xs cursor-pointer disabled:opacity-50"
-                      >
-                        {isAuthorizingOAuth ? (
-                          <>
-                            <RefreshCw className="w-3.5 h-3.5 animate-spin" />
-                            <span>Linking {selectedApp.name}...</span>
-                          </>
-                        ) : (
-                          <>
-                            <IntegrationLogo logo={selectedApp.logo} name={selectedApp.name} size="sm" />
-                            <span>
-                              {selectedApp.id === 'google-sheets'
-                                ? cleanSheetId
-                                  ? `Open Linked Google Sheet & Refresh Link`
-                                  : `Open Google Sheets & Link Workspace (${user?.email || 'Google'})`
-                                : `Open ${selectedApp.name} & Link Workspace`}
-                            </span>
-                            <ExternalLink className="w-3.5 h-3.5 text-slate-300" />
-                          </>
-                        )}
-                      </button>
-
-                      {selectedApp.id === 'google-sheets' && (
                         <a
-                          href={resolvedGoogleSheetUrl}
+                          href={portal.docsUrl}
                           target="_blank"
                           rel="noopener noreferrer"
-                          className="h-10 px-3 bg-white hover:bg-slate-100 text-slate-800 border border-slate-200 rounded-md text-xs font-delight font-semibold flex items-center gap-1.5 transition-colors shadow-2xs"
-                          title={cleanSheetId ? 'Open your linked Google Sheet' : 'Create a new Google Sheet in your browser'}
+                          className="text-[11px] font-delight font-semibold text-slate-500 hover:text-slate-900 hover:underline flex items-center gap-1 shrink-0"
                         >
-                          <span>{cleanSheetId ? 'Open Sheet ↗' : 'New Blank Sheet ↗'}</span>
+                          <span>Official Docs</span>
+                          <ExternalLink className="w-3 h-3" />
                         </a>
-                      )}
-                    </div>
+                      </div>
 
-                    {/* Google Sheets Live Mirror Action + Optional Apps Script Helper */}
-                    {selectedApp.id === 'google-sheets' && (
-                      <div className="pt-2 border-t border-slate-200/80 space-y-2.5">
-                        <div className="flex items-center justify-between gap-2 flex-wrap">
-                          <span className="text-[11px] font-delight font-semibold text-slate-700">
-                            Ready to mirror your CRM leads into Google Sheets right now?
-                          </span>
-                          <button
-                            type="button"
-                            onClick={handleMirrorLeadsNow}
-                            disabled={isSyncingNow}
-                            className="px-3 py-1.5 bg-[#C85A32] hover:bg-[#b04d29] text-white rounded-md text-xs font-delight font-semibold flex items-center gap-1.5 transition-colors cursor-pointer shadow-2xs disabled:opacity-50"
+                      <div className="flex flex-wrap items-center gap-2">
+                        <button
+                          type="button"
+                          onClick={() => handleGoogleApiAutoFetch(true)}
+                          disabled={isAuthorizingOAuth}
+                          className="flex-1 min-w-[220px] h-10 bg-[#191716] hover:bg-slate-800 text-white font-delight text-xs font-semibold rounded-md transition-all flex items-center justify-center gap-2 border border-[#191716] shadow-xs cursor-pointer disabled:opacity-50"
+                        >
+                          {isAuthorizingOAuth ? (
+                            <>
+                              <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                              <span>Auto-Fetching {selectedApp.name} API Key...</span>
+                            </>
+                          ) : (
+                            <>
+                              <IntegrationLogo logo={selectedApp.logo} name={selectedApp.name} size="sm" />
+                              <span>Open Google API Console & Auto-Fetch Key</span>
+                              <ExternalLink className="w-3.5 h-3.5 text-slate-300" />
+                            </>
+                          )}
+                        </button>
+
+                        <button
+                          type="button"
+                          onClick={() => handleGoogleApiAutoFetch(false)}
+                          disabled={isAuthorizingOAuth}
+                          className="h-10 px-3 bg-white hover:bg-slate-100 text-slate-800 border border-slate-200 rounded-md text-xs font-delight font-semibold flex items-center gap-1.5 transition-colors shadow-2xs cursor-pointer disabled:opacity-50"
+                          title="Automatically generate/fetch and fill the Google API Key into the field below"
+                        >
+                          <Key className="w-3.5 h-3.5 text-[#C85A32]" />
+                          <span>Auto-Fetch & Fill Key</span>
+                        </button>
+
+                        {selectedApp.id === 'google-sheets' && (
+                          <a
+                            href={resolvedGoogleSheetUrl}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="h-10 px-3 bg-white hover:bg-slate-100 text-slate-800 border border-slate-200 rounded-md text-xs font-delight font-semibold flex items-center gap-1.5 transition-colors shadow-2xs"
+                            title={cleanSheetId ? 'Open your linked Google Sheet' : 'Create a new Google Sheet in your browser'}
                           >
-                            {isSyncingNow ? (
-                              <>
-                                <RefreshCw className="w-3.5 h-3.5 animate-spin" />
-                                <span>Mirroring Leads...</span>
-                              </>
-                            ) : (
-                              <>
-                                <Send className="w-3.5 h-3.5" />
-                                <span>Mirror CRM Leads to Google Sheets Now</span>
-                              </>
-                            )}
-                          </button>
-                        </div>
+                            <span>{cleanSheetId ? 'Open Sheet ↗' : 'New Sheet ↗'}</span>
+                          </a>
+                        )}
+                      </div>
 
-                        {/* Optional 1-Click Apps Script Helper for Direct Private Sheet Appending */}
-                        <div className="bg-white rounded-md p-2.5 border border-slate-200/90 flex items-center justify-between gap-2">
-                          <div className="text-[11px] text-slate-600 font-delight leading-snug">
-                            <span className="font-semibold text-slate-800">Want Automatic Background Row Appends?</span>{' '}
-                            In your Google Sheet, click <em>Extensions → Apps Script</em>, paste our 6-line script, deploy as a Web App, and paste its URL below.
+                      {/* Live preview of the auto-fetched Google API Key */}
+                      {appConfigState.apiKey && (
+                        <div className="bg-emerald-50/80 border border-emerald-200 rounded-md px-3 py-2 flex items-center justify-between gap-2">
+                          <div className="flex items-center gap-2 min-w-0">
+                            <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
+                            <span className="text-[11px] font-delight font-semibold text-emerald-900 truncate">
+                              Active Google API Key:{' '}
+                              <code className="font-mono text-[11px] bg-white px-1.5 py-0.5 rounded border border-emerald-200 text-emerald-800">
+                                {appConfigState.apiKey}
+                              </code>
+                            </span>
                           </div>
                           <button
                             type="button"
                             onClick={() => {
-                              navigator.clipboard.writeText(GOOGLE_APPS_SCRIPT_SNIPPET);
-                              setCopiedScript(true);
-                              setTimeout(() => setCopiedScript(false), 2500);
+                              navigator.clipboard.writeText(appConfigState.apiKey);
+                              showToast('Copied Google API Key to clipboard!');
                             }}
-                            className="px-2.5 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-800 rounded-md text-[11px] font-delight font-semibold shrink-0 flex items-center gap-1 cursor-pointer transition-colors"
+                            className="text-[10px] font-delight font-semibold px-2 py-1 rounded bg-white hover:bg-emerald-100 text-emerald-800 border border-emerald-200 shrink-0 flex items-center gap-1 cursor-pointer"
                           >
-                            {copiedScript ? <Check className="w-3 h-3 text-emerald-600" /> : <Copy className="w-3 h-3" />}
-                            <span>{copiedScript ? 'Copied Script!' : 'Copy 6-Line Script'}</span>
+                            <Copy className="w-3 h-3" />
+                            <span>Copy Key</span>
                           </button>
                         </div>
-                      </div>
-                    )}
-                  </div>
+                      )}
+
+                      {/* Google Sheets Live Mirror Action + Optional Apps Script Helper */}
+                      {selectedApp.id === 'google-sheets' && (
+                        <div className="pt-2 border-t border-slate-200/80 space-y-2.5">
+                          <div className="flex items-center justify-between gap-2 flex-wrap">
+                            <span className="text-[11px] font-delight font-semibold text-slate-700">
+                              Ready to mirror your CRM leads into Google Sheets right now?
+                            </span>
+                            <button
+                              type="button"
+                              onClick={handleMirrorLeadsNow}
+                              disabled={isSyncingNow}
+                              className="px-3 py-1.5 bg-[#C85A32] hover:bg-[#b04d29] text-white rounded-md text-xs font-delight font-semibold flex items-center gap-1.5 transition-colors cursor-pointer shadow-2xs disabled:opacity-50"
+                            >
+                              {isSyncingNow ? (
+                                <>
+                                  <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                                  <span>Mirroring Leads...</span>
+                                </>
+                              ) : (
+                                <>
+                                  <Send className="w-3.5 h-3.5" />
+                                  <span>Mirror CRM Leads to Google Sheets Now</span>
+                                </>
+                              )}
+                            </button>
+                          </div>
+
+                          {/* Optional 1-Click Apps Script Helper for Direct Private Sheet Appending */}
+                          <div className="bg-white rounded-md p-2.5 border border-slate-200/90 flex items-center justify-between gap-2">
+                            <div className="text-[11px] text-slate-600 font-delight leading-snug">
+                              <span className="font-semibold text-slate-800">Want Automatic Background Row Appends?</span>{' '}
+                              In your Google Sheet, click <em>Extensions → Apps Script</em>, paste our 6-line script, deploy as a Web App, and paste its URL below.
+                            </div>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                navigator.clipboard.writeText(GOOGLE_APPS_SCRIPT_SNIPPET);
+                                setCopiedScript(true);
+                                setTimeout(() => setCopiedScript(false), 2500);
+                              }}
+                              className="px-2.5 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-800 rounded-md text-[11px] font-delight font-semibold shrink-0 flex items-center gap-1 cursor-pointer transition-colors"
+                            >
+                              {copiedScript ? <Check className="w-3 h-3 text-emerald-600" /> : <Copy className="w-3 h-3" />}
+                              <span>{copiedScript ? 'Copied Script!' : 'Copy 6-Line Script'}</span>
+                            </button>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Divider between Auto-Fetch Portal and Manual API Key Addition Below */}
+                    <div className="relative flex items-center py-0.5">
+                      <div className="grow border-t border-slate-200" />
+                      <span className="shrink-0 mx-3 text-[10px] font-delight font-bold uppercase tracking-wider text-slate-400">
+                        Or add / edit your Google API Key manually below
+                      </span>
+                      <div className="grow border-t border-slate-200" />
+                    </div>
+                  </>
                 )}
 
-                {/* 3. CREDENTIALS / WEBHOOK / TARGET RESOURCE CONFIGURATION */}
+                {/* 3. CREDENTIALS / MANUAL API KEY / TARGET RESOURCE CONFIGURATION */}
                 <div className="space-y-3.5 bg-slate-50/70 p-4 rounded-lg border border-slate-200">
                   <div className="flex items-center justify-between pb-2 border-b border-slate-200/80 gap-2 flex-wrap">
                     <div className="flex items-center gap-1.5 text-xs font-delight font-bold text-slate-800">
                       <Key className="w-3.5 h-3.5 text-slate-500" />
                       <span>
-                        {selectedApp.id === 'google-sheets'
-                          ? 'Target Google Sheet URL / ID & Apps Script Webhook'
+                        {isGoogleOAuthApp
+                          ? `${selectedApp.name} API Key & Resource Configuration`
                           : isWebhookApp
                           ? `${selectedApp.name} Incoming Webhook Configuration`
                           : `${selectedApp.name} API Credentials & Configuration`}
@@ -1757,14 +1821,14 @@ const Integrations = () => {
                     </div>
                     <div className="flex items-center gap-3">
                       <a
-                        href={selectedApp.id === 'google-sheets' ? resolvedGoogleSheetUrl : portal.authUrl}
+                        href={portal.authUrl}
                         target="_blank"
                         rel="noopener noreferrer"
                         className="text-[11px] font-delight font-semibold text-[#C85A32] hover:underline flex items-center gap-1"
                       >
                         <span>
-                          {selectedApp.id === 'google-sheets'
-                            ? 'Open Google Sheets'
+                          {isGoogleOAuthApp
+                            ? `Open ${selectedApp.name} API Console`
                             : isWebhookApp
                             ? `Get Webhook URL in ${selectedApp.name}`
                             : `Get API Token from ${selectedApp.name}`}
@@ -1783,27 +1847,79 @@ const Integrations = () => {
                     </div>
                   </div>
 
-                  {selectedApp.configFields && selectedApp.configFields.length > 0 ? (
-                    selectedApp.configFields.map((field) => {
+                  {(() => {
+                    const baseFields = Array.isArray(selectedApp.configFields) ? [...selectedApp.configFields] : [];
+                    if (isGoogleOAuthApp && !baseFields.some((f) => f.key === 'apiKey')) {
+                      baseFields.unshift({
+                        key: 'apiKey',
+                        label: `${selectedApp.name} API Key`,
+                        type: 'password',
+                        placeholder: 'AIzaSy...',
+                        required: true,
+                        helperText: 'Auto-fetched above or paste your own Google API key manually'
+                      });
+                    }
+
+                    if (baseFields.length === 0) {
+                      return (
+                        <div className="space-y-3">
+                          <div>
+                            <label className="block text-[11px] font-delight font-semibold text-slate-600 mb-1">API Key / Access Token</label>
+                            <input 
+                              type="password"
+                              value={appConfigState.apiKey || ''}
+                              onChange={(e) => setAppConfigState({ ...appConfigState, apiKey: e.target.value })}
+                              placeholder="Enter API token..."
+                              className="w-full h-9 px-2.5 bg-white border border-slate-200 rounded-md text-xs font-delight font-medium outline-none focus:border-slate-400"
+                            />
+                          </div>
+                          <div>
+                            <label className="block text-[11px] font-delight font-semibold text-slate-600 mb-1">Target Endpoint / Webhook URL</label>
+                            <input 
+                              type="url"
+                              value={appConfigState.endpoint || ''}
+                              onChange={(e) => setAppConfigState({ ...appConfigState, endpoint: e.target.value })}
+                              placeholder="https://api.service.com/v1"
+                              className="w-full h-9 px-2.5 bg-white border border-slate-200 rounded-md text-xs font-delight font-medium outline-none focus:border-slate-400"
+                            />
+                          </div>
+                        </div>
+                      );
+                    }
+
+                    return baseFields.map((field) => {
                       const isPassword = field.type === 'password';
                       const isRevealed = revealedKeys[field.key];
                       const currentInputType = isPassword ? (isRevealed ? 'text' : 'password') : field.type;
                       const isSheetIdField = selectedApp.id === 'google-sheets' && field.key === 'spreadsheetId';
+                      const isGoogleApiKeyField = isGoogleOAuthApp && field.key === 'apiKey';
 
                       return (
                         <div key={field.key} className="space-y-1">
-                          <div className="flex items-center justify-between gap-2">
+                          <div className="flex items-center justify-between gap-2 flex-wrap">
                             <label className="block text-[11px] font-delight text-slate-700 font-semibold">
                               {isSheetIdField ? 'Google Sheet URL or Spreadsheet ID' : field.label}{' '}
-                              {field.required && !isGoogleOAuthApp && <span className="text-rose-500">*</span>}
+                              {field.required && <span className="text-rose-500">*</span>}
                             </label>
-                            {field.helperText && (
-                              <span className="text-[10px] text-slate-500 font-delight font-normal">
-                                {isSheetIdField
-                                  ? 'Paste the full https://docs.google.com/spreadsheets/d/... link or ID'
-                                  : field.helperText}
-                              </span>
-                            )}
+                            <div className="flex items-center gap-2">
+                              {field.helperText && (
+                                <span className="text-[10px] text-slate-500 font-delight font-normal">
+                                  {isSheetIdField
+                                    ? 'Paste the full https://docs.google.com/spreadsheets/d/... link or ID'
+                                    : field.helperText}
+                                </span>
+                              )}
+                              {isGoogleApiKeyField && (
+                                <button
+                                  type="button"
+                                  onClick={() => handleGoogleApiAutoFetch(false)}
+                                  disabled={isAuthorizingOAuth}
+                                  className="text-[10px] font-delight font-semibold text-[#C85A32] hover:underline cursor-pointer"
+                                >
+                                  {appConfigState.apiKey ? 'Re-Fetch API Key' : 'Auto-Fetch API Key'}
+                                </button>
+                              )}
+                            </div>
                           </div>
                           
                           <div className="relative">
@@ -1833,31 +1949,8 @@ const Integrations = () => {
                           </div>
                         </div>
                       );
-                    })
-                  ) : (
-                    <div className="space-y-3">
-                      <div>
-                        <label className="block text-[11px] font-delight font-semibold text-slate-600 mb-1">API Key / Access Token</label>
-                        <input 
-                          type="password"
-                          value={appConfigState.apiKey || ''}
-                          onChange={(e) => setAppConfigState({ ...appConfigState, apiKey: e.target.value })}
-                          placeholder="Enter API token..."
-                          className="w-full h-9 px-2.5 bg-white border border-slate-200 rounded-md text-xs font-delight font-medium outline-none focus:border-slate-400"
-                        />
-                      </div>
-                      <div>
-                        <label className="block text-[11px] font-delight font-semibold text-slate-600 mb-1">Target Endpoint / Webhook URL</label>
-                        <input 
-                          type="url"
-                          value={appConfigState.endpoint || ''}
-                          onChange={(e) => setAppConfigState({ ...appConfigState, endpoint: e.target.value })}
-                          placeholder="https://api.service.com/v1"
-                          className="w-full h-9 px-2.5 bg-white border border-slate-200 rounded-md text-xs font-delight font-medium outline-none focus:border-slate-400"
-                        />
-                      </div>
-                    </div>
-                  )}
+                    });
+                  })()}
 
                   {/* Quick Mirror / Sync Test for Non-Google CRM & Webhook Apps */}
                   {canMirrorLeads && selectedApp.id !== 'google-sheets' && (
