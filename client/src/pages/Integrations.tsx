@@ -589,8 +589,8 @@ const GOOGLE_APPS_SCRIPT_SNIPPET = `function doPost(e) {
 }`;
 
 const Integrations = () => {
-  const { user, integrations: storeIntegrations, integrationLogs, setIntegrations, setIntegrationLogs, syncLeadsToIntegration, leads } = useStore();
-  const [apps, setApps] = useState<IntegrationApp[]>(storeIntegrations as IntegrationApp[]);
+  const { user, integrations: storeIntegrations = [], integrationLogs = [], setIntegrations, setIntegrationLogs, syncLeadsToIntegration } = useStore();
+  const [apps, setApps] = useState<IntegrationApp[]>((storeIntegrations || []) as IntegrationApp[]);
   const [apiKey, setApiKey] = useState('lp_live_workspace_key');
   const [, setLoading] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
@@ -1690,7 +1690,7 @@ const Integrations = () => {
                       <div className="pt-2 border-t border-slate-200/80 space-y-2.5">
                         <div className="flex items-center justify-between gap-2 flex-wrap">
                           <span className="text-[11px] font-delight font-semibold text-slate-700">
-                            Ready to test mirroring your {leads.length || 'CRM'} leads right now?
+                            Ready to test mirroring your CRM leads right now?
                           </span>
                           <button
                             type="button"
