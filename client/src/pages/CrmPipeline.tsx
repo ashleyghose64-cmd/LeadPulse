@@ -7,7 +7,8 @@ import {
   Plus, Phone, Globe, MapPin,
   MessageCircle, Send,
   Check, Edit3, ShieldCheck, GripVertical,
-  X, ExternalLink, Trash2, Star, Sparkles
+  X, ExternalLink, Trash2, Star, Sparkles,
+  RotateCcw, Move, Maximize2
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import Sidebar from '../components/Sidebar';
@@ -22,6 +23,9 @@ const KANBAN_STAGES = [
   'Proposal Sent',
   'Closed Won'
 ];
+
+const DEFAULT_COL_WIDTH = 272;
+const DEFAULT_COL_HEIGHT = 560;
 
 const CrmPipeline = () => {
   const { user, integrations, notifyIntegration, syncLeadsToIntegration } = useStore();
@@ -46,9 +50,44 @@ const CrmPipeline = () => {
     a => a.connected && ['hubspot', 'salesforce', 'attio', 'google-sheets', 'airtable', 'notion'].includes(a.id)
   );
   
-  // Drag and Drop State
+  // Lead Card Drag and Drop State
   const [draggedLeadId, setDraggedLeadId] = useState<string | null>(null);
   const [dragOverStage, setDragOverStage] = useState<string | null>(null);
+
+  // Kanban Column Order (Drag-to-Reposition) State
+  const [columnOrder, setColumnOrder] = useState<string[]>(() => {
+    try {
+      const saved = localStorage.getItem('leadpulse-kanban-order-v1');
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed) && parsed.length === KANBAN_STAGES.length && KANBAN_STAGES.every(s => parsed.includes(s))) {
+          return parsed;
+        }
+      }
+    } catch {}
+    return KANBAN_STAGES;
+  });
+  const [draggedColStage, setDraggedColStage] = useState<string | null>(null);
+  const [dragOverColStage, setDragOverColStage] = useState<string | null>(null);
+
+  // Kanban Column Dimensions (Mouse-Resizable Width & Height) State
+  const [columnSizes, setColumnSizes] = useState<Record<string, { width: number; height: number }>>(() => {
+    try {
+      const saved = localStorage.getItem('leadpulse-kanban-sizes-v1');
+      if (saved) {
+        return JSON.parse(saved);
+      }
+    } catch {}
+    return {};
+  });
+  const [resizingCol, setResizingCol] = useState<{
+    stage: string;
+    direction: 'width' | 'height' | 'both';
+    startX: number;
+    startY: number;
+    startWidth: number;
+    startHeight: number;
+  } | null>(null);
 
   // Click-to-View Lead Details Modal State
   const [selectedLeadDetails, setSelectedLeadDetails] = useState<any | null>(null);
@@ -152,16 +191,23 @@ const CrmPipeline = () => {
     }
   };
 
-  // Drag and Drop Event Handlers
+  // Lead Card Drag and Drop Event Handlers
   const handleDragStart = (e: React.DragEvent, leadId: string) => {
+    e.stopPropagation();
+    e.dataTransfer.setData('application/x-leadpulse-lead', leadId);
     e.dataTransfer.setData('text/plain', leadId);
     e.dataTransfer.effectAllowed = 'move';
     setDraggedLeadId(leadId);
+    setDraggedColStage(null);
   };
 
   const handleDragOver = (e: React.DragEvent, stage: string) => {
     e.preventDefault();
     e.dataTransfer.dropEffect = 'move';
+    if (draggedColStage) {
+      if (dragOverColStage !== stage) setDragOverColStage(stage);
+      return;
+    }
     if (dragOverStage !== stage) {
       setDragOverStage(stage);
     }
@@ -170,18 +216,38 @@ const CrmPipeline = () => {
   const handleDragLeave = (e: React.DragEvent, stage: string) => {
     e.preventDefault();
     if (e.currentTarget.contains(e.relatedTarget as Node)) return;
-    if (dragOverStage === stage) {
-      setDragOverStage(null);
-    }
+    if (dragOverStage === stage) setDragOverStage(null);
+    if (dragOverColStage === stage) setDragOverColStage(null);
   };
 
   const handleDrop = async (e: React.DragEvent, targetStage: string) => {
     e.preventDefault();
-    const leadId = e.dataTransfer.getData('text/plain') || draggedLeadId;
+    const colStage = e.dataTransfer.getData('application/x-leadpulse-col') || draggedColStage;
+    if (colStage) {
+      setDragOverColStage(null);
+      setDraggedColStage(null);
+      if (colStage !== targetStage) {
+        setColumnOrder(prev => {
+          const next = [...prev];
+          const fromIdx = next.indexOf(colStage);
+          const toIdx = next.indexOf(targetStage);
+          if (fromIdx !== -1 && toIdx !== -1) {
+            next.splice(fromIdx, 1);
+            next.splice(toIdx, 0, colStage);
+          }
+          localStorage.setItem('leadpulse-kanban-order-v1', JSON.stringify(next));
+          return next;
+        });
+        showToast(`Repositioned "${colStage}" column board`);
+      }
+      return;
+    }
+
+    const leadId = e.dataTransfer.getData('application/x-leadpulse-lead') || e.dataTransfer.getData('text/plain') || draggedLeadId;
     setDragOverStage(null);
     setDraggedLeadId(null);
 
-    if (leadId) {
+    if (leadId && !KANBAN_STAGES.includes(leadId)) {
       const targetLead = leads.find(l => l._id === leadId);
       if (targetLead && (targetLead.status || 'New') !== targetStage) {
         await handleUpdateStatus(leadId, targetStage);
@@ -192,6 +258,85 @@ const CrmPipeline = () => {
   const handleDragEnd = () => {
     setDraggedLeadId(null);
     setDragOverStage(null);
+    setDraggedColStage(null);
+    setDragOverColStage(null);
+  };
+
+  // Kanban Column Header Drag-to-Reposition Handlers
+  const handleColDragStart = (e: React.DragEvent, stage: string) => {
+    e.dataTransfer.setData('application/x-leadpulse-col', stage);
+    e.dataTransfer.effectAllowed = 'move';
+    setDraggedColStage(stage);
+    setDraggedLeadId(null);
+  };
+
+  // Mouse Resize Handlers for Individual Kanban Column Boards
+  const startResizingColumn = (
+    e: React.MouseEvent,
+    stage: string,
+    direction: 'width' | 'height' | 'both'
+  ) => {
+    e.preventDefault();
+    e.stopPropagation();
+    const current = columnSizes[stage] || { width: DEFAULT_COL_WIDTH, height: DEFAULT_COL_HEIGHT };
+    setResizingCol({
+      stage,
+      direction,
+      startX: e.clientX,
+      startY: e.clientY,
+      startWidth: current.width,
+      startHeight: current.height
+    });
+  };
+
+  useEffect(() => {
+    if (!resizingCol) return;
+
+    const handleMouseMove = (e: MouseEvent) => {
+      const deltaX = e.clientX - resizingCol.startX;
+      const deltaY = e.clientY - resizingCol.startY;
+
+      setColumnSizes(prev => {
+        const current = prev[resizingCol.stage] || {
+          width: resizingCol.startWidth,
+          height: resizingCol.startHeight
+        };
+        const nextWidth =
+          resizingCol.direction === 'width' || resizingCol.direction === 'both'
+            ? Math.max(210, Math.min(640, resizingCol.startWidth + deltaX))
+            : current.width;
+        const nextHeight =
+          resizingCol.direction === 'height' || resizingCol.direction === 'both'
+            ? Math.max(260, Math.min(920, resizingCol.startHeight + deltaY))
+            : current.height;
+
+        const updated = {
+          ...prev,
+          [resizingCol.stage]: { width: Math.round(nextWidth), height: Math.round(nextHeight) }
+        };
+        localStorage.setItem('leadpulse-kanban-sizes-v1', JSON.stringify(updated));
+        return updated;
+      });
+    };
+
+    const handleMouseUp = () => {
+      setResizingCol(null);
+    };
+
+    window.addEventListener('mousemove', handleMouseMove);
+    window.addEventListener('mouseup', handleMouseUp);
+    return () => {
+      window.removeEventListener('mousemove', handleMouseMove);
+      window.removeEventListener('mouseup', handleMouseUp);
+    };
+  }, [resizingCol]);
+
+  const handleResetKanbanLayout = () => {
+    setColumnOrder(KANBAN_STAGES);
+    setColumnSizes({});
+    localStorage.removeItem('leadpulse-kanban-order-v1');
+    localStorage.removeItem('leadpulse-kanban-sizes-v1');
+    showToast('Kanban board positions & dimensions restored to default');
   };
 
   // 1-Click Upgrade Record from "Phone-Only" to "Verified Email Lead"
@@ -396,6 +541,27 @@ const CrmPipeline = () => {
                 </button>
               )}
 
+              {viewMode === 'kanban' && (
+                <div className="hidden xl:flex items-center gap-2 px-2.5 py-1 rounded-md bg-[#FAF8F5] border border-[#E5E0D5] text-[10px] font-delight text-[#6E675F]">
+                  <Move className="w-3 h-3 text-[#C85A32]" />
+                  <span>Drag board header to move</span>
+                  <span className="text-[#D6CFC2]">•</span>
+                  <Maximize2 className="w-3 h-3 text-[#C85A32]" />
+                  <span>Drag edges/corner to resize</span>
+                </div>
+              )}
+
+              {viewMode === 'kanban' && (Object.keys(columnSizes).length > 0 || JSON.stringify(columnOrder) !== JSON.stringify(KANBAN_STAGES)) && (
+                <button
+                  onClick={handleResetKanbanLayout}
+                  className="bg-white hover:bg-slate-100 text-slate-700 border border-slate-200 px-2.5 py-1.5 rounded-lg text-xs font-delight font-semibold transition-all flex items-center gap-1.5 cursor-pointer"
+                  title="Restore default Kanban column order and dimensions"
+                >
+                  <RotateCcw className="w-3.5 h-3.5 text-slate-500" />
+                  <span>Reset Boards</span>
+                </button>
+              )}
+
               <button
                 onClick={() => navigate('/finder')}
                 className="bg-blue-600 hover:bg-blue-700 text-white px-3.5 py-1.5 rounded-lg text-xs font-semibold transition-all shadow-xs shadow-blue-500/20 flex items-center gap-1.5 cursor-pointer"
@@ -427,38 +593,74 @@ const CrmPipeline = () => {
             </div>
           </div>
 
-          {/* KANBAN VIEW (Compact, Sharp Developer-Grade Geometry) */}
+          {/* KANBAN VIEW (Mouse-Resizable & Drag-to-Reposition Boards) */}
           {viewMode === 'kanban' && (
-            <div className="flex-1 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-3 min-h-0 h-full overflow-hidden">
-              {KANBAN_STAGES.map(stage => {
+            <div className="flex-1 flex items-start gap-3.5 min-h-0 h-full overflow-x-auto overflow-y-auto pb-4 pr-2 custom-scrollbar select-none">
+              {columnOrder.map((stage) => {
                 const stageLeads = filteredLeads.filter(l => (l.status || 'New') === stage);
-                const isOver = dragOverStage === stage;
+                const isOver = dragOverStage === stage && !draggedColStage;
+                const isColOver = dragOverColStage === stage && draggedColStage && draggedColStage !== stage;
+                const isColDragged = draggedColStage === stage;
+                const isResizingThis = resizingCol?.stage === stage;
+                const colSize = columnSizes[stage] || { width: DEFAULT_COL_WIDTH, height: DEFAULT_COL_HEIGHT };
                 
                 return (
                   <div 
-                    key={stage} 
+                    key={stage}
+                    style={{
+                      width: `${colSize.width}px`,
+                      height: `${colSize.height}px`,
+                      minWidth: '210px',
+                      maxWidth: '640px',
+                      minHeight: '260px',
+                      maxHeight: '920px'
+                    }}
                     onDragOver={(e) => handleDragOver(e, stage)}
                     onDragLeave={(e) => handleDragLeave(e, stage)}
                     onDrop={(e) => handleDrop(e, stage)}
-                    className={`flex flex-col h-full rounded-md border transition-all duration-150 overflow-hidden min-w-0 ${
-                      isOver 
-                        ? 'bg-slate-100 border-slate-900 border-2' 
-                        : 'bg-slate-50/70 border-slate-200'
+                    className={`relative shrink-0 flex flex-col rounded-md border transition-colors duration-150 overflow-hidden group/board ${
+                      isColDragged
+                        ? 'opacity-45 border-dashed border-[#C85A32] bg-[#FAF8F5]'
+                        : isColOver
+                          ? 'bg-[#C85A32]/5 border-[#C85A32] border-2 shadow-md'
+                          : isResizingThis
+                            ? 'bg-slate-50 border-[#C85A32] ring-1 ring-[#C85A32]/30 shadow-md'
+                            : isOver 
+                              ? 'bg-slate-100 border-slate-900 border-2' 
+                              : 'bg-slate-50/70 border-slate-200 hover:border-slate-300'
                     }`}
                   >
                     
-                    {/* Column Header */}
-                    <div className="px-3 py-2 border-b flex items-center justify-between shrink-0 bg-white border-slate-200">
+                    {/* Column Header (Draggable Handle to Reposition Board) */}
+                    <div
+                      draggable={true}
+                      onDragStart={(e) => handleColDragStart(e, stage)}
+                      onDragEnd={handleDragEnd}
+                      title="Drag header to reposition this Kanban board"
+                      className="px-2.5 py-2 border-b flex items-center justify-between shrink-0 bg-white border-slate-200 cursor-grab active:cursor-grabbing hover:bg-[#FAF8F5] transition-colors"
+                    >
                       <div className="flex items-center gap-1.5 min-w-0">
+                        <GripVertical className="w-3.5 h-3.5 text-slate-400 group-hover/board:text-[#C85A32] shrink-0 transition-colors" />
                         <span className="w-1.5 h-1.5 rounded-xs bg-slate-900 shrink-0"></span>
                         <h3 className="font-bold text-xs text-slate-900 truncate tracking-tight" title={stage}>{stage}</h3>
                       </div>
-                      <span className="text-[10px] font-delight font-bold px-1.5 py-0.5 rounded-sm border bg-slate-100 text-slate-700 border-slate-200 shrink-0">
-                        {stageLeads.length}
-                      </span>
+                      <div className="flex items-center gap-1.5 shrink-0">
+                        {(isResizingThis || columnSizes[stage]) && (
+                          <span className={`text-[9px] font-mono px-1.5 py-0.5 rounded border ${
+                            isResizingThis
+                              ? 'bg-[#C85A32] text-white border-[#C85A32] font-bold'
+                              : 'bg-slate-50 text-slate-500 border-slate-200'
+                          }`}>
+                            {colSize.width}×{colSize.height}
+                          </span>
+                        )}
+                        <span className="text-[10px] font-delight font-bold px-1.5 py-0.5 rounded-sm border bg-slate-100 text-slate-700 border-slate-200 shrink-0">
+                          {stageLeads.length}
+                        </span>
+                      </div>
                     </div>
 
-                    {/* Column Cards Container (Vertical Scroll only) */}
+                    {/* Column Cards Container (Vertical Scroll) */}
                     <div className="flex-1 p-2 overflow-y-auto custom-scrollbar space-y-2">
                       {stageLeads.length === 0 ? (
                         <div className={`p-4 text-center text-[11px] rounded-md border border-dashed transition-all font-delight font-medium ${
@@ -541,6 +743,31 @@ const CrmPipeline = () => {
                           );
                         })
                       )}
+                    </div>
+
+                    {/* Right-Edge Mouse Resize Handle (Width) */}
+                    <div
+                      onMouseDown={(e) => startResizingColumn(e, stage, 'width')}
+                      title="Drag horizontally to resize board width"
+                      className="absolute top-0 right-0 w-1.5 h-full cursor-ew-resize hover:bg-[#C85A32]/40 active:bg-[#C85A32] transition-colors z-10"
+                    />
+
+                    {/* Bottom-Edge Mouse Resize Handle (Height) */}
+                    <div
+                      onMouseDown={(e) => startResizingColumn(e, stage, 'height')}
+                      title="Drag vertically to resize board height"
+                      className="absolute bottom-0 left-0 w-full h-1.5 cursor-ns-resize hover:bg-[#C85A32]/40 active:bg-[#C85A32] transition-colors z-10"
+                    />
+
+                    {/* Bottom-Right Corner Mouse Resize Handle (Width + Height) */}
+                    <div
+                      onMouseDown={(e) => startResizingColumn(e, stage, 'both')}
+                      title="Drag corner to resize board width and height"
+                      className="absolute bottom-0 right-0 w-4 h-4 cursor-nwse-resize flex items-end justify-end p-0.5 z-20 text-slate-400 hover:text-[#C85A32] transition-colors"
+                    >
+                      <svg className="w-2.5 h-2.5" viewBox="0 0 10 10" fill="none">
+                        <path d="M9 1L1 9M9 5L5 9M9 8.5L8.5 9" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+                      </svg>
                     </div>
 
                   </div>

@@ -1,982 +1,1439 @@
-import { useState, useMemo } from 'react';
+import React, { useState, useMemo, useRef, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import Sidebar from '../components/Sidebar';
 import Header from '../components/Header';
-import { 
-  BookOpen, Search, Filter, Send, MessageCircle, Settings, Shield, 
-  ChevronRight, ChevronDown, Check, Copy, ExternalLink, AlertCircle, 
-  Sparkles, Users, Webhook, Zap, CreditCard, ArrowRight, Lock, 
-  HelpCircle, CheckCircle2, Layers, Globe, FileText, Terminal, 
-  Sliders, RefreshCw, X, ArrowUpRight, Mail
-} from 'lucide-react';
 import { useStore } from '../store/useStore';
+import {
+  Search, BookOpen, Compass, Kanban, Send, GitMerge, Users,
+  Puzzle, ShieldCheck, CreditCard, Terminal, CheckCircle2,
+  Copy, Check, ArrowRight, Sparkles, HelpCircle, FileText,
+  ChevronRight, ChevronDown, ThumbsUp, ThumbsDown, Printer,
+  Share2, ExternalLink, Layers, Clock, Sliders, AlertCircle,
+  PlayCircle, MessageSquare, LifeBuoy, Zap
+} from 'lucide-react';
 
-interface DocStep {
-  step: string;
-  title: string;
-  desc: string;
-  details?: string[];
-  code?: string;
-  note?: string;
-}
+type GuideTab = 'admin-guide' | 'operator-guide' | 'integrations-guide' | 'faq-portal';
 
-interface DocModule {
+interface SubArticle {
   id: string;
-  section: string;
   title: string;
-  category: string;
-  badge: string;
+  readingTime: string;
+  lastUpdated: string;
+  route: string;
+  routeLabel: string;
+  summary: string;
+  keyTakeaways: string[];
+  steps: {
+    title: string;
+    detail: string;
+    tip?: string;
+  }[];
+  proTip: string;
+  codeTitle?: string;
+  codeBlock?: string;
+  faqs?: { q: string; a: string }[];
+}
+
+interface TopicCategory {
+  id: string;
+  title: string;
+  tab: GuideTab;
   icon: any;
-  overview: string;
-  steps: DocStep[];
-  troubleshooting?: string[];
+  description: string;
+  articles: SubArticle[];
 }
 
-interface FAQItem {
-  question: string;
-  category: string;
-  answer: string;
-  steps?: string[];
-}
-
-const MODULES: DocModule[] = [
+const HELP_CATEGORIES: TopicCategory[] = [
   {
-    id: 'lead-finder',
-    section: 'MODULE 01',
-    category: 'Lead Scraping & Discovery',
-    badge: 'Core Engine',
-    title: 'Commercial Lead Scraping & Spatial Harvesting',
-    icon: Search,
-    overview: 'The Lead Finder query system queries live spatial and business registries to surface validated business entities, commercial contacts, websites, ratings, and physical locations.',
-    steps: [
+    id: 'getting-started',
+    title: 'Getting Started',
+    tab: 'admin-guide',
+    icon: BookOpen,
+    description: 'Workspace onboarding, architecture overview & first campaign checklist',
+    articles: [
       {
-        step: 'Step 1',
-        title: 'Navigate to Lead Finder & Formulate High-Intent Queries',
-        desc: 'Open Lead Finder from the left sidebar navigation. Construct targeted search syntax specifying the exact industry niche and municipal geography.',
-        details: [
-          'High-yield query format: [Industry Keyword] in [City, State / Region] (e.g. "HVAC Contractors in Austin, TX" or "Boutique Law Firms in Chicago, IL").',
-          'Avoid overly generic single-word queries like "companies" or "restaurants" to ensure commercial viability and decision-maker contact density.'
+        id: 'welcome-leadpulse',
+        title: 'Welcome to LeadPulse by DocuReady',
+        readingTime: '3 min read',
+        lastUpdated: 'Updated Today',
+        route: '/dashboard',
+        routeLabel: 'Open Dashboard',
+        summary:
+          'LeadPulse is an enterprise B2B spatial lead harvesting, multi-channel outreach (Email + WhatsApp), and customizable Kanban CRM platform engineered by DocuReady. Unlike bloated legacy CRMs that charge $150+/seat, LeadPulse unifies real-time local business discovery and direct outreach into one high-velocity workspace.',
+        keyTakeaways: [
+          'Unified workflow: Scrape B2B prospects -> Enrich Email/WhatsApp -> Manage in Resizable Kanban -> Automate follow-ups.',
+          'Transparent contact accounting: 1 Token = 1 Scraped Contact across all tiers.',
+          'Customizable workspace: Rearrange Dashboard widgets with 6 prebuilt layouts and resize Kanban stage boards with your mouse.'
         ],
-        code: 'Format: {Industry/Niche} in {City, State/Country}\nExample: Commercial Roofing Contractors in Phoenix, AZ'
-      },
-      {
-        step: 'Step 2',
-        title: 'Execute Spatial Query & Review Live Registry Feeds',
-        desc: 'Click "Execute Search" to initialize spatial harvesting. LeadPulse queries live Google Maps and public business registries.',
-        details: [
-          'Real-time verification evaluates business status (Open / Operating), physical address, phone numbers, domain URLs, and verified customer review counts.',
-          'Review the live table results showing phone numbers, websites, Star Ratings, and total customer review counts.'
-        ]
-      },
-      {
-        step: 'Step 3',
-        title: 'Evaluate Prospect Fit & Handle Long Commercial Titles',
-        desc: 'Inspect the fetched contact details. Names often fetched by business registries (such as multi-service descriptive agency titles) automatically wrap cleanly to preserve full readability.',
-        details: [
-          'Click the edit pencil icon next to any business name or contact to customize or shorten their display name prior to adding them to your CRM.',
-          'Verify that the company URL and contact numbers match your target client profile.'
-        ]
-      },
-      {
-        step: 'Step 4',
-        title: 'Save Prospect to CRM Pipeline (Credit Metering)',
-        desc: 'Click "Add to Pipeline" on individual prospect rows, or select multiple prospects and click "Save Selected Leads".',
-        details: [
-          'Each prospect saved into your CRM consumes exactly 1 Lead Credit.',
-          'Free-tier accounts receive 15 Lead Tokens / Credits that automatically refresh on a 4-day rolling cycle.',
-          'Saved prospects transition immediately into the "New" stage in your CRM Kanban board.'
+        steps: [
+          {
+            title: 'Authenticate & Verify Workspace Profile',
+            detail:
+              'Sign in via Google OAuth or Workspace Credentials. Your operator profile, active plan tier (Free, Basic, or Pro), and live token pool are immediately synchronized via Firestore.',
+            tip: 'Check the bottom-left sidebar card anytime to view your live token balance or trigger a 1-click plan upgrade / token top-up.'
+          },
+          {
+            title: 'Choose Your Prebuilt Dashboard Layout',
+            detail:
+              'Navigate to the Dashboard and select from 6 prebuilt layouts (Executive Command, Time & Schedule Focus, Sales Velocity, Compact Bento Grid, Outbound SDR Cockpit, or Minimalist Focus), or click "Edit Layout" to drag and resize widgets.',
+            tip: 'Use the built-in World Clock & 25-minute Outreach Sprint timer to structure high-conversion calling blocks.'
+          },
+          {
+            title: 'Run Your First Spatial Harvest & Launch Outreach',
+            detail:
+              'Open Lead Finder, enter a niche (e.g., "Dental Clinics" or "Solar Installers") and target city, and click Harvest. Verified leads flow directly into your CRM Pipeline.',
+            tip: 'Leads with phone-only coordinates automatically unlock the 1-Click WhatsApp Email Capture Bridge.'
+          }
         ],
-        note: 'Saved leads are immediately preserved in your workspace database and are never duplicated.'
+        proTip:
+          'Bookmark the Help Center or press "/" anywhere on this page to instantly search across all setup guides, token rules, and webhook schemas.',
+        codeTitle: 'LeadPulse End-to-End Pipeline Architecture',
+        codeBlock: `[1. Lead Finder] ──(1 Token = 1 Contact)──> [2. Resizable Kanban CRM]
+                                                    │
+         ┌──────────────────────────────────────────┴──────────────────────────────────────────┐
+         ▼                                                                                     ▼
+[3A. Verified Email Found]                                                     [3B. Phone / WhatsApp Only]
+Dispatch AI Cold Email Sequence                                                1-Click WhatsApp Capture Bridge
+         │                                                                                     │
+         └──────────────────────────────────────────┬──────────────────────────────────────────┘
+                                                    ▼
+                                    [4. Connected OAuth Integrations]
+                            (HubSpot / Salesforce / Google Sheets / Slack Alerts)`
       },
       {
-        step: 'Step 5',
-        title: 'Export Curated Prospect Lists to CSV or Excel',
-        desc: 'Export your scraped prospects for external analysis, team distribution, or cold calling spreadsheets.',
-        details: [
-          'Click "Export CSV" or "Export Excel" in the top action toolbar.',
-          'Files include Name, Phone Number, Website, Address, Star Rating, Reviews, and Date Discovered.'
-        ]
-      }
-    ],
-    troubleshooting: [
-      'If a query returns fewer leads than expected, widen your geographic radius (e.g., search the metro county instead of a single neighborhood).',
-      'If credit balance is zero, wait for your 4-day free refresh or click "Upgrade / Top-Up" to get instant credits.'
-    ]
-  },
-  {
-    id: 'crm-pipeline',
-    section: 'MODULE 02',
-    category: 'CRM & Pipeline',
-    badge: 'Deal Management',
-    title: 'Visual CRM Kanban Pipeline & Lifecycle Tracking',
-    icon: Filter,
-    overview: 'The CRM Pipeline organizes your qualified prospects across 4 operational lifecycle stages to systematically move prospects from initial discovery to closed revenue.',
-    steps: [
-      {
-        step: 'Step 1',
-        title: 'Access the Kanban Workspace',
-        desc: 'Click "CRM Pipeline" in the sidebar navigation. Your saved prospects are organized into visual columns.',
-        details: [
-          'New: Freshly harvested prospects awaiting initial review or outreach assignment.',
-          'Contacted: Prospects who have received an email sequence or WhatsApp message.',
-          'Replied: High-intent prospects who answered your outbound communication with commercial interest.',
-          'Converted: Won accounts, signed agreements, or active paying clients.'
-        ]
-      },
-      {
-        step: 'Step 2',
-        title: 'Drag-and-Drop Stage Transitions with Instant Cloud Sync',
-        desc: 'Click and hold any lead card, then drag it across columns as deals progress.',
-        details: [
-          'Moving a card from "New" to "Contacted" or "Replied" triggers real-time updates to your database with zero delay.',
-          'Stage progression automatically updates your top-level conversion analytics and funnel metrics.'
-        ]
-      },
-      {
-        step: 'Step 3',
-        title: 'In-Line Contact Editing & Notes',
-        desc: 'Click the edit icon on any card to update contact details, phone numbers, decision-maker names, or custom notes.',
-        details: [
-          'All text fields allow multi-line text wrapping for long names and descriptions.',
-          'Notes are auto-saved and visible to all authorized team members in your workspace.'
-        ]
-      },
-      {
-        step: 'Step 4',
-        title: 'Switching Between Kanban Board & Data-Dense Table View',
-        desc: 'Toggle between the visual Kanban card layout and the structured Table view using the view selector in the top-right toolbar.',
-        details: [
-          'Table view provides high data density, column sorting, search filtering, and bulk status updates.',
-          'Filter by stage, phone availability, or website presence.'
-        ]
-      }
-    ],
-    troubleshooting: [
-      'If a card does not stay in its dragged column, check your internet connectivity to ensure Firestore sync completes.',
-      'Deleting a card permanently removes it from your CRM pipeline, but preserves your overall credit quota.'
-    ]
-  },
-  {
-    id: 'outreach-email',
-    section: 'MODULE 03',
-    category: 'Outreach & Email',
-    badge: 'High Deliverability',
-    title: 'Executive Outreach Center (Email Campaigns & AI Copilot)',
-    icon: Send,
-    overview: 'Deploy production-grade, executive-formatted email layouts with personalized AI copy generation, dynamic merge tags, and A/B test variations.',
-    steps: [
-      {
-        step: 'Step 1',
-        title: 'Select Target Prospect & Channel in Outreach Center',
-        desc: 'Navigate to "Outreach Center" from the sidebar. Choose your recipient from the left prospect selector.',
-        details: [
-          'Click the "Email Dispatch" tab at the top of the interface.',
-          'The prospect email address and company details will be loaded into the active composer.'
-        ]
-      },
-      {
-        step: 'Step 2',
-        title: 'Choose from 8 Engineered Email Layout Wireframes',
-        desc: 'Click "Browse 8 Layouts" to select a structured, enterprise-grade email wireframe.',
-        details: [
-          'Layout 1: Minimalist Executive Note — High open rate, plain-text appearance with subtle typography.',
-          'Layout 2: Two-Column Feature Grid — Showcases services, pricing, and visual deliverables.',
-          'Layout 3: Social Proof & Metrics — Highlights client testimonials, ROI numbers, and case studies.',
-          'Layout 4: Product Feed & Demo Invite — Highlights software or product catalog items with direct CTA buttons.'
-        ]
-      },
-      {
-        step: 'Step 3',
-        title: 'Generate Personalized Copy via AI Assistant Copilot',
-        desc: 'Click the Sparkle icon to activate the AI Writing Copilot.',
-        details: [
-          'Enter your objective prompt (e.g., "Pitch local SEO optimization to a dental clinic with focus on Google reviews").',
-          'AI generates tailored, professional copy avoiding generic filler, with dynamic tags like {{company_name}}, {{first_name}}, and {{city}} automatically resolved.'
-        ]
-      },
-      {
-        step: 'Step 4',
-        title: 'Configure A/B Testing Subject Line & Hook Variants',
-        desc: 'Toggle "A/B Testing Variants" to draft two competing versions (Variant A and Variant B).',
-        details: [
-          'Test curiosity-based subjects vs. ROI-based numerical subjects to identify highest open rates.',
-          'LeadPulse tracks open and reply rates across both variants automatically in your Analytics dashboard.'
-        ]
-      },
-      {
-        step: 'Step 5',
-        title: 'Review Live HTML Preview & Send Outbound Message',
-        desc: 'Inspect the real-time responsive email rendering in the right pane, then click "Send Outbound Email".',
-        details: [
-          'Emails are dispatched through your configured SMTP gateway or standard LeadPulse transport.',
-          'The prospect stage in your CRM is automatically updated to "Contacted".'
-        ]
-      }
-    ],
-    troubleshooting: [
-      'If emails fail to send, ensure your SMTP settings in Settings > SMTP Gateway are verified.',
-      'Check that recipient email addresses are valid and do not contain special characters.'
-    ]
-  },
-  {
-    id: 'outreach-whatsapp',
-    section: 'MODULE 04',
-    category: 'WhatsApp Engine',
-    badge: 'Conversational',
-    title: 'Direct WhatsApp Conversational Dispatch Engine',
-    icon: MessageCircle,
-    overview: 'Engage decision-makers directly with pre-formatted conversational scripts through WhatsApp Web with 1-click dispatch and zero manual address book saving.',
-    steps: [
-      {
-        step: 'Step 1',
-        title: 'Switch to the WhatsApp Dispatch Channel',
-        desc: 'In the Outreach Center, click the "WhatsApp Business" tab in the top header.',
-        details: [
-          'The interface transitions to conversational chat mode with instant device preview.',
-          'Prospects with valid phone numbers are highlighted in the recipient list.'
-        ]
-      },
-      {
-        step: 'Step 2',
-        title: 'Select from 10 Field-Tested Conversational Scripts',
-        desc: 'Browse the script drawer on the left to select an outreach framework matching your commercial proposal.',
-        details: [
-          'Script 1: Executive Direct Introduction — Quick intro referencing mutual business context.',
-          'Script 2: Website / Speed Audit Finding — Friendly notification pointing out an optimization opportunity.',
-          'Script 3: Local Competitor Comparison — Brief observation on market ranking in their city.',
-          'Script 4: Special Commercial Promotion / Partnership — High-value, low-friction discovery offer.'
-        ]
-      },
-      {
-        step: 'Step 3',
-        title: 'Auto-Inject Dynamic Contact & Business Variables',
-        desc: 'LeadPulse dynamically injects variables such as the business name, city, phone number, and owner name into the message text.',
-        details: [
-          'You can freely edit or personalize the drafted text in the message editor before sending.'
-        ]
-      },
-      {
-        step: 'Step 4',
-        title: '1-Click Dispatch via WhatsApp Web',
-        desc: 'Click "Open in WhatsApp Web" button.',
-        details: [
-          'LeadPulse launches the official WhatsApp Web API link formatted with the international phone code and URL-encoded message.',
-          'Your WhatsApp Web opens with the chat pre-filled and ready to send. No need to save the prospect to your phonebook!'
+        id: 'quickstart-checklist',
+        title: '15-Minute Operator Quickstart',
+        readingTime: '4 min read',
+        lastUpdated: 'Updated Today',
+        route: '/finder',
+        routeLabel: 'Start Harvesting',
+        summary:
+          'Follow this structured 15-minute deployment sequence to go from a fresh workspace to a live multi-channel B2B outreach campaign with automated CRM stage alerts.',
+        keyTakeaways: [
+          'Configure your sender identity in Settings before launching bulk email sequences.',
+          'Connect Slack, Microsoft Teams, or Google Sheets in the Integrations hub for real-time deal telemetry.',
+          'Use small targeted batches (10–15 contacts) to test message resonance before scaling.'
         ],
-        note: 'Requires you to be logged into web.whatsapp.com in your default browser.'
-      }
-    ],
-    troubleshooting: [
-      'Ensure the prospect phone number includes their country code (e.g., +1 for USA, +91 for India).',
-      'If WhatsApp Web does not open, disable browser pop-up blockers for the domain.'
-    ]
-  },
-  {
-    id: 'smtp-setup',
-    section: 'MODULE 05',
-    category: 'SMTP & Deliverability',
-    badge: 'Infrastructure',
-    title: 'Custom SMTP Gateway & Domain Deliverability Setup',
-    icon: Settings,
-    overview: 'Connect your verified business domain or email provider so all outbound outreach is delivered directly from your own email address with verified DKIM and SPF authentication.',
-    steps: [
-      {
-        step: 'Step 1',
-        title: 'Navigate to Settings & Open SMTP Gateway',
-        desc: 'Click "Settings" in the sidebar navigation, then switch to the "SMTP Gateway" tab.',
-        details: [
-          'Select your email transport provider from the dropdown: Gmail / Google Workspace, Resend, SendGrid, Postmark, AWS SES, or Custom SMTP.'
-        ]
-      },
-      {
-        step: 'Step 2',
-        title: 'Setting up Google Workspace / Gmail with App Passwords',
-        desc: 'Follow these exact steps to connect Gmail without exposing your primary account password:',
-        details: [
-          '1. Go to your Google Account > Security > 2-Step Verification.',
-          '2. Scroll to the bottom and select "App passwords".',
-          '3. Create an app password named "LeadPulse". Google will generate a 16-character code.',
-          '4. In LeadPulse, enter your Gmail address and paste the 16-character code as your SMTP Password.',
-          '5. Host: smtp.gmail.com, Port: 587 (TLS).'
+        steps: [
+          {
+            title: 'Step 1: Configure Sender Identity (Minutes 0–3)',
+            detail:
+              'Open Settings -> Outreach & SMTP to verify your sender display name, reply-to address, and default signature variables.'
+          },
+          {
+            title: 'Step 2: Harvest Your First 10 Niche Leads (Minutes 3–8)',
+            detail:
+              'In Lead Finder, set your target business category, city, and desired batch size. Each returned business contact consumes 1 token from your pool.'
+          },
+          {
+            title: 'Step 3: Organize Your Kanban Pipeline (Minutes 8–12)',
+            detail:
+              'Open CRM Pipeline. Drag stage headers to match your sales process, resize high-volume stage columns with your mouse, and inspect lead cards.'
+          },
+          {
+            title: 'Step 4: Dispatch Multi-Channel Outreach (Minutes 12–15)',
+            detail:
+              'Launch Outreach Studio to send personalized cold emails or trigger WhatsApp Web deep-links with dynamic {{businessName}} and {{location}} merge tags.'
+          }
         ],
-        code: 'Host: smtp.gmail.com\nPort: 587\nUsername: your_email@domain.com\nPassword: [16-character App Password]\nEncryption: TLS'
-      },
-      {
-        step: 'Step 3',
-        title: 'Setting up Professional Relays (Resend / SendGrid / Postmark)',
-        desc: 'Connect dedicated transactional email services for high-volume sending:',
-        details: [
-          'Resend: Host: smtp.resend.com, Port: 465, Username: resend, Password: [Your Resend API Key].',
-          'SendGrid: Host: smtp.sendgrid.net, Port: 587, Username: apikey, Password: [Your SG API Key].',
-          'Postmark: Host: smtp.postmarkapp.com, Port: 587, Username: [Server Token], Password: [Server Token].'
-        ]
-      },
-      {
-        step: 'Step 4',
-        title: 'Verify DNS Records for Maximum Inbox Deliverability',
-        desc: 'Ensure your custom sending domain has proper DNS records configured at your domain registrar (GoDaddy, Cloudflare, Namecheap):',
-        details: [
-          'SPF: v=spf1 include:_spf.google.com ~all (or your relay provider SPF).',
-          'DKIM: Publish the TXT record provided by your mail provider.',
-          'DMARC: Add TXT record for _dmarc.yourdomain.com with value "v=DMARC1; p=none; sp=none;".'
-        ]
-      },
-      {
-        step: 'Step 5',
-        title: 'Test Connection Handshake & Save Credentials',
-        desc: 'Click "Send Test Email" to verify handshake. If successful, click "Save Gateway Configuration".',
-        details: [
-          'All future outbound emails will now be signed with your domain credentials and replies will route directly to your inbox.'
-        ]
+        proTip:
+          'You can check off each step above directly in this article reader—your progress is interactive!'
       }
-    ],
-    troubleshooting: [
-      'If you receive "535 Authentication Failed" with Gmail, ensure 2-Factor Authentication is ON and you are using an App Password (not your normal login password).',
-      'Port 587 uses STARTTLS. Port 465 uses SSL/TLS.'
     ]
   },
   {
-    id: 'team-management',
-    section: 'MODULE 06',
-    category: 'Team & Universal Tokens',
-    badge: 'Collaboration',
-    title: 'Team Management, Role RBAC & Universal Tokens Quotas',
-    icon: Users,
-    overview: 'Manage team seats, configure role-based access control (Admin, Sales Lead, Account Executive, Marketing Analyst, Viewer), and manage shared Universal Tokens pools according to your subscription tier.',
-    steps: [
-      {
-        step: 'Step 1',
-        title: 'Review Your Workspace Tier Seat Rules',
-        desc: 'Understand how seats are allocated based on your subscription tier:',
-        details: [
-          'Free Tier: Fixed allowance of exactly 2 workspace seats.',
-          'Basic Tier: Unlocks 50% of the seats selected during registration (e.g., 6 registered seats = 3 active workspace seats) with 500 shared Universal Tokens.',
-          'Pro Tier: Unlocks 100% of the seats selected during registration (e.g., 10 registered seats = 10 active workspace seats) with 2,500 shared Universal Tokens.'
-        ]
-      },
-      {
-        step: 'Step 2',
-        title: 'Add a New Team Member',
-        desc: 'Click the "Add Team Member" button in the top right of the Team page or "+ Add Member" in the table header.',
-        details: [
-          'Enter their Full Name and Work Email Address.',
-          'Select their Assigned Role (Admin, Sales Lead / SDR, Account Executive, Marketing Analyst, Workspace Viewer).',
-          'Set their Monthly Universal Token Quota using preset chips (100, 250, 500, 1000 tokens).',
-          'Choose Member Activation Status: "Active Now" (direct immediate workspace access) or "Invite Pending" (sends an invitation link).'
-        ]
-      },
-      {
-        step: 'Step 3',
-        title: 'Manage Roles & Token Allowances (RBAC)',
-        desc: 'To change an existing team member\'s permissions, click the "Manage Role" button on their row.',
-        details: [
-          'Select a new role from the dropdown. Role descriptions and capability summaries display in real time.',
-          'Adjust their monthly Universal Token quota limit from the shared pool.',
-          'Click "Save Role Changes". Permissions take effect immediately.'
-        ]
-      },
-      {
-        step: 'Step 4',
-        title: 'Remove Team Member (Preserving Pipeline Deals)',
-        desc: 'To remove a team member who has left the organization or changed teams:',
-        details: [
-          'Click the red Trash icon on their table row.',
-          'A confirmation modal will appear reassuring you that their assigned CRM leads and deals will remain preserved in your workspace pipeline for reassignment.',
-          'Click "Confirm Removal". Their workspace seat is immediately freed up for another team member.'
-        ],
-        note: 'The primary Workspace Owner is protected from removal and cannot be deleted.'
-      },
-      {
-        step: 'Step 5',
-        title: 'Handling Seat Limits & Upgrades',
-        desc: 'If you reach your maximum seat quota, clicking "Add Team Member" opens the Seat Limit & Upgrade modal.',
-        details: [
-          'Click "Upgrade Plan" to upgrade from Free to Basic (50% capacity) or Pro (100% capacity).',
-          'Alternatively, click "Seats & Tier Rules" to adjust your registered seats baseline via the settings drawer.'
-        ]
-      }
-    ],
-    troubleshooting: [
-      'If you see "SEAT_LIMIT_REACHED (403)", you must either upgrade your subscription tier or remove an inactive team member to free up a seat.',
-      'Workspace Owner privileges can only be transferred by contacting platform support.'
-    ]
-  },
-  {
-    id: 'integrations',
-    section: 'MODULE 07',
-    category: 'Integrations & API',
-    badge: '40+ Apps',
-    title: 'Connecting 40+ Integrations & Enterprise Webhooks',
-    icon: Webhook,
-    overview: 'Sync your harvested leads, pipeline stages, and contact updates with Airtable, HubSpot, Salesforce, Google Sheets, Slack, Notion, Stripe, and 35+ enterprise services.',
-    steps: [
-      {
-        step: 'Step 1',
-        title: 'Navigate to the Integrations Hub',
-        desc: 'Click "Integrations" in the sidebar navigation. Browse cards organized by Category (CRM, Productivity, Communication, Data & Analytics, AI).',
-        details: [
-          'Use the category filter tabs or search input to quickly find any specific app (e.g. HubSpot, Google Sheets, Slack, Notion).'
-        ]
-      },
-      {
-        step: 'Step 2',
-        title: 'Connect via 1-Click OAuth 2.0 (Recommended)',
-        desc: 'Click "Connect" on any integration card.',
-        details: [
-          'The connection modal displays a 3-step setup guide and visual OAuth authorization card.',
-          'Click the blue "1-Click Connect with [App]" button. LeadPulse handles the OAuth token handshake and marks the integration as Active Sync.'
-        ]
-      },
-      {
-        step: 'Step 3',
-        title: 'Connect via Direct API Key / Secret Token (Alternative)',
-        desc: 'If your organization prefers direct API access or self-hosted instances:',
-        details: [
-          'Scroll to the "Direct API Credentials & Webhooks" section below the OAuth button.',
-          'Enter your API Key, Access Token, or Webhook URL, then click "Save API Credentials".'
-        ]
-      },
-      {
-        step: 'Step 4',
-        title: 'Verify Active Sync & Status Beacons',
-        desc: 'Once connected, the integration card displays a glowing green "Active Sync" beacon and an "Auto-Syncing" pill.',
-        details: [
-          'New prospects added to your CRM will be automatically mirrored to your destination application.'
-        ]
-      }
-    ],
-    troubleshooting: [
-      'If OAuth handshake fails, ensure third-party cookies are enabled in your browser during the OAuth redirect.',
-      'API tokens should have write permissions on your target CRM or spreadsheet to allow LeadPulse to create rows.'
-    ]
-  },
-  {
-    id: 'billing-credits',
-    section: 'MODULE 08',
-    category: 'Billing & Upgrades',
-    badge: 'Token Pool',
-    title: 'Universal Tokens, Rolling Quotas & Tier Upgrades',
+    id: 'my-plan-tokens',
+    title: 'My Plan & Token Pool',
+    tab: 'admin-guide',
     icon: CreditCard,
-    overview: 'Understand your lead credits, Universal Tokens pool, automatic refresh cycles, and how to top up via the integrated PhonePe payment gateway.',
-    steps: [
+    description: '1 Token = 1 Contact accounting, 15-token Free tier, upgrades & instant top-ups',
+    articles: [
       {
-        step: 'Step 1',
-        title: 'Understanding Lead Credits vs Universal Tokens',
-        desc: 'LeadPulse uses a dual-credit architecture for clarity and flexibility:',
-        details: [
-          'Lead Credits: Consumed when scraping and adding new commercial leads to your CRM (1 credit = 1 lead).',
-          'Universal Tokens: A shared pool consumed by multi-channel actions, AI personalization copy generation, contact enrichment, and sequence automations.'
-        ]
+        id: 'token-accounting-rules',
+        title: 'How Token Pool Calculation Works (1 Token = 1 Contact)',
+        readingTime: '4 min read',
+        lastUpdated: 'Updated Today',
+        route: '/settings',
+        routeLabel: 'Manage Billing & Tokens',
+        summary:
+          'LeadPulse enforces a transparent, contact-based credit ledger: 1 Token = 1 Scraped Contact. You never lose tokens for empty searches, and your pool is strictly deducted by the exact number of business contacts harvested.',
+        keyTakeaways: [
+          'Strict 1:1 Accounting: If a search scrapes 10 contacts, exactly 10 tokens are deducted from your available pool.',
+          'Free Tier Allocation: Includes 15 verified contact tokens (replenished every 4 days up to the 15-token cap).',
+          'Basic ($15/mo) & Pro ($29/mo) Allocations: Provide 400 and 1,000 tokens per 4-day cycle respectively.',
+          'Sidebar Upgrade / Top-Up: Click "Upgrade Plan" in the sidebar (or "Top-Up Tokens" when on the Pro tier) for instant quota expansion.'
+        ],
+        steps: [
+          {
+            title: 'Pre-Flight Token Check Before Scraping',
+            detail:
+              'When you initiate a harvest in Lead Finder, the server verifies your live Firestore token balance. If you have fewer tokens than the requested batch size, LeadPulse automatically caps the scrape to your remaining tokens so your job still succeeds.'
+          },
+          {
+            title: 'Exact Per-Contact Deduction',
+            detail:
+              'Once the scraper extracts and deduplicates the business listings, it calculates `tokensUsed = finalResults.length` (1 token per contact) and atomically updates `lead_credits` in Firestore.'
+          },
+          {
+            title: '4-Day Rolling Replenishment Engine',
+            detail:
+              'Every 96 hours (4 days), your workspace pool automatically refreshes to your tier allocation (15 on Free, 400 on Basic, 1,000 on Pro). Any purchased Top-Up tokens are preserved above baseline limits via the `has_topup` flag.'
+          }
+        ],
+        proTip:
+          'Already on the Pro tier and running a massive national campaign? The sidebar button automatically switches from "Upgrade Plan" to "Top-Up Tokens" so you can inject +50, +100, or +500 instant tokens without changing plans.',
+        codeTitle: 'Server-Side Contact Token Ledger Formula',
+        codeBlock: `// Strict 1 Token = 1 Scraped Contact Accounting
+const PLAN_CREDITS = { free: 15, basic: 400, pro: 1000 };
+
+const maxAllowedLeads = Math.min(Number(maxResults) || 15, availableCredits);
+const finalResults = uniqueResults.slice(0, maxAllowedLeads);
+
+// 1 Token = 1 Contact
+const tokensUsed = finalResults.length;
+const newCredits = Math.max(0, availableCredits - tokensUsed);`
       },
       {
-        step: 'Step 2',
-        title: 'Free-Tier Automatic Refresh Schedule',
-        desc: 'Free accounts receive 15 Lead Tokens / Credits every 4 days.',
-        details: [
-          'The 4-day timer starts from the moment your credits replenish.',
-          'You can view your remaining days and current quota in the top dashboard metric card.'
-        ]
+        id: 'tier-comparison-topups',
+        title: 'Comparing Free, Basic & Pro Tiers + Instant Top-Ups',
+        readingTime: '3 min read',
+        lastUpdated: 'Updated Today',
+        route: '/dashboard',
+        routeLabel: 'View Quota Meter',
+        summary:
+          'DocuReady engineered LeadPulse pricing to deliver 80% lower TCO than legacy data brokers while providing enterprise-grade spatial scraping, multi-seat governance, and OAuth integrations.',
+        keyTakeaways: [
+          'Free Tier ($0): 15 Contact Tokens / 4 days, 1 Operator Seat, Core Lead Finder & Kanban CRM.',
+          'Basic Tier ($15/mo): 400 Contact Tokens / 4 days, 3 Team Seats, Email & WhatsApp Outreach Studio, CSV Export.',
+          'Pro Tier ($29/mo): 1,000 Contact Tokens / 4 days, 10 Team Seats, Full Workflow Automations, OAuth CRM Sync & Priority Scraper Concurrency.',
+          'On-Demand Token Packs: Add +50 ($5), +100 ($9), or +500 ($25) tokens anytime.'
+        ],
+        steps: [
+          {
+            title: 'Upgrading from Free or Basic Tier',
+            detail:
+              'Click the "Upgrade Plan" / "Upgrade to Pro" button in the bottom-left sidebar or the Dashboard Token Pool widget to open the Razorpay checkout modal.'
+          },
+          {
+            title: 'Topping Up Tokens on Any Tier',
+            detail:
+              'Switch to the "Instant Token Top-Up" tab inside the modal (or click "Top-Up Tokens" directly in the sidebar if you are on the Pro tier) to immediately add credits to your account.'
+          }
+        ],
+        proTip:
+          'All plan upgrades and token top-ups take effect immediately without restarting your browser session.'
+      }
+    ]
+  },
+  {
+    id: 'dashboard-widgets',
+    title: 'Custom Dashboard & Widgets',
+    tab: 'admin-guide',
+    icon: Layers,
+    description: 'Live World Clock, Follow-Up Calendar, Edit Layout drag-and-drop & 6 prebuilt layouts',
+    articles: [
+      {
+        id: 'interactive-widgets-guide',
+        title: 'Using World Clock, Sprint Timer & Follow-Up Calendar Widgets',
+        readingTime: '4 min read',
+        lastUpdated: 'Updated Today',
+        route: '/dashboard',
+        routeLabel: 'Open Dashboard Widgets',
+        summary:
+          'Your LeadPulse Dashboard is a modular command center equipped with 8 interactive widgets designed for high-tempo B2B sales operators.',
+        keyTakeaways: [
+          'World Clock & Sprint Timer: Live analog/digital clock, B2B calling window statuses (IST, GMT, EST), and a 25-minute Pomodoro outreach sprint timer.',
+          'Follow-Up & Campaign Calendar: Monthly interactive calendar where clicking any date lets you schedule time-stamped call reminders.',
+          'Operator Scratchpad & Checklist: Auto-saving call notes and daily task checklist persisted in your browser.'
+        ],
+        steps: [
+          {
+            title: 'Check Global Calling Windows Before Dialing',
+            detail:
+              'Look at the World Clock widget to see live local times across India (IST), UK (GMT), and US East (EST). Green "OPEN" badges indicate active 9 AM – 6 PM business hours.'
+          },
+          {
+            title: 'Run a 25-Minute Outreach Sprint',
+            detail:
+              'Click "Start" on the Outreach Sprint Timer inside the World Clock widget to begin a focused 25-minute outbound prospecting block.'
+          },
+          {
+            title: 'Schedule Date-Specific Follow-Ups on the Calendar',
+            detail:
+              'Click any date in the Follow-Up Calendar widget, choose a time (e.g., 14:30), type your reminder (e.g., "Call Apex Dental Decision Maker"), and click Add. Dates with reminders display an indicator dot.'
+          }
+        ],
+        proTip:
+          'All calendar events, checklist tasks, and scratchpad call notes are automatically persisted in local storage so they remain intact across page reloads.'
       },
       {
-        step: 'Step 3',
-        title: 'Upgrading Your Subscription Plan (Basic & Pro)',
-        desc: 'To upgrade your plan for unlimited leads, continuous daily quotas, and full team seats:',
-        details: [
-          'Click "Upgrade Plan" in the sidebar or top header.',
-          'Select LeadPulse Basic (₹699/mo) for 600 saved leads, 50% registered seats, and 500 universal tokens.',
-          'Select LeadPulse Pro (₹1,999/mo) for unlimited saved leads, 100% registered seats, and 2,500 universal tokens.',
-          'Complete checkout securely via the integrated PhonePe gateway.'
-        ]
+        id: 'dashboard-edit-layouts',
+        title: 'Rearranging the Dashboard & Using the 6 Prebuilt Layouts',
+        readingTime: '3 min read',
+        lastUpdated: 'Updated Today',
+        route: '/dashboard',
+        routeLabel: 'Customize Dashboard Layout',
+        summary:
+          'Every operator works differently. LeadPulse lets you switch between 6 curated prebuilt layouts in 1 click or enter "Edit Layout" mode to drag, reorder, resize, and hide/show any widget.',
+        keyTakeaways: [
+          '6 Prebuilt Layouts: Executive Command, Time & Schedule Focus, Sales Velocity & Funnel, Compact Bento Grid, Outbound SDR Cockpit, and Minimalist Focus.',
+          'Drag-and-Drop Reordering: Click "Edit Layout" and drag any widget header to reposition it.',
+          'Column Span Resizing: Set any widget width to 1/3 (4 cols), 1/2 (6 cols), 2/3 (8 cols), or Full Width (12 cols).'
+        ],
+        steps: [
+          {
+            title: 'Switch Prebuilt Layouts in 1 Click',
+            detail:
+              'Use the "Prebuilt Layouts" bar at the top of the Dashboard to instantly apply any of the 6 architectural presets.'
+          },
+          {
+            title: 'Enter Edit Layout Mode to Drag & Resize',
+            detail:
+              'Click the "Edit Layout" button on the top-right of the Dashboard command bar. Drag widgets by their grip handle to reorder them, click 1/3, 1/2, 2/3, or Full to change their width, or toggle widget visibility pills.'
+          },
+          {
+            title: 'Reset to Default Anytime',
+            detail:
+              'Click the Reset icon next to Edit Layout to restore the default Executive Command layout.'
+          }
+        ],
+        proTip:
+          'Try the "Outbound SDR Cockpit" layout during live calling hours—it places the Sprint Clock, Scratchpad, and Direct Actions side-by-side on the top row!'
+      }
+    ]
+  },
+  {
+    id: 'lead-finder-scraping',
+    title: 'Lead Finder & Spatial Scraping',
+    tab: 'operator-guide',
+    icon: Compass,
+    description: 'Geo-targeted B2B scraping, deep website email crawling & deduplication',
+    articles: [
+      {
+        id: 'spatial-harvesting-engine',
+        title: 'Harvesting Verified B2B Leads by Niche & City',
+        readingTime: '5 min read',
+        lastUpdated: 'Updated Today',
+        route: '/finder',
+        routeLabel: 'Launch Lead Finder',
+        summary:
+          'The Lead Finder engine combines spatial directory discovery with an asynchronous website crawler that inspects `/contact`, `/about`, and homepage DOM nodes to extract verified business emails and direct phone/WhatsApp coordinates.',
+        keyTakeaways: [
+          'High-precision targeting by business niche + city/region.',
+          'Automatic classification into "Verified Email" vs "Phone-Only / WhatsApp Ready".',
+          'Zero duplicate billing: Duplicate phones/websites within a batch are filtered before token deduction.'
+        ],
+        steps: [
+          {
+            title: 'Enter Target Niche & Location Coordinates',
+            detail:
+              'Provide a specific industry keyword (e.g., "Orthodontist", "Commercial HVAC", "B2B Logistics") and a city/state.'
+          },
+          {
+            title: 'Select Harvest Batch Size',
+            detail:
+              'Choose how many contacts to scrape. Remember that 1 Token = 1 Contact, so a 10-contact harvest uses 10 tokens.'
+          },
+          {
+            title: 'Review & Sync to CRM Pipeline',
+            detail:
+              'Inspect ratings, websites, phone numbers, and email verification badges in the live results table, or open CRM Pipeline where all harvested leads are automatically saved.'
+          }
+        ],
+        proTip:
+          'Combine specific sub-niches with neighborhood or suburb names (e.g., "Cosmetic Dentist in Indiranagar Bengaluru") to uncover high-margin businesses with less inbox competition.'
+      }
+    ]
+  },
+  {
+    id: 'kanban-crm-pipeline',
+    title: 'Resizable Kanban CRM Pipeline',
+    tab: 'operator-guide',
+    icon: Kanban,
+    description: 'Mouse-resizable Kanban boards, drag-to-reposition columns & WhatsApp email capture',
+    articles: [
+      {
+        id: 'resizable-draggable-kanban',
+        title: 'Resizing & Repositioning Kanban Stage Boards with Your Mouse',
+        readingTime: '4 min read',
+        lastUpdated: 'Updated Today',
+        route: '/crm',
+        routeLabel: 'Open Kanban Pipeline',
+        summary:
+          'LeadPulse features an interactive, developer-grade Kanban board where every stage column can be resized horizontally, vertically, or diagonally using your mouse, and reordered by dragging the column header.',
+        keyTakeaways: [
+          'Mouse-Resizable Width & Height: Drag the right edge, bottom edge, or bottom-right corner handle of any Kanban column to resize it between 210px–640px wide and 260px–920px tall.',
+          'Live Dimension Readout: A live `W × H` pixel badge appears in the column header while resizing.',
+          'Drag-to-Reposition Columns: Grab any stage header (`GripVertical`) and drag it left or right to reorder your pipeline stages.',
+          'Persistent Layout + 1-Click Reset: Board dimensions and stage order save automatically to your browser, with a "Reset Boards" button in the toolbar.'
+        ],
+        steps: [
+          {
+            title: 'Resize Any Kanban Board Using Your Mouse',
+            detail:
+              'Hover over the right border, bottom border, or bottom-right diagonal corner of any Kanban stage column. Click and drag with your mouse to expand or compact that board to fit your lead volume.'
+          },
+          {
+            title: 'Drag Column Headers to Reposition Stages',
+            detail:
+              'Click and drag the top header bar of any Kanban column (e.g., move "Email Verified & Captured" to the first position) and drop it onto another column to reorder the board.'
+          },
+          {
+            title: 'Drag Lead Cards Between Stages',
+            detail:
+              'Drag individual prospect cards from one stage column to another. If you have Slack or Microsoft Teams connected, moving a deal automatically dispatches a live stage transition alert.'
+          },
+          {
+            title: 'Reset Board Layout Anytime',
+            detail:
+              'Once you customize board sizes or column order, a "Reset Boards" button appears in the top toolbar to restore default dimensions in one click.'
+          }
+        ],
+        proTip:
+          'Make your active working stage (such as "WhatsApp Contacted" or "Proposal Sent") wider (e.g., 420px) while keeping archived stages compact (220px)!'
       },
       {
-        step: 'Step 4',
-        title: 'Instant Micro & Mega Credit Top-Ups',
-        desc: 'Need extra tokens without upgrading your monthly plan?',
-        details: [
-          'Switch to the "Top-Up Credits" tab in the upgrade modal.',
-          'Micro Pack: 100 Instant Universal Tokens for ₹199.',
-          'Mega Pack: 500 Instant Universal Tokens for ₹799.',
-          'Tokens are credited immediately upon payment confirmation.'
+        id: 'whatsapp-email-capture-bridge',
+        title: '1-Click WhatsApp Email Capture Bridge for Phone-Only Leads',
+        readingTime: '3 min read',
+        lastUpdated: 'Updated Today',
+        route: '/crm',
+        routeLabel: 'Open CRM Pipeline',
+        summary:
+          'Many local businesses list a mobile/WhatsApp number on Google Maps without publishing an email on their website. LeadPulse turns those phone-only records into verified email leads using a 1-click WhatsApp bridge script.',
+        keyTakeaways: [
+          'Automatically identifies "Phone Only / No Email Found" prospects.',
+          'Launches WhatsApp with a pre-filled, high-conversion script requesting the decision maker’s best email for a custom proposal.',
+          '1-click inline upgrade converts the record to "Email Verified & Captured" once they reply.'
+        ],
+        steps: [
+          {
+            title: 'Click a Phone-Only Lead Card in Kanban',
+            detail:
+              'Open any lead card badged with the amber "WA" indicator to view its detailed slide-over drawer.'
+          },
+          {
+            title: 'Trigger the WhatsApp Capture Script',
+            detail:
+              'Click "Request Email via WhatsApp". LeadPulse opens WhatsApp with a tailored message addressed to the business.'
+          },
+          {
+            title: 'Save the Captured Email Inline',
+            detail:
+              'Paste the prospect’s replied email into the inline capture box and click Save. The lead automatically advances to "Email Verified & Captured" and unlocks cold email sequences.'
+          }
+        ],
+        proTip:
+          'Prospects who reply with their email on WhatsApp have an 82%+ open rate on subsequent proposal emails.'
+      }
+    ]
+  },
+  {
+    id: 'outreach-studio-automations',
+    title: 'Outreach Studio & Automations',
+    tab: 'operator-guide',
+    icon: Send,
+    description: 'AI email sequences, WhatsApp templates, Audience forms & trigger workflows',
+    articles: [
+      {
+        id: 'multi-channel-outreach-studio',
+        title: 'Launching Personalized Email & WhatsApp Campaigns',
+        readingTime: '4 min read',
+        lastUpdated: 'Updated Today',
+        route: '/outreach',
+        routeLabel: 'Open Outreach Studio',
+        summary:
+          'Outreach Studio lets you craft dynamic, variable-injected campaigns across Email and WhatsApp with live recipient previewing—always grounded in your real harvested CRM leads.',
+        keyTakeaways: [
+          'Dynamic merge variables: `{{businessName}}`, `{{category}}`, `{{location}}`, `{{rating}}`, and `{{website}}`.',
+          'Live Recipient Preview: Preview exact rendered copy for each real prospect in your CRM before sending.',
+          'Built-in library of proven B2B cold outreach and follow-up templates.'
+        ],
+        steps: [
+          {
+            title: 'Select Channel (Email or WhatsApp) & Template',
+            detail:
+              'Open Outreach Studio and pick a battle-tested B2B script or compose your own message with dynamic merge tags.'
+          },
+          {
+            title: 'Filter Target Recipients from Your CRM',
+            detail:
+              'Filter by pipeline stage or niche cohort and preview how the message renders for each selected lead.'
+          },
+          {
+            title: 'Dispatch Campaign & Track Status',
+            detail:
+              'Send your batch via your configured SMTP relay or step through 1-click WhatsApp dispatches with automatic CRM stage updates.'
+          }
+        ],
+        proTip:
+          'Always include the prospect’s exact city (`{{location}}`) and rating (`{{rating}}`) in the first sentence to prove your message is locally researched.'
+      },
+      {
+        id: 'workflow-automations-audience',
+        title: 'Workflow Automations & Audience Capture Forms',
+        readingTime: '4 min read',
+        lastUpdated: 'Updated Today',
+        route: '/automations',
+        routeLabel: 'Open Automations',
+        summary:
+          'Automate repetitive follow-ups and inbound lead ingestion using Trigger -> Condition -> Action workflows and embeddable Audience capture forms.',
+        keyTakeaways: [
+          'Trigger rules on new lead harvest, stage transition, or inbound form submission.',
+          'Audience & Forms module provides hosted lead capture forms that feed directly into your CRM.'
+        ],
+        steps: [
+          {
+            title: 'Create or Toggle an Automation Rule',
+            detail:
+              'Navigate to Automations to enable prebuilt recipes (e.g., Auto-Bridge Phone-Only Leads or Closed-Won Slack Broadcast) or build a custom rule.'
+          },
+          {
+            title: 'Configure Inbound Capture Forms in Audience',
+            detail:
+              'Open Audience & Forms to manage segmented contact lists and shareable lead capture forms.'
+          }
+        ],
+        proTip:
+          'Pair a Stage Transition automation with a Slack or Webhook integration so your entire revenue team celebrates every Closed Won deal in real time.'
+      }
+    ]
+  },
+  {
+    id: 'integrations-webhooks',
+    title: 'Integrations & OAuth Portals',
+    tab: 'integrations-guide',
+    icon: Puzzle,
+    description: 'Vendor OAuth authorization, active integration filter & live webhook payloads',
+    articles: [
+      {
+        id: 'oauth-vendor-authorization',
+        title: 'Connecting Integrations via Vendor OAuth Portals & Active Filter',
+        readingTime: '5 min read',
+        lastUpdated: 'Updated Today',
+        route: '/integrations',
+        routeLabel: 'Open Integrations Hub',
+        summary:
+          'LeadPulse connects to HubSpot, Salesforce, Google Sheets, Slack, Microsoft Teams, Zapier, Make, Notion, Airtable, and Custom Webhooks through official vendor authorization portals and live HTTP webhook handshakes.',
+        keyTakeaways: [
+          'Vendor Authorization Flow: Clicking Connect opens the provider’s authorization portal window (e.g., HubSpot, Slack, Google OAuth) to complete workspace linking and scope verification.',
+          'Active / Connected Filter Toggle: Use the top filter bar in Integrations to toggle between "All Integrations", "Connected / Active", and "Not Connected".',
+          'Live HTTP Verification: Test any connected app to receive a verified `[200 OK]` round-trip telemetry receipt.'
+        ],
+        steps: [
+          {
+            title: 'Open Integrations & Filter by Active Status',
+            detail:
+              'Navigate to the Integrations page. Use the status toggle pills ("All", "Connected", "Available") at the top to immediately inspect your active integrations.'
+          },
+          {
+            title: 'Authorize on the Provider Portal',
+            detail:
+              'Click "Connect" on any integration card, click "Authorize on [Vendor] Portal" to launch the vendor authorization window and grant workspace scopes, or paste your destination Webhook / API endpoint.'
+          },
+          {
+            title: 'Mirror CRM Leads & Receive Stage Alerts',
+            detail:
+              'Once connected, click "Mirror to [CRM]" inside CRM Pipeline or Lead Finder to push leads, or move cards on the Kanban board to trigger instant Slack/Teams notifications.'
+          }
+        ],
+        proTip:
+          'Use the "Connected" filter toggle in the Integrations header anytime to audit which external systems currently have live sync access to your workspace.',
+        codeTitle: 'Sample Outbound Webhook JSON Payload (POST)',
+        codeBlock: `{
+  "event": "leadpulse.crm.stage_changed",
+  "timestamp": "2026-10-12T08:00:00.000Z",
+  "workspace": "DocuReady Enterprise",
+  "operator": "operator@leadpulse.io",
+  "data": {
+    "leadId": "lp_994821a",
+    "businessName": "Apex Industrial Systems",
+    "category": "B2B Manufacturing",
+    "location": "Bengaluru, KA",
+    "previousStage": "WhatsApp Contacted",
+    "newStage": "Proposal Sent"
+  }
+}`
+      }
+    ]
+  },
+  {
+    id: 'team-security-faq',
+    title: 'Team, Security & FAQs',
+    tab: 'faq-portal',
+    icon: ShieldCheck,
+    description: 'Seat limits, role permissions, data privacy & frequently asked questions',
+    articles: [
+      {
+        id: 'team-seats-and-faqs',
+        title: 'Team Seat Governance, Security & Frequently Asked Questions',
+        readingTime: '5 min read',
+        lastUpdated: 'Updated Today',
+        route: '/team',
+        routeLabel: 'Open Team & Seats',
+        summary:
+          'Manage multi-operator seats across Free (1 seat), Basic (3 seats), and Pro (10 seats) workspaces, and get answers to the most common questions about LeadPulse.',
+        keyTakeaways: [
+          'Role-based access control: Super Admin, Campaign Manager, and SDR Operator roles.',
+          'Isolated tenant data in Firestore with encrypted credential storage.',
+          'Instant answers to token deduction, Kanban customization, and OAuth linking below.'
+        ],
+        steps: [
+          {
+            title: 'Invite Team Operators Within Your Tier Cap',
+            detail:
+              'Open Team in the sidebar to view active seats and invite colleagues. If you reach your tier seat ceiling, upgrade your plan in 1 click.'
+          },
+          {
+            title: 'Audit Workspace Settings & API Keys',
+            detail:
+              'Visit Settings to configure workspace branding, SMTP credentials, and security preferences.'
+          }
+        ],
+        proTip:
+          'Have a question not covered below? Use the "Talk to a Solutions Architect" card at the bottom of the right sidebar.',
+        faqs: [
+          {
+            q: 'How are tokens calculated when I scrape leads in Lead Finder?',
+            a: '1 Token = 1 Contact. If your search scrapes and returns 10 verified contacts, exactly 10 tokens are deducted from your pool. Empty searches deduct 0 tokens.'
+          },
+          {
+            q: 'How many tokens are included in the Free tier?',
+            a: 'The Free tier includes 15 contact tokens, replenished every 4 days up to the 15-token ceiling. You can upgrade to Basic (400 tokens), Pro (1,000 tokens), or purchase an instant Top-Up pack anytime.'
+          },
+          {
+            q: 'How do I resize or reorder the Kanban boards in CRM Pipeline?',
+            a: 'In CRM Pipeline (Kanban view), drag the right edge, bottom edge, or bottom-right corner of any stage column with your mouse to resize its width and height. Drag any column header by its grip icon to reposition the column order. Click "Reset Boards" in the toolbar to restore defaults.'
+          },
+          {
+            q: 'How do I customize the Dashboard or use prebuilt layouts?',
+            a: 'On the Dashboard top bar, click any of the 6 Prebuilt Layouts (Executive Command, Time & Schedule Focus, Sales Velocity, Compact Bento Grid, Outbound SDR Cockpit, Minimalist Focus), or click "Edit Layout" to drag-and-drop widgets, change column widths (1/3, 1/2, 2/3, Full), or hide/show widgets.'
+          },
+          {
+            q: 'Where is the Upgrade or Top-Up button located?',
+            a: 'In the bottom-left Sidebar card! When you are on the Free or Basic tier, it displays "Upgrade Plan" / "Upgrade to Pro" (plus a quick Top-Up icon). When you are on the topmost Pro tier, the primary button automatically becomes "Top-Up Tokens".'
+          },
+          {
+            q: 'How do I see only my active/connected integrations?',
+            a: 'Go to the Integrations page and click the "Connected" filter toggle pill at the top of the catalog to display only active, linked integrations.'
+          }
         ]
       }
-    ],
-    troubleshooting: [
-      'If payment completes but credits do not update immediately, refresh your browser or check the billing receipt in Settings.',
-      'All transactions are processed through RBI-authorized payment rails.'
     ]
   }
-];
-
-const FAQS: FAQItem[] = [
-  {
-    question: 'How do Free Tier lead credits refresh?',
-    category: 'Billing & Upgrades',
-    answer: 'Free accounts receive 15 Lead Tokens / Credits automatically every 4 days on a rolling cycle. You do not need to take any action; the system checks your last refresh timestamp and restores your balance to 15 tokens automatically.'
-  },
-  {
-    question: 'Why did my lead query return 0 or fewer results than expected?',
-    category: 'Lead Scraping & Discovery',
-    answer: 'Business registries require a clear municipal location. If you search "Plumbers", the registry does not know where to look. Always provide both the industry and the city, like "Plumbing Contractors in Dallas, TX". Also ensure you are not searching too narrow a geographic boundary (like a specific street address).'
-  },
-  {
-    question: 'What is the difference between Basic (50%) and Pro (100%) seats?',
-    category: 'Team & Universal Tokens',
-    answer: 'When you sign up, you specify your organization\'s team size baseline (e.g. 6 seats). On the Basic Tier, you can add up to 50% of those registered seats (3 seats). On the Pro Tier, you unlock 100% of those registered seats (6 seats), with all members sharing your universal token pool.'
-  },
-  {
-    question: 'Can my team members use the shared Universal Tokens pool?',
-    category: 'Team & Universal Tokens',
-    answer: 'Yes! Both Basic and Pro tiers provide a shared workspace token pool. As the Workspace Owner or Admin, you can allocate monthly quotas per member (e.g. 250 tokens/mo) to keep resource consumption organized across your sales team.'
-  },
-  {
-    question: 'Can I remove a team member without losing their deals and leads?',
-    category: 'Team & Universal Tokens',
-    answer: 'Absolutely. When you remove a team member, their workspace access is revoked and their seat is immediately freed up. However, all leads and pipeline deals they created or were assigned to remain safely intact in your CRM pipeline for reassignment to another team member.'
-  },
-  {
-    question: 'Why can\'t I remove the Workspace Owner?',
-    category: 'Team & Universal Tokens',
-    answer: 'The primary Workspace Owner is the root administrator account that created the workspace and holds the billing subscription. To prevent accidental workspace lockout or orphaned accounts, the platform strictly forbids deleting the Workspace Owner.'
-  },
-  {
-    question: 'How does the 1-Click WhatsApp dispatch work without saving contacts?',
-    category: 'WhatsApp Engine',
-    answer: 'LeadPulse uses the official WhatsApp Web API protocol (https://web.whatsapp.com/send?phone=...&text=...). When you click "Open in WhatsApp Web", your browser passes the phone number and pre-filled message directly to WhatsApp Web. WhatsApp Web handles the direct chat without needing to save them in your phonebook contacts.'
-  },
-  {
-    question: 'How do I connect my Gmail account to the SMTP Gateway?',
-    category: 'SMTP & Deliverability',
-    answer: 'Google requires an "App Password" rather than your normal password. Enable 2-Step Verification on your Google Account, navigate to "App Passwords", generate a 16-character code for LeadPulse, and paste that code into Settings > SMTP Gateway with Host smtp.gmail.com and Port 587.'
-  },
-  {
-    question: 'Are my API keys and SMTP credentials secure?',
-    category: 'Integrations & API',
-    answer: 'Yes. All SMTP passwords, API keys, and webhook secrets are encrypted at rest using AES-256 before storage in Google Cloud Firestore. They are never exposed to client-side browsers or logged in plain text.'
-  },
-  {
-    question: 'How do I export my CRM leads to CSV or Excel?',
-    category: 'CRM & Pipeline',
-    answer: 'Navigate to the CRM Pipeline page. In the top right header, click "Export CSV" or "Export Excel". A formatted spreadsheet containing all prospect names, phones, emails, stages, websites, and discovery dates will be downloaded instantly.'
-  },
-  {
-    question: 'What happens if I exceed my workspace seat limit?',
-    category: 'Team & Universal Tokens',
-    answer: 'When you reach your maximum seat quota, the system will block further member additions with a 403 SEAT_LIMIT_REACHED error and display an Upgrade Modal. You can upgrade to a higher tier (Basic for 50%, Pro for 100%) or remove an inactive team member to free up a seat.'
-  },
-  {
-    question: 'Can I edit the name of a business if it is too long?',
-    category: 'Lead Scraping & Discovery',
-    answer: 'Yes! Some Google business names are descriptive (e.g. "Digital Keddy Internet Marketing Services in Delhi | Social Media Agency | PPC Agency"). The LeadPulse interface wraps these long names across lines cleanly and provides an inline edit button so you can rename the contact to something concise before saving.'
-  }
-];
-
-const CATEGORIES = [
-  'All Docs',
-  'Lead Scraping & Discovery',
-  'CRM & Pipeline',
-  'Outreach & Email',
-  'WhatsApp Engine',
-  'SMTP & Deliverability',
-  'Team & Universal Tokens',
-  'Integrations & API',
-  'Billing & Upgrades',
-  'FAQs & Troubleshooting'
 ];
 
 const HelpCenter = () => {
-  const { user, setUpgradeModalOpen } = useStore();
-  const [searchQuery, setSearchQuery] = useState('');
-  const [selectedCategory, setSelectedCategory] = useState('All Docs');
-  const [expandedFaq, setExpandedFaq] = useState<number | null>(null);
-  const [copiedCodeIndex, setCopiedCodeIndex] = useState<string | null>(null);
+  const navigate = useNavigate();
+  const { user, setTopUpOpen, setUpgradeTab } = useStore();
+  const searchInputRef = useRef<HTMLInputElement>(null);
 
-  const handleCopyCode = (code: string, id: string) => {
-    navigator.clipboard.writeText(code);
-    setCopiedCodeIndex(id);
-    setTimeout(() => setCopiedCodeIndex(null), 2000);
+  const [activeTab, setActiveTab] = useState<GuideTab>('admin-guide');
+  const [searchQuery, setSearchQuery] = useState('');
+  const [treeFilter, setTreeFilter] = useState('');
+  const [expandedCatIds, setExpandedCatIds] = useState<string[]>(
+    HELP_CATEGORIES.map(c => c.id)
+  );
+  const [activeArticleId, setActiveArticleId] = useState<string>('welcome-leadpulse');
+  const [completedSteps, setCompletedSteps] = useState<Record<string, boolean>>({});
+  const [copiedCode, setCopiedCode] = useState(false);
+  const [copiedLink, setCopiedLink] = useState(false);
+  const [helpfulVote, setHelpfulVote] = useState<'yes' | 'no' | null>(null);
+  const [resourcesOpen, setResourcesOpen] = useState(false);
+
+  // Interactive Token Simulator State (shown on Token Pool article)
+  const [simContacts, setSimContacts] = useState<number>(10);
+
+  // Keyboard "/" shortcut to focus search
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === '/' && document.activeElement?.tagName !== 'INPUT' && document.activeElement?.tagName !== 'TEXTAREA') {
+        e.preventDefault();
+        searchInputRef.current?.focus();
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, []);
+
+  // Flatten all articles for easy lookup & prev/next navigation
+  const allArticles = useMemo(() => {
+    const list: { category: TopicCategory; article: SubArticle }[] = [];
+    HELP_CATEGORIES.forEach(cat => {
+      cat.articles.forEach(art => {
+        list.push({ category: cat, article: art });
+      });
+    });
+    return list;
+  }, []);
+
+  // Filtered categories for left tree
+  const filteredCategories = useMemo(() => {
+    const q = (searchQuery || treeFilter).trim().toLowerCase();
+    if (!q) return HELP_CATEGORIES;
+    return HELP_CATEGORIES.map(cat => {
+      const matchingArticles = cat.articles.filter(
+        a =>
+          a.title.toLowerCase().includes(q) ||
+          a.summary.toLowerCase().includes(q) ||
+          a.steps.some(s => s.title.toLowerCase().includes(q) || s.detail.toLowerCase().includes(q)) ||
+          (a.faqs && a.faqs.some(f => f.q.toLowerCase().includes(q) || f.a.toLowerCase().includes(q)))
+      );
+      if (cat.title.toLowerCase().includes(q)) {
+        return cat;
+      }
+      return { ...cat, articles: matchingArticles };
+    }).filter(cat => cat.articles.length > 0);
+  }, [searchQuery, treeFilter]);
+
+  const currentEntry = useMemo(() => {
+    return (
+      allArticles.find(item => item.article.id === activeArticleId) ||
+      allArticles[0]
+    );
+  }, [allArticles, activeArticleId]);
+
+  const currentIndex = useMemo(() => {
+    return allArticles.findIndex(item => item.article.id === currentEntry.article.id);
+  }, [allArticles, currentEntry]);
+
+  const prevEntry = currentIndex > 0 ? allArticles[currentIndex - 1] : null;
+  const nextEntry = currentIndex < allArticles.length - 1 ? allArticles[currentIndex + 1] : null;
+
+  const handleSelectArticle = (cat: TopicCategory, art: SubArticle) => {
+    setActiveArticleId(art.id);
+    setActiveTab(cat.tab);
+    setHelpfulVote(null);
+    if (!expandedCatIds.includes(cat.id)) {
+      setExpandedCatIds(prev => [...prev, cat.id]);
+    }
   };
 
-  // Filtered Modules
-  const filteredModules = useMemo(() => {
-    return MODULES.filter(module => {
-      const matchesCategory = selectedCategory === 'All Docs' || module.category === selectedCategory;
-      if (!matchesCategory) return false;
-      if (!searchQuery.trim()) return true;
+  const handleSelectTab = (tab: GuideTab) => {
+    setActiveTab(tab);
+    const firstCatInTab = HELP_CATEGORIES.find(c => c.tab === tab);
+    if (firstCatInTab && firstCatInTab.articles.length > 0) {
+      setActiveArticleId(firstCatInTab.articles[0].id);
+      if (!expandedCatIds.includes(firstCatInTab.id)) {
+        setExpandedCatIds(prev => [...prev, firstCatInTab.id]);
+      }
+    }
+  };
 
-      const q = searchQuery.toLowerCase();
-      const inTitle = module.title.toLowerCase().includes(q);
-      const inOverview = module.overview.toLowerCase().includes(q);
-      const inSteps = module.steps.some(s => 
-        s.title.toLowerCase().includes(q) || 
-        s.desc.toLowerCase().includes(q) || 
-        s.details?.some(d => d.toLowerCase().includes(q))
-      );
-      const inTrouble = module.troubleshooting?.some(t => t.toLowerCase().includes(q));
+  const toggleCategoryExpand = (catId: string) => {
+    setExpandedCatIds(prev =>
+      prev.includes(catId) ? prev.filter(id => id !== catId) : [...prev, catId]
+    );
+  };
 
-      return inTitle || inOverview || inSteps || inTrouble;
-    });
-  }, [searchQuery, selectedCategory]);
+  const scrollToSection = (sectionId: string) => {
+    const el = document.getElementById(sectionId);
+    if (el) {
+      el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+  };
 
-  // Filtered FAQs
-  const filteredFaqs = useMemo(() => {
-    return FAQS.filter(faq => {
-      const matchesCategory = selectedCategory === 'All Docs' || selectedCategory === 'FAQs & Troubleshooting' || faq.category === selectedCategory;
-      if (!matchesCategory) return false;
-      if (!searchQuery.trim()) return true;
+  const handleCopyCode = (code: string) => {
+    navigator.clipboard.writeText(code);
+    setCopiedCode(true);
+    setTimeout(() => setCopiedCode(false), 2000);
+  };
 
-      const q = searchQuery.toLowerCase();
-      return faq.question.toLowerCase().includes(q) || faq.answer.toLowerCase().includes(q);
-    });
-  }, [searchQuery, selectedCategory]);
+  const handleCopyPermalink = () => {
+    navigator.clipboard.writeText(`${window.location.origin}/help#${currentEntry.article.id}`);
+    setCopiedLink(true);
+    setTimeout(() => setCopiedLink(false), 2000);
+  };
+
+  const { category: activeCat, article: activeArt } = currentEntry;
 
   return (
-    <div className="flex h-screen w-full overflow-hidden bg-transparent">
+    <div className="flex h-screen w-full overflow-hidden bg-[#FAF8F5]">
       <Sidebar />
+
       <div className="flex-1 flex flex-col h-screen overflow-hidden">
         <Header />
-        
-        <div className="flex-1 overflow-y-auto p-6 lg:p-8 custom-scrollbar">
-          {/* Strictly Left-Aligned Container */}
-          <div className="w-full max-w-5xl space-y-8 pb-24 text-left flex flex-col items-start">
 
-            {/* Header & Title Banner */}
-            <div className="w-full space-y-2 text-left">
-              <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 bg-slate-100 border border-slate-200 rounded-sm text-[11px] font-delight text-slate-700">
-                <BookOpen className="w-3.5 h-3.5 text-slate-800" />
-                <span>OFFICIAL SYSTEM MANUAL & DOCUMENTATION</span>
+        {/* ZOHO COMMERCE STYLE TOP DOCUMENTATION SUB-NAVBAR */}
+        <div className="bg-white border-b border-[#E5E0D5] px-6 py-2.5 flex flex-wrap items-center justify-between gap-3 shrink-0 z-20">
+          {/* Left: Portal Identity + Mode Tabs */}
+          <div className="flex items-center gap-6 overflow-x-auto custom-scrollbar">
+            <div className="flex items-center gap-2 shrink-0 pr-2 border-r border-[#E5E0D5]">
+              <div className="w-6 h-6 rounded bg-[#191716] text-white flex items-center justify-center">
+                <BookOpen className="w-3.5 h-3.5 text-[#C85A32]" />
               </div>
-              
-              <h1 className="text-2xl sm:text-3xl font-bold font-display text-slate-900 tracking-tight text-left">
-                LeadPulse Operator Manual & Knowledgebase
-              </h1>
-              
-              <p className="text-slate-500 font-sans text-xs sm:text-sm max-w-3xl leading-relaxed text-left">
-                Step-by-step technical guides, operational procedures, multi-channel configurations, team administration rules, and answers to frequently asked questions.
-              </p>
-            </div>
-
-            {/* Search Bar in Help */}
-            <div className="w-full space-y-3 text-left">
-              <div className="relative w-full max-w-2xl">
-                <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
-                <input 
-                  type="text"
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  placeholder="Search in help, guides, steps, error codes, FAQs, or integrations..."
-                  className="w-full h-10 pl-10 pr-24 bg-white border border-slate-200 rounded-md text-xs font-sans text-slate-800 placeholder:text-slate-400 focus:outline-none focus:border-slate-400 transition-colors shadow-2xs text-left"
-                />
-                {searchQuery ? (
-                  <button 
-                    onClick={() => setSearchQuery('')}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 p-1 cursor-pointer"
-                  >
-                    <X className="w-3.5 h-3.5" />
-                  </button>
-                ) : (
-                  <div className="absolute right-3 top-1/2 -translate-y-1/2 text-[10px] font-delight text-slate-400 border border-slate-200 bg-slate-50 px-1.5 py-0.5 rounded-sm">
-                    Search Docs
-                  </div>
-                )}
-              </div>
-
-              {/* Category Pills */}
-              <div className="flex flex-wrap items-center gap-1.5 pt-1 text-left">
-                {CATEGORIES.map(cat => (
-                  <button
-                    key={cat}
-                    onClick={() => setSelectedCategory(cat)}
-                    className={`px-3 py-1.5 rounded-sm text-xs font-delight transition-colors cursor-pointer text-left ${
-                      selectedCategory === cat 
-                        ? 'bg-slate-900 text-white font-semibold border border-slate-900 shadow-xs' 
-                        : 'bg-white text-slate-700 hover:text-slate-900 hover:bg-slate-50 border border-slate-200'
-                    }`}
-                  >
-                    {cat}
-                  </button>
-                ))}
+              <div>
+                <div className="text-xs font-bold font-delight text-[#191716] leading-none">
+                  Help Center
+                </div>
+                <div className="text-[9px] font-mono text-[#6E675F] mt-0.5">
+                  DocuReady Docs v3.4
+                </div>
               </div>
             </div>
 
-            {/* Match Counter if searching */}
-            {searchQuery && (
-              <div className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-md text-xs font-delight text-slate-600 flex items-center justify-between text-left">
-                <span>
-                  Showing results for "<strong className="text-slate-900">{searchQuery}</strong>": {filteredModules.length} Modules, {filteredFaqs.length} FAQs
-                </span>
-                <button 
-                  onClick={() => setSearchQuery('')} 
-                  className="text-blue-600 hover:underline cursor-pointer"
+            {/* Zoho-Style Mode Tabs */}
+            <nav className="flex items-center gap-1 shrink-0">
+              {([
+                { id: 'admin-guide' as GuideTab, label: 'Admin & Setup Guide' },
+                { id: 'operator-guide' as GuideTab, label: 'Operator & Outreach Guide' },
+                { id: 'integrations-guide' as GuideTab, label: 'Integrations & Webhooks' },
+                { id: 'faq-portal' as GuideTab, label: 'FAQs & Troubleshooting' }
+              ]).map(t => (
+                <button
+                  key={t.id}
+                  onClick={() => handleSelectTab(t.id)}
+                  className={`px-3 py-1.5 rounded-md text-xs font-delight font-semibold transition-all cursor-pointer ${
+                    activeTab === t.id
+                      ? 'bg-[#191716] text-white'
+                      : 'text-[#57514B] hover:bg-[#F5F2EB] hover:text-[#191716]'
+                  }`}
                 >
-                  Clear Search
+                  {t.label}
                 </button>
-              </div>
-            )}
+              ))}
+            </nav>
+          </div>
 
-            {/* Quick Summary Cards (Left-Aligned) */}
-            <div className="w-full grid grid-cols-1 sm:grid-cols-3 gap-3 text-left">
-              <div className="p-3.5 bg-white border border-slate-200 rounded-md space-y-1 text-left">
-                <div className="flex items-center gap-2">
-                  <span className="font-bold font-delight text-xs text-slate-900">Lead Harvesting</span>
-                </div>
-                <p className="text-[11px] text-slate-500 font-sans leading-relaxed text-left">
-                  Query Google Maps & business registries. Free tier refreshes with 15 tokens / credits every 4 days.
-                </p>
-              </div>
-
-              <div className="p-3.5 bg-white border border-slate-200 rounded-md space-y-1 text-left">
-                <div className="flex items-center gap-2">
-                  <span className="font-bold font-delight text-xs text-slate-900">Email & WhatsApp</span>
-                </div>
-                <p className="text-[11px] text-slate-500 font-sans leading-relaxed text-left">
-                  8 responsive email wireframes, AI Copilot copy generator, and 1-click WhatsApp web dispatch.
-                </p>
-              </div>
-
-              <div className="p-3.5 bg-white border border-slate-200 rounded-md space-y-1 text-left">
-                <div className="flex items-center gap-2">
-                  <span className="font-bold font-delight text-xs text-slate-900">Team & Universal Tokens</span>
-                </div>
-                <p className="text-[11px] text-slate-500 font-sans leading-relaxed text-left">
-                  Free: 2 seats. Basic: 50% registered seats. Pro: 100% registered seats with universal tokens.
-                </p>
-              </div>
+          {/* Right: Global Doc Search + Resources Dropdown */}
+          <div className="flex items-center gap-2.5">
+            <div className="relative w-64 sm:w-72">
+              <Search className="w-3.5 h-3.5 text-[#9C9488] absolute left-3 top-1/2 -translate-y-1/2" />
+              <input
+                ref={searchInputRef}
+                type="text"
+                value={searchQuery}
+                onChange={e => setSearchQuery(e.target.value)}
+                placeholder="Search user guide, tokens, kanban..."
+                className="w-full pl-8 pr-8 py-1.5 bg-[#FAF8F5] border border-[#E5E0D5] rounded-md text-xs font-delight text-[#191716] placeholder:text-[#9C9488] focus:outline-none focus:bg-white focus:border-[#C85A32]"
+              />
+              {searchQuery ? (
+                <button
+                  onClick={() => setSearchQuery('')}
+                  className="absolute right-2.5 top-1/2 -translate-y-1/2 text-[10px] font-mono text-[#6E675F] hover:text-[#191716] cursor-pointer"
+                >
+                  ESC
+                </button>
+              ) : (
+                <kbd className="absolute right-2.5 top-1/2 -translate-y-1/2 text-[10px] font-mono px-1.5 py-0.2 bg-white border border-[#E5E0D5] rounded text-[#9C9488]">
+                  /
+                </kbd>
+              )}
             </div>
 
-            {/* ================= SECTION: DETAILED DOCUMENTATION MODULES ================= */}
-            <div className="w-full space-y-6 text-left">
-              <div className="flex items-center justify-between border-b border-slate-200 pb-2 text-left">
-                <div>
-                  <h2 className="text-lg font-bold font-display text-slate-900 tracking-tight text-left">
-                    Detailed Step-by-Step Operator Modules
-                  </h2>
-                  <p className="text-slate-500 font-sans text-xs text-left">
-                    Follow these verified procedures to execute daily commercial operations.
-                  </p>
-                </div>
-                <span className="text-xs font-delight font-medium text-slate-400">
-                  {filteredModules.length} Modules Available
-                </span>
-              </div>
+            {/* Resources Dropdown */}
+            <div className="relative">
+              <button
+                onClick={() => setResourcesOpen(!resourcesOpen)}
+                className="px-3 py-1.5 rounded-md bg-[#FAF8F5] hover:bg-[#F5F2EB] border border-[#E5E0D5] text-xs font-delight font-semibold text-[#191716] flex items-center gap-1.5 cursor-pointer"
+              >
+                <span>Resources</span>
+                <ChevronDown className="w-3.5 h-3.5 text-[#6E675F]" />
+              </button>
 
-              {filteredModules.length === 0 && (
-                <div className="p-6 bg-white border border-slate-200 rounded-md text-center py-10 space-y-2">
-                  <AlertCircle className="w-6 h-6 text-slate-400 mx-auto" />
-                  <p className="text-xs font-delight font-medium text-slate-600">No documentation modules match your search criteria.</p>
-                  <button 
-                    onClick={() => { setSearchQuery(''); setSelectedCategory('All Docs'); }}
-                    className="text-xs font-delight font-semibold text-blue-600 hover:underline cursor-pointer"
+              {resourcesOpen && (
+                <div
+                  onMouseLeave={() => setResourcesOpen(false)}
+                  className="absolute right-0 mt-1.5 w-60 bg-white border border-[#E5E0D5] rounded-lg shadow-xl py-1.5 z-50 text-xs font-delight"
+                >
+                  <button
+                    onClick={() => {
+                      setActiveArticleId('quickstart-checklist');
+                      setResourcesOpen(false);
+                    }}
+                    className="w-full px-3.5 py-2 text-left hover:bg-[#FAF8F5] flex items-center justify-between text-[#191716] cursor-pointer"
                   >
-                    Reset filters and show all modules
+                    <span>15-Min Operator Quickstart</span>
+                    <ArrowRight className="w-3 h-3 text-[#C85A32]" />
                   </button>
+                  <button
+                    onClick={() => {
+                      setActiveArticleId('token-accounting-rules');
+                      setResourcesOpen(false);
+                    }}
+                    className="w-full px-3.5 py-2 text-left hover:bg-[#FAF8F5] flex items-center justify-between text-[#191716] cursor-pointer"
+                  >
+                    <span>Token Pool Calculator (1:1)</span>
+                    <CreditCard className="w-3 h-3 text-[#C85A32]" />
+                  </button>
+                  <button
+                    onClick={() => {
+                      setActiveArticleId('resizable-draggable-kanban');
+                      setResourcesOpen(false);
+                    }}
+                    className="w-full px-3.5 py-2 text-left hover:bg-[#FAF8F5] flex items-center justify-between text-[#191716] cursor-pointer"
+                  >
+                    <span>Resizable Kanban Guide</span>
+                    <Kanban className="w-3 h-3 text-[#C85A32]" />
+                  </button>
+                  <div className="my-1 border-t border-[#E5E0D5]" />
+                  <div className="px-3.5 py-1.5 flex items-center justify-between text-[11px] text-[#6E675F]">
+                    <span>Scraper Cluster Status</span>
+                    <span className="inline-flex items-center gap-1 text-emerald-700 font-semibold">
+                      <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
+                      99.98% Up
+                    </span>
+                  </div>
                 </div>
               )}
+            </div>
+          </div>
+        </div>
 
-              {filteredModules.map((module) => {
+        {/* 3-PANE ZOHO COMMERCE DOCUMENTATION WORKSPACE */}
+        <div className="flex-1 flex min-h-0 overflow-hidden">
+          {/* LEFT PANE: Collapsible Nested Topic Tree (`sidebar-lhs-wrap`) */}
+          <aside className="w-72 bg-white border-r border-[#E5E0D5] flex flex-col h-full shrink-0">
+            <div className="p-3.5 border-b border-[#E5E0D5] space-y-2.5">
+              <div className="flex items-center justify-between">
+                <span className="text-[11px] font-delight font-bold uppercase tracking-wider text-[#191716]">
+                  Topics ({allArticles.length} Articles)
+                </span>
+                <button
+                  onClick={() =>
+                    setExpandedCatIds(
+                      expandedCatIds.length === HELP_CATEGORIES.length
+                        ? []
+                        : HELP_CATEGORIES.map(c => c.id)
+                    )
+                  }
+                  className="text-[10px] font-delight font-semibold text-[#C85A32] hover:underline cursor-pointer"
+                >
+                  {expandedCatIds.length === HELP_CATEGORIES.length ? 'Collapse All' : 'Expand All'}
+                </button>
+              </div>
+
+              <input
+                type="text"
+                value={treeFilter}
+                onChange={e => setTreeFilter(e.target.value)}
+                placeholder="Filter topic tree..."
+                className="w-full px-2.5 py-1 text-xs font-delight bg-[#FAF8F5] border border-[#E5E0D5] rounded text-[#191716] placeholder:text-[#9C9488] focus:outline-none focus:border-[#C85A32]"
+              />
+            </div>
+
+            <div className="flex-1 overflow-y-auto p-2.5 space-y-1.5 custom-scrollbar">
+              {filteredCategories.map(cat => {
+                const Icon = cat.icon;
+                const isExpanded = expandedCatIds.includes(cat.id) || Boolean(searchQuery || treeFilter);
+                const hasActiveChild = cat.articles.some(a => a.id === activeArt.id);
+
                 return (
-                  <div 
-                    key={module.id} 
-                    id={module.id}
-                    className="bg-white border border-slate-200 rounded-md overflow-hidden text-left"
-                  >
-                    {/* Module Title Header */}
-                    <div className="p-4 sm:p-5 border-b border-slate-100 flex flex-wrap items-center justify-between gap-3 bg-slate-50/60 text-left">
-                      <div className="flex items-start gap-3 text-left">
-                        <div className="text-left">
-                          <div className="flex items-center gap-2">
-                            <span className="text-[10px] font-delight text-slate-500 uppercase tracking-wider font-semibold">
-                              {module.section} • {module.category}
-                            </span>
-                            <span className="text-[10px] font-delight bg-slate-200 text-slate-700 px-1.5 py-0.2 rounded-xs">
-                              {module.badge}
-                            </span>
-                          </div>
-                          <h3 className="text-sm sm:text-base font-bold font-display text-slate-900 tracking-tight text-left">
-                            {module.title}
-                          </h3>
-                        </div>
+                  <div key={cat.id} className="rounded-md overflow-hidden">
+                    {/* Parent Topic Row */}
+                    <button
+                      onClick={() => toggleCategoryExpand(cat.id)}
+                      className={`w-full px-2.5 py-2 rounded-md text-left flex items-center justify-between transition-colors cursor-pointer ${
+                        hasActiveChild
+                          ? 'bg-[#F5F2EB] text-[#191716] font-bold'
+                          : 'hover:bg-[#FAF8F5] text-[#57514B] font-semibold'
+                      }`}
+                    >
+                      <div className="flex items-center gap-2 min-w-0">
+                        <Icon
+                          className={`w-3.5 h-3.5 shrink-0 ${
+                            hasActiveChild ? 'text-[#C85A32]' : 'text-[#9C9488]'
+                          }`}
+                        />
+                        <span className="text-xs font-delight truncate">{cat.title}</span>
                       </div>
-                    </div>
-
-                    {/* Overview */}
-                    <div className="p-4 sm:p-5 border-b border-slate-100 text-left">
-                      <p className="text-xs text-slate-600 font-sans leading-relaxed text-left">
-                        {module.overview}
-                      </p>
-                    </div>
-
-                    {/* Detailed Steps List */}
-                    <div className="p-4 sm:p-5 space-y-5 text-left">
-                      <h4 className="text-xs font-delight uppercase tracking-wider font-semibold text-slate-500 text-left">
-                        Step-by-Step Execution Guide:
-                      </h4>
-
-                      <div className="space-y-4 text-left">
-                        {module.steps.map((st, sIdx) => (
-                          <div 
-                            key={sIdx} 
-                            className="p-3.5 bg-slate-50/70 border border-slate-200 rounded-md text-left space-y-2 hover:border-slate-300 transition-colors"
-                          >
-                            <div className="flex items-start gap-2.5 text-left">
-                              <span className="inline-flex items-center justify-center px-1.5 py-0.5 bg-slate-900 text-white font-delight text-[10px] font-bold rounded-xs shrink-0 mt-0.5">
-                                {st.step}
-                              </span>
-                              <div className="text-left">
-                                <h5 className="font-bold text-xs font-display text-slate-900 text-left">
-                                  {st.title}
-                                </h5>
-                                <p className="text-xs text-slate-600 font-sans mt-0.5 leading-relaxed text-left">
-                                  {st.desc}
-                                </p>
-                              </div>
-                            </div>
-
-                            {/* Bullet details */}
-                            {st.details && st.details.length > 0 && (
-                              <ul className="pl-8 space-y-1 font-sans text-xs text-slate-600 list-disc text-left">
-                                {st.details.map((dt, dIdx) => (
-                                  <li key={dIdx} className="leading-relaxed text-left">
-                                    {dt}
-                                  </li>
-                                ))}
-                              </ul>
-                            )}
-
-                            {/* Code or config snippet */}
-                            {st.code && (
-                              <div className="ml-8 mt-2 relative">
-                                <pre className="p-2.5 bg-slate-950 text-slate-100 rounded-sm font-delight font-normal text-[11px] overflow-x-auto text-left">
-                                  {st.code}
-                                </pre>
-                                <button
-                                  onClick={() => handleCopyCode(st.code!, `${module.id}-${sIdx}`)}
-                                  className="absolute top-2 right-2 px-1.5 py-0.5 bg-slate-800 hover:bg-slate-700 text-slate-300 text-[10px] font-delight font-medium rounded-xs flex items-center gap-1 cursor-pointer"
-                                >
-                                  {copiedCodeIndex === `${module.id}-${sIdx}` ? (
-                                    <>
-                                      <Check className="w-3 h-3 text-emerald-400" />
-                                      <span>Copied</span>
-                                    </>
-                                  ) : (
-                                    <>
-                                      <Copy className="w-3 h-3" />
-                                      <span>Copy</span>
-                                    </>
-                                  )}
-                                </button>
-                              </div>
-                            )}
-
-                            {/* Note */}
-                            {st.note && (
-                              <div className="ml-8 mt-1 p-2 bg-amber-50 border border-amber-200 rounded-sm text-[11px] font-sans text-amber-900 flex items-start gap-1.5 text-left">
-                                <AlertCircle className="w-3.5 h-3.5 text-amber-700 shrink-0 mt-0.5" />
-                                <span>{st.note}</span>
-                              </div>
-                            )}
-                          </div>
-                        ))}
-                      </div>
-
-                      {/* Troubleshooting callout */}
-                      {module.troubleshooting && module.troubleshooting.length > 0 && (
-                        <div className="mt-4 p-3 bg-blue-50/60 border border-blue-200 rounded-md text-left space-y-1.5">
-                          <div className="flex items-center gap-1.5 text-xs font-delight font-bold text-blue-900 text-left">
-                            <HelpCircle className="w-3.5 h-3.5 text-blue-700" />
-                            <span>Pro Tips & Troubleshooting for {module.title}</span>
-                          </div>
-                          <ul className="pl-5 space-y-1 font-sans text-xs text-blue-900/80 list-disc text-left">
-                            {module.troubleshooting.map((tr, tIdx) => (
-                              <li key={tIdx} className="leading-relaxed text-left">{tr}</li>
-                            ))}
-                          </ul>
-                        </div>
+                      {isExpanded ? (
+                        <ChevronDown className="w-3.5 h-3.5 text-[#9C9488] shrink-0" />
+                      ) : (
+                        <ChevronRight className="w-3.5 h-3.5 text-[#9C9488] shrink-0" />
                       )}
-                    </div>
+                    </button>
+
+                    {/* Nested Sub-Articles */}
+                    {isExpanded && (
+                      <div className="mt-1 ml-3.5 pl-2.5 border-l border-[#E5E0D5] space-y-0.5">
+                        {cat.articles.map(art => {
+                          const isSelected = art.id === activeArt.id;
+                          return (
+                            <button
+                              key={art.id}
+                              onClick={() => handleSelectArticle(cat, art)}
+                              className={`w-full px-2.5 py-1.5 rounded text-left text-[11px] font-delight transition-colors flex items-center justify-between gap-1.5 cursor-pointer ${
+                                isSelected
+                                  ? 'bg-[#191716] text-white font-semibold'
+                                  : 'text-[#6E675F] hover:bg-[#FAF8F5] hover:text-[#191716]'
+                              }`}
+                            >
+                              <span className="truncate">{art.title}</span>
+                              {isSelected && <span className="w-1.5 h-1.5 rounded-full bg-[#C85A32] shrink-0" />}
+                            </button>
+                          );
+                        })}
+                      </div>
+                    )}
                   </div>
                 );
               })}
             </div>
 
-            {/* ================= SECTION: FREQUENTLY ASKED QUESTIONS (FAQS) ================= */}
-            <div className="w-full space-y-4 text-left pt-6">
-              <div className="flex items-center justify-between border-b border-slate-200 pb-2 text-left">
-                <div>
-                  <h2 className="text-lg font-bold font-display text-slate-900 tracking-tight text-left">
-                    Frequently Asked Questions (FAQs)
-                  </h2>
-                  <p className="text-slate-500 font-sans text-xs text-left">
-                    Direct answers to common operational questions, account policies, and technical edge cases.
-                  </p>
-                </div>
-                <span className="text-xs font-delight font-medium text-slate-400">
-                  {filteredFaqs.length} Answers
-                </span>
+            {/* Bottom Quick Upgrade / Support Banner in Left Tree */}
+            <div className="p-3.5 border-t border-[#E5E0D5] bg-[#FAF8F5]">
+              <div className="text-[10px] font-delight uppercase font-bold text-[#6E675F]">
+                Workspace Plan: <span className="text-[#C85A32]">{user?.plan || 'Free'}</span>
               </div>
+              <p className="text-[11px] font-delight text-[#57514B] mt-0.5">
+                Rule: <b>1 Token = 1 Contact</b> (Free Tier: 15 tokens).
+              </p>
+              <button
+                onClick={() => {
+                  const isPro = (user?.plan || 'free').toLowerCase() === 'pro';
+                  setUpgradeTab(isPro ? 'topup' : 'plans');
+                  setTopUpOpen(true);
+                }}
+                className="mt-2 w-full py-1.5 px-2.5 rounded bg-[#191716] hover:bg-[#C85A32] text-white text-[11px] font-delight font-semibold transition-colors cursor-pointer flex items-center justify-center gap-1.5"
+              >
+                <Sparkles className="w-3 h-3 text-[#C85A32]" />
+                <span>
+                  {(user?.plan || 'free').toLowerCase() === 'pro'
+                    ? 'Top-Up Instant Tokens'
+                    : 'Upgrade Plan / Top-Up'}
+                </span>
+              </button>
+            </div>
+          </aside>
 
-              {filteredFaqs.length === 0 && (
-                <div className="p-4 bg-white border border-slate-200 rounded-md text-xs font-delight font-medium text-slate-600 text-left">
-                  No FAQs match your search query. Try another keyword or browse all modules above.
-                </div>
-              )}
+          {/* CENTER + RIGHT SCROLLABLE DOCUMENTATION AREA */}
+          <main className="flex-1 overflow-y-auto custom-scrollbar">
+            <div className="max-w-[1160px] mx-auto px-6 py-7">
+              <div className="grid grid-cols-1 xl:grid-cols-12 gap-7 items-start">
+                {/* CENTER ARTICLE READER (8 Cols) */}
+                <div className="xl:col-span-8 space-y-6">
+                  {/* Article Card */}
+                  <div className="bg-white border border-[#E5E0D5] rounded-lg overflow-hidden shadow-2xs">
+                    {/* Top Breadcrumb & Action Bar */}
+                    <div className="px-6 py-3.5 bg-[#F5F2EB] border-b border-[#E5E0D5] flex flex-wrap items-center justify-between gap-2">
+                      <div className="flex items-center gap-1.5 text-[11px] font-delight text-[#6E675F]">
+                        <span>Help Center</span>
+                        <ChevronRight className="w-3 h-3 text-[#9C9488]" />
+                        <span className="font-semibold text-[#191716]">{activeCat.title}</span>
+                      </div>
 
-              <div className="space-y-2.5 text-left w-full">
-                {filteredFaqs.map((faq, fIdx) => {
-                  const isExpanded = expandedFaq === fIdx;
-                  return (
-                    <div 
-                      key={fIdx}
-                      className="bg-white border border-slate-200 rounded-md overflow-hidden text-left transition-colors"
-                    >
-                      <button
-                        onClick={() => setExpandedFaq(isExpanded ? null : fIdx)}
-                        className="w-full p-3.5 sm:p-4 text-left flex items-center justify-between gap-3 hover:bg-slate-50 transition-colors cursor-pointer"
-                      >
-                        <div className="flex items-start gap-2.5 text-left">
-                          <HelpCircle className="w-4 h-4 text-blue-600 shrink-0 mt-0.5" />
-                          <div className="text-left">
-                            <span className="text-xs sm:text-sm font-bold font-display text-slate-900 text-left">
-                              {faq.question}
-                            </span>
-                            <span className="block text-[10px] font-delight text-slate-500 mt-0.5 text-left">
-                              Category: {faq.category}
+                      <div className="flex items-center gap-2">
+                        <span className="text-[11px] font-delight text-[#6E675F] flex items-center gap-1">
+                          <Clock className="w-3 h-3 text-[#C85A32]" />
+                          {activeArt.readingTime}
+                        </span>
+                        <button
+                          onClick={handleCopyPermalink}
+                          className="px-2 py-1 rounded bg-white border border-[#E5E0D5] text-[11px] font-delight font-medium text-[#191716] hover:border-[#191716] flex items-center gap-1 cursor-pointer"
+                          title="Copy article link"
+                        >
+                          {copiedLink ? <Check className="w-3 h-3 text-emerald-600" /> : <Share2 className="w-3 h-3" />}
+                          <span>{copiedLink ? 'Copied' : 'Share'}</span>
+                        </button>
+                        <button
+                          onClick={() => window.print()}
+                          className="p-1 rounded bg-white border border-[#E5E0D5] text-[#6E675F] hover:text-[#191716] cursor-pointer"
+                          title="Print guide"
+                        >
+                          <Printer className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* Article Body */}
+                    <div className="p-6 sm:p-8 space-y-7">
+                      {/* Title + Deep Link CTA */}
+                      <div id="doc-overview" className="flex flex-col sm:flex-row sm:items-start justify-between gap-4 border-b border-[#E5E0D5] pb-5">
+                        <div>
+                          <div className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded bg-[#FAF8F5] border border-[#E5E0D5] text-[10px] font-mono text-[#C85A32] mb-2">
+                            <span>{activeArt.lastUpdated}</span>
+                          </div>
+                          <h1 className="text-xl sm:text-2xl font-bold font-delight text-[#191716] tracking-tight">
+                            {activeArt.title}
+                          </h1>
+                        </div>
+
+                        <button
+                          onClick={() => navigate(activeArt.route)}
+                          className="px-3.5 py-2 bg-[#191716] hover:bg-[#C85A32] text-white rounded-md text-xs font-delight font-semibold transition-colors flex items-center gap-1.5 shrink-0 cursor-pointer"
+                        >
+                          <span>{activeArt.routeLabel}</span>
+                          <ArrowRight className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
+
+                      {/* Executive Summary & Key Takeaways */}
+                      <div className="space-y-4">
+                        <p className="text-sm font-delight text-[#57514B] leading-relaxed">
+                          {activeArt.summary}
+                        </p>
+
+                        <div className="bg-[#FAF8F5] border border-[#E5E0D5] rounded-lg p-4 space-y-2">
+                          <div className="text-[11px] font-delight font-bold uppercase tracking-wider text-[#191716] flex items-center gap-1.5">
+                            <Sparkles className="w-3.5 h-3.5 text-[#C85A32]" />
+                            <span>Key Capabilities Covered in This Guide</span>
+                          </div>
+                          <ul className="space-y-1.5">
+                            {activeArt.keyTakeaways.map((point, idx) => (
+                              <li key={idx} className="text-xs font-delight text-[#57514B] flex items-start gap-2">
+                                <CheckCircle2 className="w-3.5 h-3.5 text-[#C85A32] shrink-0 mt-0.5" />
+                                <span>{point}</span>
+                              </li>
+                            ))}
+                          </ul>
+                        </div>
+                      </div>
+
+                      {/* Interactive Token Pool Calculator (Shown on Token Articles) */}
+                      {activeCat.id === 'my-plan-tokens' && (
+                        <div className="bg-[#F5F2EB] border border-[#E5E0D5] rounded-lg p-5 space-y-4">
+                          <div className="flex items-center justify-between">
+                            <div>
+                              <h3 className="text-xs font-bold uppercase tracking-wider font-delight text-[#191716]">
+                                Interactive Token Deduction Simulator (1 Token = 1 Contact)
+                              </h3>
+                              <p className="text-[11px] font-delight text-[#6E675F]">
+                                Drag the slider to see how scraped contacts map to your 4-day token pool
+                              </p>
+                            </div>
+                            <span className="px-2.5 py-1 rounded bg-[#191716] text-white font-mono text-xs font-bold">
+                              {simContacts} Contacts = {simContacts} Tokens
                             </span>
                           </div>
-                        </div>
-                        <ChevronDown className={`w-4 h-4 text-slate-400 shrink-0 transition-transform duration-150 ${isExpanded ? 'rotate-180' : ''}`} />
-                      </button>
 
-                      {isExpanded && (
-                        <div className="p-3.5 sm:p-4 pt-1 bg-slate-50 border-t border-slate-100 text-left text-xs font-sans text-slate-700 leading-relaxed space-y-2">
-                          <p className="text-left">{faq.answer}</p>
-                          {faq.steps && (
-                            <ol className="list-decimal pl-5 space-y-1 font-delight font-normal text-[11px] text-slate-800 text-left">
-                              {faq.steps.map((st, sIdx) => (
-                                <li key={sIdx} className="text-left">{st}</li>
-                              ))}
-                            </ol>
-                          )}
+                          <input
+                            type="range"
+                            min={1}
+                            max={250}
+                            value={simContacts}
+                            onChange={e => setSimContacts(Number(e.target.value))}
+                            className="w-full accent-[#C85A32] cursor-pointer"
+                          />
+
+                          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-xs font-delight">
+                            <div className="p-3 rounded bg-white border border-[#E5E0D5]">
+                              <div className="text-[10px] font-bold uppercase text-[#6E675F]">Free Tier (15 Cap)</div>
+                              <div className="font-bold text-[#191716] mt-1">
+                                {simContacts <= 15
+                                  ? `${15 - simContacts} tokens remaining`
+                                  : `Requires Basic or +${simContacts - 15} Top-Up`}
+                              </div>
+                            </div>
+                            <div className="p-3 rounded bg-white border border-[#E5E0D5]">
+                              <div className="text-[10px] font-bold uppercase text-[#6E675F]">Basic Tier (400 Cap)</div>
+                              <div className="font-bold text-emerald-700 mt-1">
+                                {400 - simContacts} tokens remaining
+                              </div>
+                            </div>
+                            <div className="p-3 rounded bg-white border border-[#E5E0D5]">
+                              <div className="text-[10px] font-bold uppercase text-[#6E675F]">Pro Tier (1,000 Cap)</div>
+                              <div className="font-bold text-[#C85A32] mt-1">
+                                {1000 - simContacts} tokens remaining
+                              </div>
+                            </div>
+                          </div>
                         </div>
                       )}
+
+                      {/* Interactive Step-by-Step Procedure */}
+                      <div id="doc-steps" className="space-y-4">
+                        <div className="flex items-center justify-between">
+                          <h2 className="text-xs font-bold uppercase tracking-wider font-delight text-[#191716]">
+                            Step-by-Step Implementation Procedure
+                          </h2>
+                          <span className="text-[11px] font-delight text-[#6E675F]">
+                            Click any step to mark complete
+                          </span>
+                        </div>
+
+                        <div className="space-y-3">
+                          {activeArt.steps.map((step, idx) => {
+                            const stepKey = `${activeArt.id}-step-${idx}`;
+                            const isDone = Boolean(completedSteps[stepKey]);
+
+                            return (
+                              <div
+                                key={stepKey}
+                                onClick={() =>
+                                  setCompletedSteps(prev => ({ ...prev, [stepKey]: !prev[stepKey] }))
+                                }
+                                className={`p-4 rounded-lg border transition-all cursor-pointer ${
+                                  isDone
+                                    ? 'bg-emerald-50/40 border-emerald-300'
+                                    : 'bg-[#FAF8F5] hover:bg-white border-[#E5E0D5]'
+                                }`}
+                              >
+                                <div className="flex items-start gap-3.5">
+                                  <div
+                                    className={`w-6 h-6 rounded-md text-xs font-mono font-bold flex items-center justify-center shrink-0 mt-0.5 transition-colors ${
+                                      isDone
+                                        ? 'bg-emerald-600 text-white'
+                                        : 'bg-[#191716] text-white'
+                                    }`}
+                                  >
+                                    {isDone ? <Check className="w-3.5 h-3.5" /> : idx + 1}
+                                  </div>
+                                  <div className="flex-1 space-y-1.5">
+                                    <div className="flex items-center justify-between gap-2">
+                                      <h3 className="text-xs font-bold font-delight text-[#191716]">
+                                        {step.title}
+                                      </h3>
+                                      <span className="text-[10px] font-mono text-[#6E675F]">
+                                        {isDone ? 'Completed' : `Step 0${idx + 1}`}
+                                      </span>
+                                    </div>
+                                    <p className="text-xs font-delight text-[#57514B] leading-relaxed">
+                                      {step.detail}
+                                    </p>
+                                    {step.tip && (
+                                      <div className="mt-2 px-3 py-1.5 rounded bg-white border border-[#E5E0D5] text-[11px] font-delight text-[#6E675F] flex items-center gap-1.5">
+                                        <Zap className="w-3 h-3 text-[#C85A32] shrink-0" />
+                                        <span>{step.tip}</span>
+                                      </div>
+                                    )}
+                                  </div>
+                                </div>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      </div>
+
+                      {/* Optional Architecture / Code Reference */}
+                      {activeArt.codeBlock && (
+                        <div id="doc-config" className="space-y-2">
+                          <div className="flex items-center justify-between">
+                            <span className="text-xs font-bold uppercase tracking-wider font-delight text-[#191716] flex items-center gap-1.5">
+                              <Terminal className="w-3.5 h-3.5 text-[#C85A32]" />
+                              <span>{activeArt.codeTitle || 'Technical Reference'}</span>
+                            </span>
+                            <button
+                              onClick={() => handleCopyCode(activeArt.codeBlock!)}
+                              className="px-2.5 py-1 rounded bg-[#FAF8F5] hover:bg-[#F5F2EB] border border-[#E5E0D5] text-[11px] font-delight font-semibold text-[#191716] flex items-center gap-1 cursor-pointer"
+                            >
+                              {copiedCode ? (
+                                <>
+                                  <Check className="w-3 h-3 text-emerald-600" />
+                                  <span>Copied</span>
+                                </>
+                              ) : (
+                                <>
+                                  <Copy className="w-3 h-3" />
+                                  <span>Copy Snippet</span>
+                                </>
+                              )}
+                            </button>
+                          </div>
+                          <pre className="p-4 rounded-lg bg-[#191716] text-[#FAF8F5] font-mono text-xs overflow-x-auto leading-relaxed border border-[#2C2825]">
+                            <code>{activeArt.codeBlock}</code>
+                          </pre>
+                        </div>
+                      )}
+
+                      {/* Optional FAQ Accordion inside Article */}
+                      {activeArt.faqs && activeArt.faqs.length > 0 && (
+                        <div id="doc-faqs" className="space-y-3">
+                          <h2 className="text-xs font-bold uppercase tracking-wider font-delight text-[#191716]">
+                            Frequently Asked Questions
+                          </h2>
+                          <div className="space-y-2.5">
+                            {activeArt.faqs.map((f, i) => (
+                              <div key={i} className="p-4 rounded-lg bg-[#FAF8F5] border border-[#E5E0D5] space-y-1.5">
+                                <div className="text-xs font-bold font-delight text-[#191716] flex items-start gap-2">
+                                  <HelpCircle className="w-3.5 h-3.5 text-[#C85A32] shrink-0 mt-0.5" />
+                                  <span>{f.q}</span>
+                                </div>
+                                <p className="text-xs font-delight text-[#57514B] leading-relaxed pl-5.5">
+                                  {f.a}
+                                </p>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Operator Pro-Tip Callout */}
+                      <div id="doc-best-practices" className="p-4 rounded-lg bg-[#C85A32]/10 border border-[#C85A32]/30 flex items-start gap-3">
+                        <AlertCircle className="w-4 h-4 text-[#C85A32] shrink-0 mt-0.5" />
+                        <div className="text-xs font-delight text-[#191716] leading-relaxed">
+                          <span className="font-bold uppercase tracking-wider text-[#C85A32] mr-1.5">
+                            DocuReady Operator Note:
+                          </span>
+                          {activeArt.proTip}
+                        </div>
+                      </div>
+
+                      {/* Zoho-Style "Was this article helpful?" Feedback Bar */}
+                      <div className="pt-4 border-t border-[#E5E0D5] flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                        <div className="text-xs font-delight font-semibold text-[#191716]">
+                          Was this documentation article helpful?
+                        </div>
+                        {helpfulVote ? (
+                          <div className="text-xs font-delight font-semibold text-emerald-700 bg-emerald-50 border border-emerald-200 px-3 py-1.5 rounded-md">
+                            ✓ Thank you! Your feedback helps DocuReady improve the LeadPulse guide.
+                          </div>
+                        ) : (
+                          <div className="flex items-center gap-2">
+                            <button
+                              onClick={() => setHelpfulVote('yes')}
+                              className="px-3 py-1.5 rounded-md bg-[#FAF8F5] hover:bg-[#191716] hover:text-white border border-[#E5E0D5] text-xs font-delight font-semibold text-[#191716] flex items-center gap-1.5 cursor-pointer transition-colors"
+                            >
+                              <ThumbsUp className="w-3.5 h-3.5" />
+                              <span>Yes, helpful</span>
+                            </button>
+                            <button
+                              onClick={() => setHelpfulVote('no')}
+                              className="px-3 py-1.5 rounded-md bg-[#FAF8F5] hover:bg-[#191716] hover:text-white border border-[#E5E0D5] text-xs font-delight font-semibold text-[#191716] flex items-center gap-1.5 cursor-pointer transition-colors"
+                            >
+                              <ThumbsDown className="w-3.5 h-3.5" />
+                              <span>Needs more detail</span>
+                            </button>
+                          </div>
+                        )}
+                      </div>
                     </div>
-                  );
-                })}
+                  </div>
+
+                  {/* Previous / Next Article Navigation Cards */}
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    {prevEntry ? (
+                      <button
+                        onClick={() => handleSelectArticle(prevEntry.category, prevEntry.article)}
+                        className="p-4 rounded-lg bg-white border border-[#E5E0D5] hover:border-[#C85A32] text-left transition-all cursor-pointer group"
+                      >
+                        <div className="text-[10px] font-delight uppercase font-bold text-[#6E675F]">
+                          ← Previous Topic ({prevEntry.category.title})
+                        </div>
+                        <div className="text-xs font-bold font-delight text-[#191716] group-hover:text-[#C85A32] mt-1 truncate">
+                          {prevEntry.article.title}
+                        </div>
+                      </button>
+                    ) : (
+                      <div />
+                    )}
+
+                    {nextEntry && (
+                      <button
+                        onClick={() => handleSelectArticle(nextEntry.category, nextEntry.article)}
+                        className="p-4 rounded-lg bg-white border border-[#E5E0D5] hover:border-[#C85A32] text-right transition-all cursor-pointer group"
+                      >
+                        <div className="text-[10px] font-delight uppercase font-bold text-[#6E675F]">
+                          Next Topic ({nextEntry.category.title}) →
+                        </div>
+                        <div className="text-xs font-bold font-delight text-[#191716] group-hover:text-[#C85A32] mt-1 truncate">
+                          {nextEntry.article.title}
+                        </div>
+                      </button>
+                    )}
+                  </div>
+                </div>
+
+                {/* RIGHT PANE: Sticky "On This Page" TOC & Zoho-Style Resource Cards (4 Cols) */}
+                <div className="xl:col-span-4 space-y-5 xl:sticky xl:top-6">
+                  {/* On This Page TOC */}
+                  <div className="bg-white border border-[#E5E0D5] rounded-lg overflow-hidden">
+                    <div className="px-4 py-3 bg-[#F5F2EB] border-b border-[#E5E0D5]">
+                      <h3 className="text-xs font-bold uppercase tracking-wider font-delight text-[#191716]">
+                        On This Page
+                      </h3>
+                    </div>
+                    <div className="p-3.5 space-y-1.5 text-xs font-delight">
+                      <button
+                        onClick={() => scrollToSection('doc-overview')}
+                        className="w-full text-left px-2.5 py-1.5 rounded hover:bg-[#FAF8F5] text-[#57514B] hover:text-[#C85A32] font-medium cursor-pointer flex items-center gap-2"
+                      >
+                        <span className="w-1.5 h-1.5 rounded-full bg-[#C85A32]" />
+                        <span>Overview &amp; Key Takeaways</span>
+                      </button>
+                      <button
+                        onClick={() => scrollToSection('doc-steps')}
+                        className="w-full text-left px-2.5 py-1.5 rounded hover:bg-[#FAF8F5] text-[#57514B] hover:text-[#C85A32] font-medium cursor-pointer flex items-center gap-2"
+                      >
+                        <span className="w-1.5 h-1.5 rounded-full bg-[#191716]" />
+                        <span>Step-by-Step Procedure ({activeArt.steps.length})</span>
+                      </button>
+                      {activeArt.codeBlock && (
+                        <button
+                          onClick={() => scrollToSection('doc-config')}
+                          className="w-full text-left px-2.5 py-1.5 rounded hover:bg-[#FAF8F5] text-[#57514B] hover:text-[#C85A32] font-medium cursor-pointer flex items-center gap-2"
+                        >
+                          <span className="w-1.5 h-1.5 rounded-full bg-[#191716]" />
+                          <span>Technical / Schema Reference</span>
+                        </button>
+                      )}
+                      {activeArt.faqs && (
+                        <button
+                          onClick={() => scrollToSection('doc-faqs')}
+                          className="w-full text-left px-2.5 py-1.5 rounded hover:bg-[#FAF8F5] text-[#57514B] hover:text-[#C85A32] font-medium cursor-pointer flex items-center gap-2"
+                        >
+                          <span className="w-1.5 h-1.5 rounded-full bg-[#191716]" />
+                          <span>Frequently Asked Questions</span>
+                        </button>
+                      )}
+                      <button
+                        onClick={() => scrollToSection('doc-best-practices')}
+                        className="w-full text-left px-2.5 py-1.5 rounded hover:bg-[#FAF8F5] text-[#57514B] hover:text-[#C85A32] font-medium cursor-pointer flex items-center gap-2"
+                      >
+                        <span className="w-1.5 h-1.5 rounded-full bg-[#191716]" />
+                        <span>DocuReady Operator Note</span>
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Zoho Commerce-Style 4 Support & Resource Cards */}
+                  <div className="bg-white border border-[#E5E0D5] rounded-lg overflow-hidden divide-y divide-[#E5E0D5]">
+                    <div className="px-4 py-3 bg-[#F5F2EB]">
+                      <h3 className="text-xs font-bold uppercase tracking-wider font-delight text-[#191716]">
+                        Help &amp; Support Channels
+                      </h3>
+                    </div>
+
+                    <div
+                      onClick={() => navigate('/finder')}
+                      className="p-3.5 hover:bg-[#FAF8F5] transition-colors cursor-pointer flex items-start gap-3"
+                    >
+                      <PlayCircle className="w-4 h-4 text-[#C85A32] shrink-0 mt-0.5" />
+                      <div>
+                        <div className="text-xs font-bold font-delight text-[#191716]">
+                          Interactive Module Walkthroughs
+                        </div>
+                        <p className="text-[11px] font-delight text-[#6E675F] mt-0.5">
+                          Jump straight into Lead Finder, Resizable Kanban, or Outreach Studio.
+                        </p>
+                      </div>
+                    </div>
+
+                    <div
+                      onClick={() => navigate('/integrations')}
+                      className="p-3.5 hover:bg-[#FAF8F5] transition-colors cursor-pointer flex items-start gap-3"
+                    >
+                      <Puzzle className="w-4 h-4 text-[#C85A32] shrink-0 mt-0.5" />
+                      <div>
+                        <div className="text-xs font-bold font-delight text-[#191716]">
+                          OAuth &amp; Webhook Reference
+                        </div>
+                        <p className="text-[11px] font-delight text-[#6E675F] mt-0.5">
+                          Connect HubSpot, Salesforce, Google Sheets, or Slack stage alerts.
+                        </p>
+                      </div>
+                    </div>
+
+                    <div className="p-3.5 bg-[#FAF8F5] space-y-2">
+                      <div className="flex items-center gap-2 text-xs font-bold font-delight text-[#191716]">
+                        <LifeBuoy className="w-4 h-4 text-[#C85A32]" />
+                        <span>Talk to a DocuReady Specialist</span>
+                      </div>
+                      <p className="text-[11px] font-delight text-[#6E675F] leading-relaxed">
+                        Need custom scraper concurrency, enterprise SSO, or dedicated webhook onboarding?
+                      </p>
+                      <a
+                        href="mailto:support@docuready.io?subject=LeadPulse%20Enterprise%20Support"
+                        className="inline-flex items-center gap-1.5 text-xs font-delight font-bold text-[#C85A32] hover:underline"
+                      >
+                        <span>Contact DocuReady Engineering →</span>
+                      </a>
+                    </div>
+                  </div>
+                </div>
               </div>
             </div>
-
-            {/* Platform Security & Contact Reassurance Footer */}
-            <div className="w-full p-4 bg-slate-900 text-white rounded-md border border-slate-800 text-left space-y-2">
-              <div className="flex items-center gap-2 text-left">
-                <Shield className="w-4 h-4 text-emerald-400" />
-                <h3 className="font-bold font-display text-xs sm:text-sm tracking-tight text-white text-left">
-                  Enterprise Security & Isolated Control Plane
-                </h3>
-              </div>
-              <p className="text-[11px] font-sans text-slate-300 leading-relaxed text-left max-w-3xl">
-                LeadPulse operates on zero-trust role verification. All outbound credentials and API tokens are encrypted with AES-256 at rest. Master administrative controls run on an isolated administrative control plane (Port 5174) with cryptographic gateway authorization.
-              </p>
-            </div>
-
-          </div>
+          </main>
         </div>
       </div>
     </div>

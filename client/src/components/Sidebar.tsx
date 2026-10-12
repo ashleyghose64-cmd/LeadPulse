@@ -2,7 +2,7 @@ import { useLocation, Link, useNavigate } from 'react-router-dom';
 import { 
   LayoutDashboard, Users, BarChart3, Settings, 
   FolderKanban, HelpCircle, Search, Send, Users2, 
-  Webhook, Waypoints, LogOut
+  Webhook, Waypoints, LogOut, Sparkles, Zap, ArrowUpRight
 } from 'lucide-react';
 import { useStore } from '../store/useStore';
 import docuReadyBlackLogo from '../assets/DocuReady-black.png';
@@ -29,12 +29,28 @@ const toolsNav = [
 const Sidebar = () => {
   const location = useLocation();
   const navigate = useNavigate();
-  const { user, setToken, setUser } = useStore();
+  const { user, setToken, setUser, setUpgradeModalOpen, setUpgradeTab, setTopUpOpen } = useStore();
+
+  const currentPlan = (user?.plan || 'free').toLowerCase();
+  const isTopTier = currentPlan === 'pro';
+  const rawCredits = user?.lead_credits ?? 15;
+  const displayCredits = currentPlan === 'free' && !(user as any)?.has_topup ? Math.min(rawCredits, 15) : rawCredits;
+  const maxPoolLabel = currentPlan === 'free' ? '15' : currentPlan === 'basic' ? '600' : '∞';
 
   const handleSignOut = () => {
     setToken(null);
     setUser(null);
     navigate('/');
+  };
+
+  const handleTierAction = () => {
+    if (isTopTier) {
+      setUpgradeTab('topup');
+      setTopUpOpen(true);
+    } else {
+      setUpgradeTab('plans');
+      setUpgradeModalOpen(true);
+    }
   };
 
   const renderNavSection = (title: string, items: any[]) => (
@@ -94,6 +110,58 @@ const Sidebar = () => {
         {renderNavSection('Main', mainNav)}
         {renderNavSection('Lead Gen & CRM', pipelineNav)}
         {renderNavSection('Tools', toolsNav)}
+      </div>
+
+      {/* Plan Quota & Dynamic Upgrade / Top-Up Box */}
+      <div className="px-2.5 pb-2">
+        <div className="p-2.5 rounded-lg bg-white border border-[#E5E0D5] shadow-2xs space-y-2">
+          <div className="flex items-center justify-between">
+            <span className="text-[10px] font-delight font-bold uppercase tracking-wider text-[#191716] flex items-center gap-1">
+              <span className={`w-1.5 h-1.5 rounded-full ${isTopTier ? 'bg-emerald-600' : 'bg-[#C85A32]'}`} />
+              {currentPlan.toUpperCase()} TIER
+            </span>
+            <span className="text-[10px] font-delight font-bold text-[#C85A32] tabular-nums">
+              {displayCredits} / {maxPoolLabel} Tokens
+            </span>
+          </div>
+
+          <div className="w-full bg-[#F5F2EB] h-1.5 rounded-full overflow-hidden border border-[#E5E0D5]">
+            <div 
+              className="h-full bg-[#C85A32] transition-all duration-300"
+              style={{
+                width: `${currentPlan === 'free'
+                  ? Math.min(100, Math.round((displayCredits / 15) * 100))
+                  : currentPlan === 'basic'
+                    ? Math.min(100, Math.round((displayCredits / 600) * 100))
+                    : 100}%`
+              }}
+            />
+          </div>
+
+          <button
+            type="button"
+            onClick={handleTierAction}
+            className={`w-full py-1.5 px-2.5 rounded-md text-[11px] font-delight font-semibold transition-all flex items-center justify-center gap-1.5 cursor-pointer shadow-2xs ${
+              isTopTier
+                ? 'bg-[#191716] hover:bg-[#2F2B28] text-white'
+                : 'bg-[#C85A32] hover:bg-[#B04B25] text-white'
+            }`}
+          >
+            {isTopTier ? (
+              <>
+                <Zap className="w-3 h-3 text-[#E07A5F] fill-current" />
+                <span>Top-Up Tokens</span>
+                <ArrowUpRight className="w-3 h-3 opacity-80" />
+              </>
+            ) : (
+              <>
+                <Sparkles className="w-3 h-3 text-white" />
+                <span>{currentPlan === 'basic' ? 'Upgrade to Pro' : 'Upgrade Plan'}</span>
+                <ArrowUpRight className="w-3 h-3 opacity-80" />
+              </>
+            )}
+          </button>
+        </div>
       </div>
 
       {/* Footer Area */}
