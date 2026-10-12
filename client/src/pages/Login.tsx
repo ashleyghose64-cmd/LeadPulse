@@ -1,8 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useStore } from '../store/useStore';
 import axios from 'axios';
-import { GoogleLogin } from '@react-oauth/google';
-import { jwtDecode } from 'jwt-decode';
 import { X } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 
@@ -26,27 +24,6 @@ const Login = ({ onBack }: LoginProps) => {
       navigate('/dashboard');
     }
   }, [token, navigate]);
-
-  const handleGoogleSuccess = async (credentialResponse: any) => {
-    setIsLoading(true);
-    setError('');
-    try {
-      const decoded: any = jwtDecode(credentialResponse.credential);
-      const res = await axios.post('http://localhost:3001/api/auth/google', {
-        googleId: decoded.sub,
-        email: decoded.email,
-        name: decoded.name
-      });
-      setToken(res.data.token);
-      setUser(res.data.user);
-      navigate('/dashboard');
-    } catch (err: any) {
-      console.error('Google login failed', err);
-      setError(err.response?.data?.error || 'Google authentication failed on server. Please sign in via email or try again.');
-    } finally {
-      setIsLoading(false);
-    }
-  };
 
   const handleEmailSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -105,7 +82,7 @@ const Login = ({ onBack }: LoginProps) => {
               </div>
             )}
 
-            <form onSubmit={handleEmailSubmit} className="space-y-3.5 mb-5" autoComplete="on">
+            <form onSubmit={handleEmailSubmit} className="space-y-3.5" autoComplete="on">
               {isSignUp && (
                 <div>
                   <label htmlFor="name" className="block text-[11px] font-delight font-semibold text-slate-600 mb-1 uppercase tracking-wider">
@@ -169,26 +146,6 @@ const Login = ({ onBack }: LoginProps) => {
                 {isLoading ? 'Authenticating...' : isSignUp ? 'Create Workspace' : 'Sign In with Email'}
               </button>
             </form>
-
-            <div className="relative flex items-center justify-center mb-5">
-              <div className="border-t border-slate-200 w-full absolute"></div>
-              <span className="bg-white px-3 text-[11px] font-delight font-semibold text-slate-400 relative z-10">OR PROVIDER ACCESS</span>
-            </div>
-
-            <div className="flex flex-col items-center gap-2.5 w-full">
-              <div className="w-full flex justify-center">
-                <GoogleLogin
-                  onSuccess={handleGoogleSuccess}
-                  onError={() => {
-                    setError('Google Sign-In popup could not complete. Please sign in via email or try again.');
-                  }}
-                  theme="outline"
-                  size="large"
-                  shape="rectangular"
-                  width="320"
-                />
-              </div>
-            </div>
 
             <p className="mt-6 text-center text-xs text-slate-500">
               {isSignUp ? 'Already provisioned?' : 'Need a workspace?'}{' '}
