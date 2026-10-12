@@ -152,10 +152,26 @@ export const useStore = create<AppState>()(
           if (res.data?.integrations) set({ integrations: res.data.integrations });
           if (res.data?.logs) set({ integrationLogs: res.data.logs });
 
-          // If syncing to Google Sheets or Microsoft Excel, copy rows to clipboard & open/create the live Google Sheet
+          // If syncing to Google Sheets or Microsoft Excel, copy rows to clipboard BEFORE opening the sheet tab
           if (appId === 'google-sheets' || appId === 'microsoft-excel') {
-            if (res.data?.tsvContent && navigator?.clipboard) {
-              navigator.clipboard.writeText(res.data.tsvContent).catch(() => {});
+            if (res.data?.tsvContent) {
+              try {
+                const ta = document.createElement('textarea');
+                ta.value = res.data.tsvContent;
+                ta.style.position = 'fixed';
+                ta.style.left = '-9999px';
+                ta.style.top = '0';
+                document.body.appendChild(ta);
+                ta.focus();
+                ta.select();
+                document.execCommand('copy');
+                document.body.removeChild(ta);
+              } catch {}
+              if (navigator?.clipboard?.writeText) {
+                try {
+                  await navigator.clipboard.writeText(res.data.tsvContent);
+                } catch {}
+              }
             }
             if (res.data?.externalUrl) {
               window.open(res.data.externalUrl, '_blank', 'noopener,noreferrer');

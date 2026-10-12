@@ -356,10 +356,10 @@ const INTEGRATION_PORTALS: Record<string, { authUrl: string; consoleUrl: string;
     portalLabel: 'Notion My Integrations Portal'
   },
   'google-sheets': {
-    authUrl: 'https://console.cloud.google.com/apis/library/sheets.googleapis.com',
+    authUrl: 'https://console.developers.google.com/apis/api/sheets.googleapis.com/overview?project=540549140912',
     consoleUrl: 'https://docs.google.com/spreadsheets/',
     docsUrl: 'https://developers.google.com/sheets/api/guides/concepts',
-    portalLabel: 'Google Sheets & Cloud OAuth Console'
+    portalLabel: 'Google Sheets API Console (leadpulse-3fe7e)'
   },
   'microsoft-excel': {
     authUrl: 'https://portal.azure.com/#view/Microsoft_AAD_RegisteredApps/ApplicationsListBlade',
@@ -368,10 +368,10 @@ const INTEGRATION_PORTALS: Record<string, { authUrl: string; consoleUrl: string;
     portalLabel: 'Microsoft Graph & Excel Portal'
   },
   'google-calendar': {
-    authUrl: 'https://console.cloud.google.com/apis/library/calendar-json.googleapis.com',
+    authUrl: 'https://console.cloud.google.com/apis/library/calendar-json.googleapis.com?project=540549140912',
     consoleUrl: 'https://calendar.google.com/',
     docsUrl: 'https://developers.google.com/calendar/api/guides/overview',
-    portalLabel: 'Google Calendar OAuth Console'
+    portalLabel: 'Google Calendar API Console'
   },
   'calendly': {
     authUrl: 'https://calendly.com/integrations/api_webhooks',
@@ -410,10 +410,10 @@ const INTEGRATION_PORTALS: Record<string, { authUrl: string; consoleUrl: string;
     portalLabel: 'Atlassian API Tokens & OAuth Console'
   },
   'google-drive': {
-    authUrl: 'https://console.cloud.google.com/apis/library/drive.googleapis.com',
+    authUrl: 'https://console.developers.google.com/apis/api/drive.googleapis.com/overview?project=540549140912',
     consoleUrl: 'https://drive.google.com/',
     docsUrl: 'https://developers.google.com/drive/api/guides/about-sdk',
-    portalLabel: 'Google Drive API Console'
+    portalLabel: 'Google Drive API Console (leadpulse-3fe7e)'
   },
   'onedrive': {
     authUrl: 'https://portal.azure.com/#view/Microsoft_AAD_RegisteredApps/ApplicationsListBlade',
@@ -583,10 +583,14 @@ const WEBHOOK_APP_IDS = [
 
 const GOOGLE_APPS_SCRIPT_SNIPPET = `function doPost(e) {
   var body = JSON.parse(e.postData.contents);
-  var sheet = SpreadsheetApp.getActiveSpreadsheet().getSheets()[0];
-  if (sheet.getLastRow() === 0 && body.headers) sheet.appendRow(body.headers);
+  var ss = null;
+  try { ss = SpreadsheetApp.getActiveSpreadsheet(); } catch (err) {}
+  if (!ss) ss = SpreadsheetApp.create(body.title || 'LeadPulse CRM — Live Mirror');
+  var sheet = ss.getSheets()[0];
+  sheet.clear();
+  if (body.headers) sheet.appendRow(body.headers);
   (body.rows || []).forEach(function(r) { sheet.appendRow(r); });
-  return ContentService.createTextOutput(JSON.stringify({ ok: true, rows: (body.rows || []).length })).setMimeType(ContentService.MimeType.JSON);
+  return ContentService.createTextOutput(JSON.stringify({ ok: true, spreadsheetId: ss.getId(), spreadsheetUrl: ss.getUrl(), rows: (body.rows || []).length })).setMimeType(ContentService.MimeType.JSON);
 }`;
 
 const Integrations = () => {

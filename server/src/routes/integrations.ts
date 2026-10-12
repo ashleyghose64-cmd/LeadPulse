@@ -1,7 +1,67 @@
 import express from 'express';
+import crypto from 'crypto';
+import fs from 'fs';
+import path from 'path';
 import { db } from '../index';
 
 const router = express.Router();
+
+let cachedServiceAccountToken: { token: string; expiresAt: number } | null = null;
+
+// Mint a live Google OAuth2 access token from the backend Service Account for Google Sheets & Drive APIs
+const getGoogleServiceAccountAccessToken = async (): Promise<string> => {
+  if (cachedServiceAccountToken && Date.now() < cachedServiceAccountToken.expiresAt) {
+    return cachedServiceAccountToken.token;
+  }
+  try {
+    let sa: any = null;
+    if (process.env.FIREBASE_SERVICE_ACCOUNT_KEY) {
+      sa = JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT_KEY);
+    } else {
+      const keyPath = process.env.FIREBASE_SERVICE_ACCOUNT_PATH
+        ? path.resolve(process.env.FIREBASE_SERVICE_ACCOUNT_PATH)
+        : path.resolve(__dirname, '../../serviceAccountKey.json');
+      if (fs.existsSync(keyPath)) {
+        sa = JSON.parse(fs.readFileSync(keyPath, 'utf8'));
+      }
+    }
+    if (!sa?.client_email || !sa?.private_key) return '';
+
+    const now = Math.floor(Date.now() / 1000);
+    const header = Buffer.from(JSON.stringify({ alg: 'RS256', typ: 'JWT' })).toString('base64url');
+    const claim = Buffer.from(
+      JSON.stringify({
+        iss: sa.client_email,
+        scope: 'https://www.googleapis.com/auth/spreadsheets https://www.googleapis.com/auth/drive',
+        aud: 'https://oauth2.googleapis.com/token',
+        exp: now + 3600,
+        iat: now
+      })
+    ).toString('base64url');
+
+    const signer = crypto.createSign('RSA-SHA256');
+    signer.update(`${header}.${claim}`);
+    const signature = signer.sign(sa.private_key, 'base64url');
+
+    const tokenRes = await fetch('https://oauth2.googleapis.com/token', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: `grant_type=urn:ietf:params:oauth:grant-type:jwt-bearer&assertion=${header}.${claim}.${signature}`
+    });
+    if (!tokenRes.ok) return '';
+    const tokenData: any = await tokenRes.json();
+    if (tokenData?.access_token) {
+      cachedServiceAccountToken = {
+        token: tokenData.access_token,
+        expiresAt: Date.now() + 50 * 60 * 1000
+      };
+      return tokenData.access_token;
+    }
+  } catch (err) {
+    console.warn('[Integrations] Service account token warning:', err);
+  }
+  return '';
+};
 
 export interface ConfigField {
   key: string;
@@ -1523,40 +1583,21 @@ router.post('/sync-leads', async (req, res) => {
       let sheetId = extractSpreadsheetId(appConfig.spreadsheetId);
       const sheetName = (appConfig.sheetName || 'Sheet1').trim();
       const appsScriptUrl = (appConfig.webhookUrl || '').trim();
+      const userEmail = String(userData?.email || appConfig.authorizedEmail || '').trim();
       let apiAppended = false;
 
-      // Path A: Direct Google Sheets v4 API with OAuth Access Token
-      if (appConfig.oauthAccessToken) {
+      // Path A: Direct Google Sheets v4 API using User OAuth Token OR Backend Google Cloud Service Account
+      const bearerToken = appConfig.oauthAccessToken || (await getGoogleServiceAccountAccessToken());
+      if (bearerToken) {
         try {
-          if (!sheetId) {
-            const createRes = await fetch('https://sheets.googleapis.com/v4/spreadsheets', {
-              method: 'POST',
-              headers: {
-                Authorization: `Bearer ${appConfig.oauthAccessToken}`,
-                'Content-Type': 'application/json'
-              },
-              body: JSON.stringify({
-                properties: { title: 'LeadPulse CRM — Live Mirror' },
-                sheets: [{ properties: { title: sheetName, gridProperties: { frozenRowCount: 1 } } }]
-              })
-            });
-            if (createRes.ok) {
-              const created: any = await createRes.json();
-              sheetId = created.spreadsheetId || '';
-              if (sheetId) {
-                appConfig.spreadsheetId = sheetId;
-                appConfig.spreadsheetUrl = `https://docs.google.com/spreadsheets/d/${sheetId}/edit`;
-              }
-            }
-          }
-
+          // 1) If an existing sheetId is linked, try writing all headers + lead rows directly into it
           if (sheetId) {
-            const appendRes = await fetch(
-              `https://sheets.googleapis.com/v4/spreadsheets/${sheetId}/values/${encodeURIComponent(sheetName)}!A1:append?valueInputOption=USER_ENTERED`,
+            const writeRes = await fetch(
+              `https://sheets.googleapis.com/v4/spreadsheets/${sheetId}/values/${encodeURIComponent(sheetName)}!A1?valueInputOption=USER_ENTERED`,
               {
-                method: 'POST',
+                method: 'PUT',
                 headers: {
-                  Authorization: `Bearer ${appConfig.oauthAccessToken}`,
+                  Authorization: `Bearer ${bearerToken}`,
                   'Content-Type': 'application/json'
                 },
                 body: JSON.stringify({
@@ -1564,25 +1605,136 @@ router.post('/sync-leads', async (req, res) => {
                 })
               }
             );
-            if (appendRes.ok) {
+            if (writeRes.ok) {
               apiAppended = true;
               deliveryMode = 'google_sheets_api';
               externalUrl = `https://docs.google.com/spreadsheets/d/${sheetId}/edit`;
-              deliveryNote = `Appended ${docsToSync.length} rows directly into Google Sheet (${sheetName}) via Google Sheets API v4`;
+              deliveryNote = `Populated ${docsToSync.length} lead(s) directly into Google Sheet (${sheetName}) via Google Sheets API v4!`;
+            }
+          }
+
+          // 2) If no sheetId (or existing sheet wasn't writable), create a brand-new Google Sheet pre-populated with all rows & styled headers
+          if (!apiAppended) {
+            const allGridRows = [
+              {
+                values: headers.map(h => ({
+                  userEnteredValue: { stringValue: String(h) },
+                  userEnteredFormat: {
+                    backgroundColor: { red: 0.098, green: 0.09, blue: 0.086 },
+                    textFormat: {
+                      bold: true,
+                      foregroundColor: { red: 1, green: 1, blue: 1 }
+                    }
+                  }
+                }))
+              },
+              ...rows.map(r => ({
+                values: r.map(cell => ({
+                  userEnteredValue: { stringValue: String(cell ?? '') }
+                }))
+              }))
+            ];
+
+            const createRes = await fetch('https://sheets.googleapis.com/v4/spreadsheets', {
+              method: 'POST',
+              headers: {
+                Authorization: `Bearer ${bearerToken}`,
+                'Content-Type': 'application/json'
+              },
+              body: JSON.stringify({
+                properties: {
+                  title: `LeadPulse CRM — Live Mirror (${docsToSync.length} Leads)`
+                },
+                sheets: [
+                  {
+                    properties: {
+                      title: sheetName,
+                      gridProperties: {
+                        frozenRowCount: 1,
+                        rowCount: Math.max(100, rows.length + 20),
+                        columnCount: Math.max(10, headers.length + 1)
+                      }
+                    },
+                    data: [
+                      {
+                        startRow: 0,
+                        startColumn: 0,
+                        rowData: allGridRows
+                      }
+                    ]
+                  }
+                ]
+              })
+            });
+
+            if (createRes.ok) {
+              const created: any = await createRes.json();
+              const newSheetId = created.spreadsheetId || '';
+              if (newSheetId) {
+                let accessibleByBrowser = Boolean(appConfig.oauthAccessToken);
+                if (!accessibleByBrowser) {
+                  // Share newly created Service Account sheet so the user's browser has immediate Editor access
+                  const permRes = await fetch(
+                    `https://www.googleapis.com/drive/v3/files/${newSheetId}/permissions`,
+                    {
+                      method: 'POST',
+                      headers: {
+                        Authorization: `Bearer ${bearerToken}`,
+                        'Content-Type': 'application/json'
+                      },
+                      body: JSON.stringify({
+                        role: 'writer',
+                        type: 'anyone'
+                      })
+                    }
+                  );
+                  if (permRes.ok) {
+                    accessibleByBrowser = true;
+                  }
+                  if (userEmail && userEmail.includes('@')) {
+                    fetch(
+                      `https://www.googleapis.com/drive/v3/files/${newSheetId}/permissions?sendNotificationEmail=false`,
+                      {
+                        method: 'POST',
+                        headers: {
+                          Authorization: `Bearer ${bearerToken}`,
+                          'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify({
+                          role: 'writer',
+                          type: 'user',
+                          emailAddress: userEmail
+                        })
+                      }
+                    ).catch(() => {});
+                  }
+                }
+
+                if (accessibleByBrowser) {
+                  sheetId = newSheetId;
+                  appConfig.spreadsheetId = newSheetId;
+                  appConfig.spreadsheetUrl = `https://docs.google.com/spreadsheets/d/${newSheetId}/edit`;
+                  apiAppended = true;
+                  deliveryMode = 'google_sheets_api';
+                  externalUrl = appConfig.spreadsheetUrl;
+                  deliveryNote = `Created & populated Google Sheet with ${docsToSync.length} lead(s) via Google Sheets API v4!`;
+                }
+              }
             }
           }
         } catch (err) {
-          console.warn('[Integrations] Google Sheets REST API append fallback:', err);
+          console.warn('[Integrations] Google Sheets REST API warning:', err);
         }
       }
 
-      // Path B: Google Apps Script Web App URL (if configured)
+      // Path B: Google Apps Script Web App URL (creates or appends rows directly in user's Google Drive)
       if (!apiAppended && appsScriptUrl.startsWith('http')) {
         try {
           const scriptRes = await fetch(appsScriptUrl, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
+              title: `LeadPulse CRM — Live Mirror (${docsToSync.length} Leads)`,
               sheetName,
               headers,
               rows,
@@ -1590,19 +1742,28 @@ router.post('/sync-leads', async (req, res) => {
             })
           });
           if (scriptRes.ok) {
+            let scriptJson: any = null;
+            try {
+              scriptJson = await scriptRes.json();
+            } catch {}
+            if (scriptJson?.spreadsheetId) {
+              sheetId = scriptJson.spreadsheetId;
+              appConfig.spreadsheetId = sheetId;
+              appConfig.spreadsheetUrl = `https://docs.google.com/spreadsheets/d/${sheetId}/edit`;
+            }
             apiAppended = true;
             deliveryMode = 'apps_script_webhook';
-            externalUrl = sheetId
-              ? `https://docs.google.com/spreadsheets/d/${sheetId}/edit`
-              : appsScriptUrl;
-            deliveryNote = `Appended ${docsToSync.length} rows to Google Sheets via Apps Script Web App`;
+            externalUrl =
+              scriptJson?.spreadsheetUrl ||
+              (sheetId ? `https://docs.google.com/spreadsheets/d/${sheetId}/edit` : appsScriptUrl);
+            deliveryNote = `Created & populated ${docsToSync.length} lead(s) in Google Sheets via Apps Script Web App!`;
           }
         } catch (err) {
           console.warn('[Integrations] Apps Script webhook warning:', err);
         }
       }
 
-      // Path C: Verify if linked sheetId actually exists on Google Drive; if not (or empty), create a brand-new Google Sheet
+      // Path C: Verify if linked sheetId actually exists on Google Drive; if not (or empty), open new Google Sheet with rows copied to clipboard
       if (!apiAppended) {
         if (sheetId) {
           try {
@@ -1611,7 +1772,6 @@ router.post('/sync-leads', async (req, res) => {
               redirect: 'follow'
             });
             if (checkRes.status === 404) {
-              // Sheet does not exist in Google Drive — clear invalid ID so we create a fresh Google Sheet instead
               sheetId = '';
               appConfig.spreadsheetId = '';
               appConfig.spreadsheetUrl = '';
@@ -1626,8 +1786,8 @@ router.post('/sync-leads', async (req, res) => {
           ? `https://docs.google.com/spreadsheets/d/${sheetId}/edit`
           : 'https://docs.google.com/spreadsheets/create';
         deliveryNote = sheetId
-          ? `Mirrored ${docsToSync.length} lead(s) (copied to clipboard) — opening Google Sheet (${sheetId})`
-          : `Created new Google Sheet & copied ${docsToSync.length} lead(s) to clipboard (press Ctrl+V in cell A1 to paste all rows)`;
+          ? `Copied ${docsToSync.length} lead(s) to clipboard & opened Google Sheet (${sheetId}) — press Ctrl+V in cell A1!`
+          : `Copied ${docsToSync.length} lead(s) to clipboard & created new Google Sheet — press Ctrl+V in cell A1 to paste all rows!`;
       }
     }
 
