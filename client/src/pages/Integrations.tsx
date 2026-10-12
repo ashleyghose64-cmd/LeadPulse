@@ -654,8 +654,18 @@ const Integrations = () => {
 
   // Open configuration for an app
   const handleOpenConfig = (app: IntegrationApp) => {
+    const initialCfg: Record<string, string> = { ...(app.config || {}) };
+    if (
+      app.id === 'google-sheets' &&
+      initialCfg.spreadsheetId &&
+      (initialCfg.spreadsheetId.startsWith('1BxiMVs0XRA5nFMdKvBdBZjgmUUqptlbs') ||
+        initialCfg.spreadsheetId.startsWith('1LpSheet_'))
+    ) {
+      initialCfg.spreadsheetId = '';
+      delete initialCfg.spreadsheetUrl;
+    }
     setSelectedApp(app);
-    setAppConfigState(app.config || {});
+    setAppConfigState(initialCfg);
     setRevealedKeys({});
     setTestPingResult(null);
     setIsAuthorizingOAuth(false);
@@ -1565,12 +1575,19 @@ const Integrations = () => {
           'attio'
         ].includes(selectedApp.id);
 
-        // Extract clean Google Sheet URL if user pasted an ID or full URL
-        const rawSheetVal = (appConfigState.spreadsheetUrl || appConfigState.spreadsheetId || '').trim();
+        // Extract clean Google Sheet URL if user pasted a real ID or full URL (ignore placeholders)
+        const rawSheetVal = (appConfigState.spreadsheetId || appConfigState.spreadsheetUrl || '').trim();
         const extractedSheetMatch = rawSheetVal.match(/\/spreadsheets\/d\/([a-zA-Z0-9-_]+)/);
-        const cleanSheetId = extractedSheetMatch
+        const candidateSheetId = extractedSheetMatch
           ? extractedSheetMatch[1]
           : (/^[a-zA-Z0-9-_]{15,}$/.test(rawSheetVal) ? rawSheetVal : '');
+        const cleanSheetId =
+          candidateSheetId &&
+          !candidateSheetId.startsWith('1BxiMVs0XRA5nFMdKvBdBZjgmUUqptlbs') &&
+          !candidateSheetId.startsWith('1LpSheet_') &&
+          candidateSheetId !== 'create'
+            ? candidateSheetId
+            : '';
         const resolvedGoogleSheetUrl = cleanSheetId
           ? `https://docs.google.com/spreadsheets/d/${cleanSheetId}/edit`
           : 'https://docs.google.com/spreadsheets/create';

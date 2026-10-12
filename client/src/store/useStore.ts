@@ -152,23 +152,10 @@ export const useStore = create<AppState>()(
           if (res.data?.integrations) set({ integrations: res.data.integrations });
           if (res.data?.logs) set({ integrationLogs: res.data.logs });
 
-          // If syncing to Google Sheets or Microsoft Excel, handle live sheet opening & clipboard/CSV sync
+          // If syncing to Google Sheets or Microsoft Excel, copy rows to clipboard & open/create the live Google Sheet
           if (appId === 'google-sheets' || appId === 'microsoft-excel') {
             if (res.data?.tsvContent && navigator?.clipboard) {
               navigator.clipboard.writeText(res.data.tsvContent).catch(() => {});
-            }
-            if (res.data?.deliveryMode === 'sheet_bridge_export' && res.data?.csvContent) {
-              try {
-                const blob = new Blob([res.data.csvContent], { type: 'text/csv;charset=utf-8;' });
-                const url = URL.createObjectURL(blob);
-                const a = document.createElement('a');
-                a.href = url;
-                a.download = `LeadPulse_${appId}_Mirror_${new Date().toISOString().slice(0, 10)}.csv`;
-                document.body.appendChild(a);
-                a.click();
-                document.body.removeChild(a);
-                URL.revokeObjectURL(url);
-              } catch {}
             }
             if (res.data?.externalUrl) {
               window.open(res.data.externalUrl, '_blank', 'noopener,noreferrer');

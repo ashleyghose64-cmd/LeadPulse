@@ -780,6 +780,25 @@ const isLegacySandboxConfig = (appId: string, cfg: any): boolean => {
   return false;
 };
 
+// Helper to extract clean Google Spreadsheet ID from either a full URL or raw ID (rejects placeholders/synthetic IDs)
+const extractSpreadsheetId = (input?: string): string => {
+  if (!input) return '';
+  const trimmed = String(input).trim();
+  const match = trimmed.match(/\/spreadsheets\/d\/([a-zA-Z0-9-_]+)/);
+  const candidate = match && match[1] ? match[1] : trimmed;
+  if (
+    !candidate ||
+    candidate === 'create' ||
+    candidate.length < 15 ||
+    candidate.startsWith('1BxiMVs0XRA5nFMdKvBdBZjgmUUqptlbs') ||
+    candidate.startsWith('1LpSheet_') ||
+    candidate.includes(' ')
+  ) {
+    return '';
+  }
+  return candidate;
+};
+
 // Helper to merge stored settings with current default schema
 const getMergedIntegrations = (savedList: any[] = []): IntegrationApp[] => {
   return DEFAULT_APPS.map(defaultApp => {
@@ -791,6 +810,15 @@ const getMergedIntegrations = (savedList: any[] = []): IntegrationApp[] => {
       const cleanedConfig = { ...defaultApp.config, ...(existing.config || {}) };
       if (defaultApp.id === 'calendly' && cleanedConfig.bookingUrl === 'https://calendly.com/alex-roberts/15min') {
         cleanedConfig.bookingUrl = '';
+      }
+      if (defaultApp.id === 'google-sheets') {
+        const validSheetId = extractSpreadsheetId(cleanedConfig.spreadsheetId);
+        cleanedConfig.spreadsheetId = validSheetId;
+        if (validSheetId) {
+          cleanedConfig.spreadsheetUrl = `https://docs.google.com/spreadsheets/d/${validSheetId}/edit`;
+        } else {
+          delete cleanedConfig.spreadsheetUrl;
+        }
       }
       return {
         ...defaultApp,
@@ -858,15 +886,6 @@ router.get('/', async (req, res) => {
   }
 });
 
-// Helper to extract clean Google Spreadsheet ID from either a full URL or raw ID
-const extractSpreadsheetId = (input?: string): string => {
-  if (!input) return '';
-  const trimmed = input.trim();
-  const match = trimmed.match(/\/spreadsheets\/d\/([a-zA-Z0-9-_]+)/);
-  if (match && match[1]) return match[1];
-  return trimmed;
-};
-
 // POST /api/integrations/connect - Connect or update an app with real OAuth / API / Sheet initialization
 router.post('/connect', async (req, res) => {
   const userId = req.headers.userid as string;
@@ -890,10 +909,14 @@ router.post('/connect', async (req, res) => {
 
     // Special handling for Google Sheets: extract ID from URL, or auto-create a live Google Sheet if OAuth token is provided
     if (appId === 'google-sheets') {
-      if (normalizedConfig.spreadsheetId) {
-        normalizedConfig.spreadsheetId = extractSpreadsheetId(normalizedConfig.spreadsheetId);
-        normalizedConfig.spreadsheetUrl = `https://docs.google.com/spreadsheets/d/${normalizedConfig.spreadsheetId}/edit`;
-      } else if (normalizedConfig.oauthAccessToken) {
+      const cleanedId = extractSpreadsheetId(normalizedConfig.spreadsheetId);
+      normalizedConfig.spreadsheetId = cleanedId;
+      if (cleanedId) {
+        normalizedConfig.spreadsheetUrl = `https://docs.google.com/spreadsheets/d/${cleanedId}/edit`;
+      } else {
+        delete normalizedConfig.spreadsheetUrl;
+      }
+      if (!cleanedId && normalizedConfig.oauthAccessToken) {
         try {
           const createRes = await fetch('https://sheets.googleapis.com/v4/spreadsheets', {
             method: 'POST',
@@ -1065,10 +1088,12 @@ router.post('/google-autofetch', async (req, res) => {
 
     if (appId === 'google-sheets') {
       const cleanedId = extractSpreadsheetId(currentConfig.spreadsheetId);
-      autoConfig.spreadsheetId = cleanedId || `1BxiMVs0XRA5nFMdKvBdBZjgmUUqptlbs_${shortWs}`;
+      autoConfig.spreadsheetId = cleanedId;
       autoConfig.sheetName = currentConfig.sheetName || 'Sheet1';
       if (cleanedId) {
         autoConfig.spreadsheetUrl = `https://docs.google.com/spreadsheets/d/${cleanedId}/edit`;
+      } else {
+        delete autoConfig.spreadsheetUrl;
       }
     } else if (appId === 'google-drive') {
       autoConfig.folderId = currentConfig.folderId || `1DriveFolder_${shortWs}_Exports`;
@@ -1577,15 +1602,32 @@ router.post('/sync-leads', async (req, res) => {
         }
       }
 
-      // Path C: Live Sheet Opener + Clipboard TSV & CSV Sync Bridge
+      // Path C: Verify if linked sheetId actually exists on Google Drive; if not (or empty), create a brand-new Google Sheet
       if (!apiAppended) {
-        deliveryMode = 'sheet_bridge_export';
+        if (sheetId) {
+          try {
+            const checkRes = await fetch(`https://docs.google.com/spreadsheets/d/${sheetId}/edit`, {
+              method: 'HEAD',
+              redirect: 'follow'
+            });
+            if (checkRes.status === 404) {
+              // Sheet does not exist in Google Drive — clear invalid ID so we create a fresh Google Sheet instead
+              sheetId = '';
+              appConfig.spreadsheetId = '';
+              appConfig.spreadsheetUrl = '';
+            }
+          } catch {
+            // Network check skipped
+          }
+        }
+
+        deliveryMode = 'google_sheet_create';
         externalUrl = sheetId
           ? `https://docs.google.com/spreadsheets/d/${sheetId}/edit`
           : 'https://docs.google.com/spreadsheets/create';
         deliveryNote = sheetId
-          ? `Synced ${docsToSync.length} leads (copied for Google Sheets & downloaded CSV) — opening Spreadsheet ${sheetId}`
-          : `Synced ${docsToSync.length} leads (copied for Google Sheets & downloaded CSV) — opening new Google Sheet`;
+          ? `Mirrored ${docsToSync.length} lead(s) (copied to clipboard) — opening Google Sheet (${sheetId})`
+          : `Created new Google Sheet & copied ${docsToSync.length} lead(s) to clipboard (press Ctrl+V in cell A1 to paste all rows)`;
       }
     }
 
