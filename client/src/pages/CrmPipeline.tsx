@@ -187,7 +187,7 @@ const CrmPipeline = () => {
         const existing = Array.isArray(l.syncedTo) ? l.syncedTo : [];
         return { ...l, syncedTo: Array.from(new Set([...existing, result.appName])) };
       }));
-      showToast(`Mirrored ${result.syncedCount} pipeline deal(s) to ${result.appName} [200 OK]`);
+      showToast(result.deliveryNote || `Mirrored ${result.syncedCount} pipeline deal(s) to ${result.appName} [200 OK]`);
     }
   };
 

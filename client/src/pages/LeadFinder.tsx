@@ -118,7 +118,7 @@ const LeadFinder = () => {
         const existing = Array.isArray(l.syncedTo) ? l.syncedTo : [];
         return { ...l, syncedTo: Array.from(new Set([...existing, result.appName])) };
       }));
-      showToast(`Pushed ${result.syncedCount} harvested lead(s) to ${result.appName} [200 OK]`);
+      showToast(result.deliveryNote || `Pushed ${result.syncedCount} harvested lead(s) to ${result.appName} [200 OK]`);
     } else {
       showToast(`Failed to sync leads to ${appName}.`);
     }

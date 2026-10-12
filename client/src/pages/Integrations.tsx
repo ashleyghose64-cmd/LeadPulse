@@ -9,6 +9,7 @@ import {
 } from 'lucide-react';
 import { useStore } from '../store/useStore';
 import { confirmDialog, alertDialog } from '../components/AppConfirmModal';
+import { useGoogleLogin } from '@react-oauth/google';
 import axios from 'axios';
 
 interface ConfigField {
@@ -176,7 +177,7 @@ const IntegrationLogo = ({
   );
 };
 
-// Generates customized, authentic 3-step OAuth instructions based on app category
+// Generates customized, accurate 3-step connection instructions based on how each integration actually connects
 const getAppSteps = (app: IntegrationApp) => {
   const name = app.name;
   const id = app.id.toLowerCase();
@@ -184,92 +185,64 @@ const getAppSteps = (app: IntegrationApp) => {
   
   if (id === 'google-sheets') {
     return [
-      'Sign in with Google',
-      'Grant access to LeadPulse',
-      'Select a spreadsheet to sync leads'
+      'Sign in with Google OAuth 2.0 (or paste your target Google Sheet URL / ID below)',
+      'Auto-create a "LeadPulse CRM — Live Mirror" sheet or link an existing spreadsheet tab',
+      'Click "Mirror CRM Leads Now" or use the CRM / Lead Finder toolbar to sync leads live'
     ];
   }
-  if (id === 'slack') {
+  if (['google-drive', 'google-calendar', 'gmail-workspace', 'google-forms', 'google-analytics'].includes(id)) {
     return [
-      'Sign in to Slack',
-      'Choose a workspace',
-      'Select channels to use'
+      `Click "Sign in with Google OAuth 2.0" to authenticate your Google Workspace account`,
+      `Configure your ${name} target resource or folder settings below`,
+      `Save & activate real-time workspace synchronization`
     ];
   }
-  if (id === 'microsoft-teams') {
+  if (['slack', 'microsoft-teams', 'zapier', 'webhook-custom'].includes(id)) {
     return [
-      'Sign in with Microsoft',
-      'Grant Teams access to LeadPulse',
-      'Start sending real-time messages'
-    ];
-  }
-  if (id === 'github') {
-    return [
-      'Sign in to GitHub',
-      'Grant access to your repositories',
-      'Start reading repos and managing issues'
-    ];
-  }
-  if (id === 'google-drive') {
-    return [
-      'Sign in with Google',
-      'Grant Drive access to LeadPulse',
-      'Select target folders for exports'
-    ];
-  }
-  if (id === 'notion') {
-    return [
-      'Sign in to Notion',
-      'Choose Notion workspace and pages',
-      'Select database to sync audience contacts'
+      `Create an Incoming Webhook URL in ${name} (use the helper link if you need a new URL)`,
+      `Paste the live Webhook URL below and click "Test Live Webhook" to send a real HTTP POST`,
+      `Save & activate instant pipeline stage and lead alerts`
     ];
   }
   if (id === 'hubspot') {
     return [
-      'Sign in to HubSpot',
-      'Choose your HubSpot portal',
-      'Map contacts & deal pipeline stages'
+      'Generate a Private App Access Token (pat-na1-...) in your HubSpot Settings',
+      'Paste the token below and click "Test Live API" to verify against HubSpot CRM API v3',
+      'Save & push CRM contacts directly to HubSpot'
     ];
   }
-  if (id === 'stripe') {
+  if (id === 'airtable') {
     return [
-      'Sign in with Stripe',
-      'Authorize LeadPulse platform access',
-      'Stream live invoice and payment conversions'
+      'Create a Personal Access Token (pat...) in Airtable Builder Hub',
+      'Enter your Base ID (app...) and Table Name below and click "Test Live API"',
+      'Save & sync leads directly into your Airtable base'
+    ];
+  }
+  if (id === 'notion') {
+    return [
+      'Create an Internal Integration Secret (ntn_...) at notion.so/my-integrations',
+      'Share your target Notion Database with the integration and paste the Database ID below',
+      'Test live API connection & activate Notion database sync'
     ];
   }
   if (cat.includes('crm')) {
     return [
-      `Sign in to ${name}`,
-      `Grant LeadPulse authorization`,
-      `Sync pipeline stages and deal records`
-    ];
-  }
-  if (cat.includes('communication')) {
-    return [
-      `Sign in to ${name}`,
-      `Select your alert channel or workspace`,
-      `Activate instant notification webhooks`
-    ];
-  }
-  if (cat.includes('data') || cat.includes('analytics')) {
-    return [
-      `Authenticate with ${name}`,
-      `Grant query and ingestion permissions`,
-      `Stream lead telemetry in real time`
+      `Copy your API key or access token from ${name}`,
+      `Paste credentials below and verify with "Test Live API"`,
+      `Activate 2-way pipeline & contact synchronization`
     ];
   }
   if (cat.includes('ai')) {
     return [
-      `Sign in to ${name}`,
-      `Grant model execution permissions`,
-      `Activate autonomous AI cold pitches`
+      `Copy your API key from the ${name} console`,
+      `Paste your API key and preferred model below`,
+      `Verify connection and activate AI outreach generation`
     ];
   }
   return [
-    `Sign in with ${name}`,
-    `Grant access to LeadPulse`,
-    `Complete automated 2-way sync setup`
+    `Copy your API credentials or webhook endpoint from ${name}`,
+    `Enter your configuration below and run "Test Live Connection"`,
+    `Save & activate ${name} across your LeadPulse workspace`
   ];
 };
 
@@ -591,8 +564,32 @@ const getIntegrationPortal = (app: IntegrationApp) => {
 
 const API_BASE = (import.meta.env.VITE_API_URL || (import.meta.env.DEV ? 'http://localhost:3001' : window.location.origin)).replace(/\/$/, '');
 
+const GOOGLE_OAUTH_APP_IDS = [
+  'google-sheets',
+  'google-drive',
+  'google-calendar',
+  'gmail-workspace',
+  'google-forms',
+  'google-analytics'
+];
+
+const WEBHOOK_APP_IDS = [
+  'slack',
+  'microsoft-teams',
+  'zapier',
+  'webhook-custom'
+];
+
+const GOOGLE_APPS_SCRIPT_SNIPPET = `function doPost(e) {
+  var body = JSON.parse(e.postData.contents);
+  var sheet = SpreadsheetApp.getActiveSpreadsheet().getSheets()[0];
+  if (sheet.getLastRow() === 0 && body.headers) sheet.appendRow(body.headers);
+  (body.rows || []).forEach(function(r) { sheet.appendRow(r); });
+  return ContentService.createTextOutput(JSON.stringify({ ok: true, rows: (body.rows || []).length })).setMimeType(ContentService.MimeType.JSON);
+}`;
+
 const Integrations = () => {
-  const { user, integrations: storeIntegrations, integrationLogs, setIntegrations, setIntegrationLogs } = useStore();
+  const { user, integrations: storeIntegrations, integrationLogs, setIntegrations, setIntegrationLogs, syncLeadsToIntegration, leads } = useStore();
   const [apps, setApps] = useState<IntegrationApp[]>(storeIntegrations as IntegrationApp[]);
   const [apiKey, setApiKey] = useState('lp_live_workspace_key');
   const [, setLoading] = useState(false);
@@ -609,12 +606,12 @@ const Integrations = () => {
   const [isActivityLogOpen, setIsActivityLogOpen] = useState(false);
   const [expandedLogId, setExpandedLogId] = useState<string | null>(null);
   const [isTestingPing, setIsTestingPing] = useState(false);
-  const [testPingResult, setTestPingResult] = useState<string | null>(null);
+  const [testPingResult, setTestPingResult] = useState<{ ok: boolean; text: string } | null>(null);
+  const [isSyncingNow, setIsSyncingNow] = useState(false);
+  const [copiedScript, setCopiedScript] = useState(false);
 
   // External Website Authorization State
   const [isAuthorizingOAuth, setIsAuthorizingOAuth] = useState(false);
-  const [oauthStep, setOauthStep] = useState<'idle' | 'portal_open' | 'verifying' | 'success'>('idle');
-  const [openedPortalUrl, setOpenedPortalUrl] = useState<string>('');
   
   // Config edit state & show/hide passwords
   const [appConfigState, setAppConfigState] = useState<Record<string, string>>({});
@@ -628,7 +625,7 @@ const Integrations = () => {
 
   const showToast = (msg: string) => {
     setToastMessage(msg);
-    setTimeout(() => setToastMessage(''), 3500);
+    setTimeout(() => setToastMessage(''), 4200);
   };
 
   useEffect(() => {
@@ -661,86 +658,90 @@ const Integrations = () => {
     setRevealedKeys({});
     setTestPingResult(null);
     setIsAuthorizingOAuth(false);
-    setOauthStep('idle');
-    setOpenedPortalUrl('');
+    setCopiedScript(false);
     setIsConfigModalOpen(true);
   };
 
-  // Step 1: Launch Official External Integration Authorization / Developer Website
-  const handleLaunchWebsiteAuth = () => {
-    if (!selectedApp) return;
-    const portal = getIntegrationPortal(selectedApp);
-    setOpenedPortalUrl(portal.authUrl);
-    setOauthStep('portal_open');
+  // Real Google OAuth 2.0 Popup Flow for Google Workspace Apps (Sheets, Drive, Calendar, Gmail, Forms, Analytics)
+  const triggerGoogleOAuth = useGoogleLogin({
+    scope: 'openid email profile https://www.googleapis.com/auth/spreadsheets https://www.googleapis.com/auth/drive.file',
+    onSuccess: async (tokenResponse) => {
+      if (!selectedApp || !user?._id) return;
+      setIsAuthorizingOAuth(true);
+      try {
+        let googleEmail = user.email || '';
+        try {
+          const profileRes = await fetch('https://www.googleapis.com/oauth2/v3/userinfo', {
+            headers: { Authorization: `Bearer ${tokenResponse.access_token}` }
+          });
+          if (profileRes.ok) {
+            const profileData = await profileRes.json();
+            if (profileData.email) googleEmail = profileData.email;
+          }
+        } catch {
+          // Ignore userinfo failure, keep token
+        }
 
-    // Open centered OAuth / Developer Authorization window directly on the provider's website
-    const width = 680;
-    const height = 760;
-    const left = Math.max(0, Math.round(window.screenX + (window.outerWidth - width) / 2));
-    const top = Math.max(0, Math.round(window.screenY + (window.outerHeight - height) / 2));
-    window.open(
-      portal.authUrl,
-      `leadpulse_oauth_${selectedApp.id}`,
-      `width=${width},height=${height},left=${left},top=${top},noopener,noreferrer`
-    );
-  };
-
-  // Step 2: Confirm & Verify Website Authorization Handshake
-  const handleCompleteWebsiteAuth = async () => {
-    if (!selectedApp || !user?._id) return;
-    setIsAuthorizingOAuth(true);
-    setOauthStep('verifying');
-
-    const portal = getIntegrationPortal(selectedApp);
-    const defaultSlug = (user?.name || user?.company_name || 'workspace').toLowerCase().replace(/[^a-z0-9]/g, '-');
-    const extraDefaults: Record<string, string> = {};
-    if (selectedApp.id === 'calendly' && !appConfigState.bookingUrl) {
-      extraDefaults.bookingUrl = `https://calendly.com/${defaultSlug}/15min`;
-    }
-
-    try {
-      const res = await axios.post(`${API_BASE}/api/integrations/connect`, {
-        appId: selectedApp.id,
-        config: {
+        const updatedConfig = {
           ...selectedApp.config,
           ...appConfigState,
-          ...extraDefaults,
-          authType: 'website_oauth2',
-          authorizedPortal: portal.authUrl,
+          oauthAccessToken: tokenResponse.access_token,
+          authorizedEmail: googleEmail,
+          authType: 'google_oauth2',
           connectedAt: new Date().toISOString()
-        }
-      }, {
-        headers: { userid: user._id }
-      });
+        };
 
-      setApps(res.data.integrations);
-      setIntegrations(res.data.integrations);
-      if (res.data.logs) setIntegrationLogs(res.data.logs);
-      setOauthStep('success');
-      setTimeout(() => {
-        setIsConfigModalOpen(false);
+        const res = await axios.post(`${API_BASE}/api/integrations/connect`, {
+          appId: selectedApp.id,
+          config: updatedConfig
+        }, {
+          headers: { userid: user._id }
+        });
+
+        const updatedApps: IntegrationApp[] = res.data.integrations || [];
+        setApps(updatedApps);
+        setIntegrations(updatedApps);
+        if (res.data.logs) setIntegrationLogs(res.data.logs);
+
+        const refreshedApp = updatedApps.find((a) => a.id === selectedApp.id);
+        if (refreshedApp) {
+          setSelectedApp(refreshedApp);
+          setAppConfigState(refreshedApp.config || updatedConfig);
+        } else {
+          setAppConfigState(updatedConfig);
+        }
+
+        setTestPingResult({
+          ok: true,
+          text: `Google OAuth 2.0 Verified (${googleEmail}) — Live ${selectedApp.name} access token active!`
+        });
+        showToast(`Authorized ${selectedApp.name} with Google (${googleEmail})!`);
+      } catch (err) {
+        console.error('Google OAuth connect error:', err);
+        setTestPingResult({
+          ok: false,
+          text: 'Google token received, but saving integration failed. Please click Save & Activate.'
+        });
+      } finally {
         setIsAuthorizingOAuth(false);
-        setOauthStep('idle');
-        showToast(`Authorized & linked ${selectedApp.name} via ${portal.portalLabel}!`);
-      }, 600);
-    } catch (err) {
-      console.error('Website authorization connect failed:', err);
+      }
+    },
+    onError: (err) => {
+      console.error('Google OAuth popup error:', err);
       setIsAuthorizingOAuth(false);
-      setOauthStep('portal_open');
-      await alertDialog({
-        title: 'Authorization Verification Failed',
-        message: 'Could not verify the connection. Please check your authorization or paste your API key/webhook below.',
-        variant: 'error'
+      setTestPingResult({
+        ok: false,
+        text: 'Google OAuth popup was closed or blocked. You can also connect by pasting your Google Sheet URL or Apps Script Webhook below.'
       });
     }
-  };
+  });
 
   // Toggle reveal password
   const toggleRevealKey = (key: string) => {
     setRevealedKeys(prev => ({ ...prev, [key]: !prev[key] }));
   };
 
-  // Test live connection ping
+  // Test live connection ping (executes real HTTP verification on the backend)
   const handleTestConnection = async () => {
     if (!selectedApp) return;
     setIsTestingPing(true);
@@ -750,25 +751,75 @@ const Integrations = () => {
         appId: selectedApp.id,
         config: appConfigState
       });
-      setTestPingResult(`Status: 200 OK (${res.data.latency}) — ${res.data.message || 'Connection verified!'}`);
-    } catch (err) {
-      setTestPingResult('Connection failed. Please check your credentials and endpoint URL.');
+      setTestPingResult({
+        ok: true,
+        text: `Status: 200 OK (${res.data.latency}) — ${res.data.message || 'Live connection verified!'}`
+      });
+    } catch (err: any) {
+      const serverMsg = err?.response?.data?.message || 'Connection failed. Please check your credentials and URL.';
+      const latency = err?.response?.data?.latency ? ` (${err.response.data.latency})` : '';
+      setTestPingResult({
+        ok: false,
+        text: `${serverMsg}${latency}`
+      });
     } finally {
       setIsTestingPing(false);
     }
   };
 
-  // Save / Connect App via Direct API Credentials
+  // Save / Connect App with validation
   const handleSaveConnection = async () => {
     if (!selectedApp || !user?._id) return;
+
+    // Validate required credentials so users don't accidentally save empty configs
+    if (selectedApp.id === 'google-sheets') {
+      const hasSheetTarget = Boolean(
+        appConfigState.spreadsheetId?.trim() ||
+        appConfigState.webhookUrl?.trim() ||
+        appConfigState.oauthAccessToken?.trim()
+      );
+      if (!hasSheetTarget) {
+        setTestPingResult({
+          ok: false,
+          text: 'Please sign in with Google OAuth above, OR paste a Google Sheet URL / ID (or Apps Script URL) before saving.'
+        });
+        return;
+      }
+    } else if (WEBHOOK_APP_IDS.includes(selectedApp.id)) {
+      const hasWebhook = Boolean(
+        appConfigState.webhookUrl?.trim() ||
+        appConfigState.targetEndpoint?.trim() ||
+        appConfigState.endpoint?.trim()
+      );
+      if (!hasWebhook) {
+        setTestPingResult({
+          ok: false,
+          text: `Please paste your live ${selectedApp.name} Incoming Webhook URL before activating.`
+        });
+        return;
+      }
+    } else if (selectedApp.configFields && selectedApp.configFields.length > 0 && !GOOGLE_OAUTH_APP_IDS.includes(selectedApp.id)) {
+      const missingRequired = selectedApp.configFields.filter(
+        (f) => f.required && !appConfigState[f.key]?.trim()
+      );
+      if (missingRequired.length > 0) {
+        setTestPingResult({
+          ok: false,
+          text: `Missing required field${missingRequired.length > 1 ? 's' : ''}: ${missingRequired.map((f) => f.label).join(', ')}`
+        });
+        return;
+      }
+    }
+
     setIsSaving(true);
     try {
       const portal = getIntegrationPortal(selectedApp);
       const res = await axios.post(`${API_BASE}/api/integrations/connect`, {
         appId: selectedApp.id,
         config: {
+          ...selectedApp.config,
           ...appConfigState,
-          authType: 'api_key',
+          authType: appConfigState.oauthAccessToken ? 'google_oauth2' : WEBHOOK_APP_IDS.includes(selectedApp.id) ? 'webhook' : 'api_key',
           authorizedPortal: portal.consoleUrl,
           connectedAt: new Date().toISOString()
         }
@@ -776,20 +827,64 @@ const Integrations = () => {
         headers: { userid: user._id }
       });
 
-      setApps(res.data.integrations);
-      setIntegrations(res.data.integrations);
+      const updatedApps: IntegrationApp[] = res.data.integrations || [];
+      setApps(updatedApps);
+      setIntegrations(updatedApps);
       if (res.data.logs) setIntegrationLogs(res.data.logs);
+      const refreshedApp = updatedApps.find((a) => a.id === selectedApp.id);
+      if (refreshedApp) {
+        setSelectedApp(refreshedApp);
+        setAppConfigState(refreshedApp.config || appConfigState);
+      }
       setIsConfigModalOpen(false);
-      showToast(`Connected to ${selectedApp.name} — Active across workspace!`);
+      showToast(`Connected ${selectedApp.name} — Live across your workspace!`);
     } catch (err) {
       console.error('Failed to connect app:', err);
       await alertDialog({
         title: 'Connection Error',
-        message: 'Failed to connect integration. Please verify your configuration and try again.',
+        message: 'Failed to save integration configuration. Please verify your settings and try again.',
         variant: 'error'
       });
     } finally {
       setIsSaving(false);
+    }
+  };
+
+  // Trigger a live CRM lead mirror / sync right from the modal
+  const handleMirrorLeadsNow = async () => {
+    if (!selectedApp || !user?._id) return;
+    setIsSyncingNow(true);
+    try {
+      // First save current config so backend uses latest inputs
+      await axios.post(`${API_BASE}/api/integrations/connect`, {
+        appId: selectedApp.id,
+        config: {
+          ...selectedApp.config,
+          ...appConfigState,
+          connectedAt: new Date().toISOString()
+        }
+      }, {
+        headers: { userid: user._id }
+      });
+
+      const result = await syncLeadsToIntegration(selectedApp.id, []);
+      if (result) {
+        setTestPingResult({
+          ok: true,
+          text: result.deliveryNote || `Mirrored ${result.syncedCount} leads to ${selectedApp.name}!`
+        });
+        showToast(result.deliveryNote || `Mirrored ${result.syncedCount} leads to ${selectedApp.name}!`);
+        fetchIntegrations();
+      } else {
+        setTestPingResult({
+          ok: false,
+          text: `Failed to mirror leads to ${selectedApp.name}. Check your configuration and try again.`
+        });
+      }
+    } catch (err) {
+      console.error('Live mirror error:', err);
+    } finally {
+      setIsSyncingNow(false);
     }
   };
 
@@ -1436,6 +1531,33 @@ const Integrations = () => {
       {/* ================= MODAL: CONFIGURE & AUTHORIZE INTEGRATION ================= */}
       {isConfigModalOpen && selectedApp && (() => {
         const portal = getIntegrationPortal(selectedApp);
+        const isGoogleOAuthApp = GOOGLE_OAUTH_APP_IDS.includes(selectedApp.id);
+        const isWebhookApp = WEBHOOK_APP_IDS.includes(selectedApp.id);
+        const canMirrorLeads = [
+          'google-sheets',
+          'microsoft-excel',
+          'hubspot',
+          'airtable',
+          'notion',
+          'slack',
+          'microsoft-teams',
+          'zapier',
+          'webhook-custom',
+          'salesforce',
+          'apollo',
+          'attio'
+        ].includes(selectedApp.id);
+
+        // Extract clean Google Sheet URL if user pasted an ID or full URL
+        const rawSheetVal = (appConfigState.spreadsheetUrl || appConfigState.spreadsheetId || '').trim();
+        const extractedSheetMatch = rawSheetVal.match(/\/spreadsheets\/d\/([a-zA-Z0-9-_]+)/);
+        const cleanSheetId = extractedSheetMatch
+          ? extractedSheetMatch[1]
+          : (/^[a-zA-Z0-9-_]{15,}$/.test(rawSheetVal) ? rawSheetVal : '');
+        const resolvedGoogleSheetUrl = cleanSheetId
+          ? `https://docs.google.com/spreadsheets/d/${cleanSheetId}/edit`
+          : 'https://docs.google.com/spreadsheets/create';
+
         return (
           <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-xs flex items-center justify-center p-3 sm:p-4 z-50 animate-in fade-in duration-150">
             <div className="bg-white rounded-lg shadow-2xl border border-slate-200 max-w-xl w-full flex flex-col overflow-hidden animate-in zoom-in-95 duration-150 max-h-[92vh]">
@@ -1451,15 +1573,22 @@ const Integrations = () => {
                   >
                     <ChevronLeft className="w-4 h-4" />
                   </button>
-                  <div className="flex items-center gap-2">
+                  <div className="w-8 h-8 rounded-md bg-slate-50 border border-slate-200 flex items-center justify-center p-1.5 shrink-0">
+                    <IntegrationLogo logo={selectedApp.logo} name={selectedApp.name} size="sm" />
+                  </div>
+                  <div className="flex items-center gap-2 flex-wrap">
                     <h3 className="text-base sm:text-lg font-bold text-slate-900 tracking-tight font-display">
-                      {selectedApp.connected ? `Manage ${selectedApp.name}` : `Authorize & Link ${selectedApp.name}`}
+                      {selectedApp.connected ? `Manage ${selectedApp.name}` : `Connect ${selectedApp.name}`}
                     </h3>
                     {selectedApp.connected && (
-                      <span className="text-[10px] font-delight font-medium px-2 py-0.5 rounded-sm bg-emerald-50 text-emerald-700 border border-emerald-200">
+                      <span className="text-[10px] font-delight font-semibold px-2 py-0.5 rounded-sm bg-emerald-50 text-emerald-700 border border-emerald-200 flex items-center gap-1">
+                        <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
                         Active Sync
                       </span>
                     )}
+                    <span className="text-[10px] font-delight font-medium px-2 py-0.5 rounded-sm bg-slate-100 text-slate-600 border border-slate-200">
+                      {isGoogleOAuthApp ? 'Google OAuth 2.0' : isWebhookApp ? 'Live Outbound Webhook' : 'Direct REST API'}
+                    </span>
                   </div>
                 </div>
 
@@ -1477,10 +1606,13 @@ const Integrations = () => {
               <div className="p-5 sm:p-6 overflow-y-auto custom-scrollbar space-y-5 flex-1">
                 
                 {/* 1. Numbered Step-by-Step Instructions */}
-                <div className="space-y-2">
+                <div className="space-y-2 bg-slate-50/60 border border-slate-200/80 rounded-lg p-3.5">
+                  <div className="text-[10px] font-bold text-slate-500 uppercase tracking-wider font-delight">
+                    How {selectedApp.name} Connects to LeadPulse
+                  </div>
                   {getAppSteps(selectedApp).map((step, idx) => (
                     <div key={idx} className="flex items-start gap-2.5 text-xs text-slate-700 font-delight font-medium">
-                      <span className="w-4 h-4 rounded-xs bg-slate-100 border border-slate-200 text-slate-700 font-bold flex items-center justify-center text-[10px] shrink-0 mt-0.5">
+                      <span className="w-4 h-4 rounded-xs bg-white border border-slate-200 text-slate-800 font-bold flex items-center justify-center text-[10px] shrink-0 mt-0.5 shadow-2xs">
                         {idx + 1}
                       </span>
                       <span className="leading-snug">{step}</span>
@@ -1488,133 +1620,161 @@ const Integrations = () => {
                   ))}
                 </div>
 
-                {/* 2. Official Website OAuth & Developer Portal Authorization Card */}
-                <div className="bg-slate-50/80 border border-slate-200 rounded-lg p-4 sm:p-5 space-y-3.5 shadow-2xs">
-                  <div className="flex items-start justify-between gap-3">
-                    <div className="flex items-center gap-2.5">
-                      <div className="w-9 h-9 rounded-md bg-white border border-slate-200 flex items-center justify-center p-1.5 shrink-0 shadow-2xs">
-                        <IntegrationLogo logo={selectedApp.logo} name={selectedApp.name} size="md" />
+                {/* 2A. REAL GOOGLE OAUTH 2.0 POPUP CARD (ONLY FOR GOOGLE WORKSPACE APPS) */}
+                {isGoogleOAuthApp && (
+                  <div className="bg-slate-50/90 border border-slate-200 rounded-lg p-4 space-y-3.5 shadow-2xs">
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="flex items-center gap-2.5">
+                        <div className="w-9 h-9 rounded-md bg-white border border-slate-200 flex items-center justify-center p-1.5 shrink-0 shadow-2xs">
+                          <IntegrationLogo logo={selectedApp.logo} name={selectedApp.name} size="md" />
+                        </div>
+                        <div>
+                          <h4 className="text-xs font-bold text-slate-900 font-delight">
+                            Google OAuth 2.0 Workspace Authorization
+                          </h4>
+                          <p className="text-[11px] text-slate-500 font-delight">
+                            {appConfigState.authorizedEmail
+                              ? `Authenticated as ${appConfigState.authorizedEmail}`
+                              : `Authenticate with your Google account to grant ${selectedApp.name} access`}
+                          </p>
+                        </div>
                       </div>
-                      <div>
-                        <h4 className="text-xs font-bold text-slate-900 font-delight">
-                          {portal.portalLabel}
-                        </h4>
-                        <p className="text-[11px] text-slate-500 font-delight truncate max-w-[310px]">
-                          {portal.authUrl}
-                        </p>
-                      </div>
+
+                      {appConfigState.oauthAccessToken && (
+                        <span className="text-[10px] font-delight font-semibold px-2 py-0.5 rounded-sm bg-emerald-100 text-emerald-800 border border-emerald-200 shrink-0">
+                          OAuth Token Active
+                        </span>
+                      )}
                     </div>
 
-                    <a
-                      href={portal.docsUrl}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="text-[11px] font-delight font-semibold text-[#C85A32] hover:underline flex items-center gap-1 shrink-0"
-                    >
-                      <span>Official Docs</span>
-                      <ExternalLink className="w-3 h-3" />
-                    </a>
-                  </div>
+                    <div className="flex flex-wrap items-center gap-2">
+                      <button
+                        type="button"
+                        onClick={() => triggerGoogleOAuth()}
+                        disabled={isAuthorizingOAuth}
+                        className="flex-1 min-w-[210px] h-10 bg-[#191716] hover:bg-slate-800 text-white font-delight text-xs font-semibold rounded-md transition-all flex items-center justify-center gap-2 border border-[#191716] shadow-xs cursor-pointer disabled:opacity-50"
+                      >
+                        {isAuthorizingOAuth ? (
+                          <>
+                            <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                            <span>Authorizing with Google...</span>
+                          </>
+                        ) : (
+                          <>
+                            <IntegrationLogo logo={selectedApp.logo} name={selectedApp.name} size="sm" />
+                            <span>
+                              {appConfigState.oauthAccessToken
+                                ? `Re-Authenticate Google Account (${appConfigState.authorizedEmail || 'Connected'})`
+                                : `Sign in with Google & Authorize ${selectedApp.name}`}
+                            </span>
+                          </>
+                        )}
+                      </button>
 
-                  <div className="bg-white rounded-md p-3 border border-slate-200/90 text-[11px] text-slate-600 space-y-1.5 font-delight">
-                    <div className="text-[10px] font-bold text-slate-700 uppercase tracking-wider">
-                      Website Authorization Permissions:
+                      {selectedApp.id === 'google-sheets' && (
+                        <a
+                          href={resolvedGoogleSheetUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="h-10 px-3 bg-white hover:bg-slate-100 text-slate-800 border border-slate-200 rounded-md text-xs font-delight font-semibold flex items-center gap-1.5 transition-colors shadow-2xs"
+                          title={cleanSheetId ? 'Open your linked Google Sheet' : 'Create a new Google Sheet in your browser'}
+                        >
+                          <span>{cleanSheetId ? 'Open Linked Sheet' : 'Create Blank Sheet'}</span>
+                          <ExternalLink className="w-3.5 h-3.5 text-slate-500" />
+                        </a>
+                      )}
                     </div>
-                    <div className="flex items-center gap-1.5 text-slate-700">
-                      <Check className="w-3 h-3 text-emerald-600 shrink-0" />
-                      <span>Authenticate directly on {selectedApp.name}&apos;s official login &amp; OAuth portal</span>
-                    </div>
-                    <div className="flex items-center gap-1.5 text-slate-700">
-                      <Check className="w-3 h-3 text-emerald-600 shrink-0" />
-                      <span>Link workspace account ({user?.email || 'your operator account'}) for live 2-way sync</span>
-                    </div>
-                  </div>
 
-                  {/* Step 1 Button: Open Real Provider Website */}
-                  <div className="space-y-2.5">
-                    <button
-                      type="button"
-                      onClick={handleLaunchWebsiteAuth}
-                      disabled={isAuthorizingOAuth}
-                      className="w-full h-10 bg-[#191716] hover:bg-slate-800 text-white font-delight text-xs font-semibold rounded-md transition-all flex items-center justify-center gap-2 border border-[#191716] shadow-xs cursor-pointer disabled:opacity-50"
-                    >
-                      <IntegrationLogo logo={selectedApp.logo} name={selectedApp.name} size="sm" />
-                      <span>
-                        {oauthStep === 'portal_open'
-                          ? `Re-open ${selectedApp.name} Authorization Website`
-                          : selectedApp.connected
-                          ? `Re-authorize on ${selectedApp.name} Website`
-                          : `Authorize on ${selectedApp.name} Website`}
-                      </span>
-                      <ExternalLink className="w-3.5 h-3.5 text-slate-300" />
-                    </button>
-
-                    {/* Step 2 Box: Shown once the external website popup/tab has been launched */}
-                    {oauthStep !== 'idle' && (
-                      <div className="p-3.5 rounded-md bg-emerald-50/90 border border-emerald-200 space-y-2.5 animate-in fade-in duration-150">
-                        <div className="flex items-start justify-between gap-2">
-                          <div className="space-y-0.5">
-                            <div className="text-xs font-delight font-bold text-emerald-950 flex items-center gap-1.5">
-                              <span className="w-2 h-2 rounded-full bg-emerald-500 animate-ping" />
-                              <span>External {selectedApp.name} Portal Launched</span>
-                            </div>
-                            <p className="text-[11px] text-emerald-800 font-delight leading-relaxed">
-                              Complete sign-in and authorization in the opened {selectedApp.name} window ({openedPortalUrl || portal.authUrl}), then click below to verify and activate your workspace link.
-                            </p>
-                          </div>
+                    {/* Google Sheets Live Mirror Action + Optional Apps Script Helper */}
+                    {selectedApp.id === 'google-sheets' && (
+                      <div className="pt-2 border-t border-slate-200/80 space-y-2.5">
+                        <div className="flex items-center justify-between gap-2 flex-wrap">
+                          <span className="text-[11px] font-delight font-semibold text-slate-700">
+                            Ready to test mirroring your {leads.length || 'CRM'} leads right now?
+                          </span>
+                          <button
+                            type="button"
+                            onClick={handleMirrorLeadsNow}
+                            disabled={isSyncingNow}
+                            className="px-3 py-1.5 bg-[#C85A32] hover:bg-[#b04d29] text-white rounded-md text-xs font-delight font-semibold flex items-center gap-1.5 transition-colors cursor-pointer shadow-2xs disabled:opacity-50"
+                          >
+                            {isSyncingNow ? (
+                              <>
+                                <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                                <span>Mirroring Leads...</span>
+                              </>
+                            ) : (
+                              <>
+                                <Send className="w-3.5 h-3.5" />
+                                <span>Mirror CRM Leads to Google Sheets Now</span>
+                              </>
+                            )}
+                          </button>
                         </div>
 
-                        <button
-                          type="button"
-                          onClick={handleCompleteWebsiteAuth}
-                          disabled={isAuthorizingOAuth}
-                          className="w-full h-9 bg-emerald-600 hover:bg-emerald-700 text-white font-delight text-xs font-semibold rounded-md transition-all flex items-center justify-center gap-2 cursor-pointer shadow-2xs disabled:opacity-50"
-                        >
-                          {isAuthorizingOAuth ? (
-                            <>
-                              <RefreshCw className="w-3.5 h-3.5 animate-spin" />
-                              <span>Verifying Authorization with {selectedApp.name}...</span>
-                            </>
-                          ) : (
-                            <>
-                              <CheckCircle2 className="w-3.5 h-3.5" />
-                              <span>I&apos;ve Authorized on {selectedApp.name} — Verify &amp; Link Now</span>
-                            </>
-                          )}
-                        </button>
+                        {/* Optional 1-Click Apps Script Helper for Direct Private Sheet Appending */}
+                        <div className="bg-white rounded-md p-2.5 border border-slate-200/90 flex items-center justify-between gap-2">
+                          <div className="text-[11px] text-slate-600 font-delight leading-snug">
+                            <span className="font-semibold text-slate-800">Pro Tip (Direct Webhook Append):</span>{' '}
+                            In any Google Sheet, click <em>Extensions → Apps Script</em>, paste our 6-line script, deploy as a Web App, and paste its URL below for instant background row appends.
+                          </div>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              navigator.clipboard.writeText(GOOGLE_APPS_SCRIPT_SNIPPET);
+                              setCopiedScript(true);
+                              setTimeout(() => setCopiedScript(false), 2500);
+                            }}
+                            className="px-2.5 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-800 rounded-md text-[11px] font-delight font-semibold shrink-0 flex items-center gap-1 cursor-pointer transition-colors"
+                          >
+                            {copiedScript ? <Check className="w-3 h-3 text-emerald-600" /> : <Copy className="w-3 h-3" />}
+                            <span>{copiedScript ? 'Copied Script!' : 'Copy 6-Line Script'}</span>
+                          </button>
+                        </div>
                       </div>
                     )}
                   </div>
-                </div>
+                )}
 
-                {/* 4. Sleek "OR" Divider */}
-                <div className="relative my-2">
-                  <div className="absolute inset-0 flex items-center">
-                    <div className="w-full border-t border-slate-200"></div>
-                  </div>
-                  <div className="relative flex justify-center text-xs">
-                    <span className="bg-white px-3 text-slate-500 font-delight font-normal text-[11px]">
-                      or paste live credentials from {selectedApp.name} Developer Console
-                    </span>
-                  </div>
-                </div>
-
-                {/* 5. Direct API Credentials / Webhook Settings */}
+                {/* 3. CREDENTIALS / WEBHOOK / TARGET RESOURCE CONFIGURATION */}
                 <div className="space-y-3.5 bg-slate-50/70 p-4 rounded-lg border border-slate-200">
-                  <div className="flex items-center justify-between pb-1.5 border-b border-slate-200/80">
+                  <div className="flex items-center justify-between pb-2 border-b border-slate-200/80 gap-2 flex-wrap">
                     <div className="flex items-center gap-1.5 text-xs font-delight font-bold text-slate-800">
                       <Key className="w-3.5 h-3.5 text-slate-500" />
-                      <span>Direct API Key / Webhook Configuration</span>
+                      <span>
+                        {selectedApp.id === 'google-sheets'
+                          ? 'Target Google Sheet URL / ID & Apps Script Webhook'
+                          : isWebhookApp
+                          ? `${selectedApp.name} Incoming Webhook Configuration`
+                          : `${selectedApp.name} API Credentials & Configuration`}
+                      </span>
                     </div>
-                    <a
-                      href={portal.consoleUrl}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="text-[11px] font-delight font-semibold text-[#C85A32] hover:underline flex items-center gap-1"
-                    >
-                      <span>Open {selectedApp.name} Console</span>
-                      <ExternalLink className="w-3 h-3" />
-                    </a>
+                    <div className="flex items-center gap-3">
+                      <a
+                        href={portal.authUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-[11px] font-delight font-semibold text-[#C85A32] hover:underline flex items-center gap-1"
+                      >
+                        <span>
+                          {selectedApp.id === 'google-sheets'
+                            ? 'Open Google Sheets'
+                            : isWebhookApp
+                            ? `Get Webhook URL in ${selectedApp.name}`
+                            : `Get API Token from ${selectedApp.name}`}
+                        </span>
+                        <ExternalLink className="w-3 h-3" />
+                      </a>
+                      <a
+                        href={portal.docsUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-[11px] font-delight font-medium text-slate-500 hover:text-slate-800 hover:underline flex items-center gap-1"
+                      >
+                        <span>Docs</span>
+                        <ExternalLink className="w-3 h-3" />
+                      </a>
+                    </div>
                   </div>
 
                   {selectedApp.configFields && selectedApp.configFields.length > 0 ? (
@@ -1622,15 +1782,21 @@ const Integrations = () => {
                       const isPassword = field.type === 'password';
                       const isRevealed = revealedKeys[field.key];
                       const currentInputType = isPassword ? (isRevealed ? 'text' : 'password') : field.type;
+                      const isSheetIdField = selectedApp.id === 'google-sheets' && field.key === 'spreadsheetId';
 
                       return (
                         <div key={field.key} className="space-y-1">
-                          <div className="flex items-center justify-between">
-                            <label className="block text-[11px] font-delight text-slate-700 font-medium">
-                              {field.label} {field.required && <span className="text-rose-500">*</span>}
+                          <div className="flex items-center justify-between gap-2">
+                            <label className="block text-[11px] font-delight text-slate-700 font-semibold">
+                              {isSheetIdField ? 'Google Sheet URL or Spreadsheet ID' : field.label}{' '}
+                              {field.required && !isGoogleOAuthApp && <span className="text-rose-500">*</span>}
                             </label>
                             {field.helperText && (
-                              <span className="text-[10px] text-slate-400 font-delight font-normal">{field.helperText}</span>
+                              <span className="text-[10px] text-slate-500 font-delight font-normal">
+                                {isSheetIdField
+                                  ? 'Paste the full https://docs.google.com/spreadsheets/d/... link or ID'
+                                  : field.helperText}
+                              </span>
                             )}
                           </div>
                           
@@ -1639,8 +1805,12 @@ const Integrations = () => {
                               type={currentInputType}
                               value={appConfigState[field.key] ?? ''}
                               onChange={(e) => setAppConfigState({ ...appConfigState, [field.key]: e.target.value })}
-                              placeholder={field.placeholder}
-                              className={`w-full h-8 px-2.5 bg-white border border-slate-200 rounded-md text-xs font-delight font-normal outline-none focus:border-slate-400 transition-colors placeholder:text-slate-400 ${
+                              placeholder={
+                                isSheetIdField
+                                  ? 'https://docs.google.com/spreadsheets/d/1BxiMVs0XRA5nFMdKvBdBZjgmUUqptlbs74OgvE2upms/edit'
+                                  : field.placeholder
+                              }
+                              className={`w-full h-9 px-2.5 bg-white border border-slate-200 rounded-md text-xs font-delight font-normal outline-none focus:border-slate-400 transition-colors placeholder:text-slate-400 ${
                                 isPassword ? 'pr-8' : ''
                               }`}
                             />
@@ -1661,13 +1831,13 @@ const Integrations = () => {
                   ) : (
                     <div className="space-y-3">
                       <div>
-                        <label className="block text-[11px] font-delight font-semibold text-slate-600 mb-1">API Key / Token</label>
+                        <label className="block text-[11px] font-delight font-semibold text-slate-600 mb-1">API Key / Access Token</label>
                         <input 
                           type="password"
                           value={appConfigState.apiKey || ''}
                           onChange={(e) => setAppConfigState({ ...appConfigState, apiKey: e.target.value })}
                           placeholder="Enter API token..."
-                          className="w-full h-8 px-2.5 bg-white border border-slate-200 rounded-md text-xs font-delight font-medium outline-none focus:border-slate-400"
+                          className="w-full h-9 px-2.5 bg-white border border-slate-200 rounded-md text-xs font-delight font-medium outline-none focus:border-slate-400"
                         />
                       </div>
                       <div>
@@ -1677,16 +1847,72 @@ const Integrations = () => {
                           value={appConfigState.endpoint || ''}
                           onChange={(e) => setAppConfigState({ ...appConfigState, endpoint: e.target.value })}
                           placeholder="https://api.service.com/v1"
-                          className="w-full h-8 px-2.5 bg-white border border-slate-200 rounded-md text-xs font-delight font-medium outline-none focus:border-slate-400"
+                          className="w-full h-9 px-2.5 bg-white border border-slate-200 rounded-md text-xs font-delight font-medium outline-none focus:border-slate-400"
                         />
                       </div>
                     </div>
                   )}
 
+                  {/* Extra Apps Script Webhook input for Google Sheets */}
+                  {selectedApp.id === 'google-sheets' && (
+                    <div className="space-y-1 pt-1">
+                      <div className="flex items-center justify-between gap-2">
+                        <label className="block text-[11px] font-delight text-slate-700 font-semibold">
+                          Google Apps Script Web App URL <span className="text-slate-400 font-normal">(Optional — Direct Row Append)</span>
+                        </label>
+                      </div>
+                      <input
+                        type="url"
+                        value={appConfigState.webhookUrl ?? ''}
+                        onChange={(e) => setAppConfigState({ ...appConfigState, webhookUrl: e.target.value })}
+                        placeholder="https://script.google.com/macros/s/.../exec"
+                        className="w-full h-9 px-2.5 bg-white border border-slate-200 rounded-md text-xs font-delight font-normal outline-none focus:border-slate-400 transition-colors placeholder:text-slate-400"
+                      />
+                    </div>
+                  )}
+
+                  {/* Quick Mirror / Sync Test for Non-Google CRM & Webhook Apps */}
+                  {canMirrorLeads && selectedApp.id !== 'google-sheets' && (
+                    <div className="pt-2 border-t border-slate-200/80 flex items-center justify-between gap-2 flex-wrap">
+                      <span className="text-[11px] font-delight text-slate-600">
+                        Test pushing your current CRM leads to {selectedApp.name}:
+                      </span>
+                      <button
+                        type="button"
+                        onClick={handleMirrorLeadsNow}
+                        disabled={isSyncingNow}
+                        className="px-3 py-1.5 bg-white hover:bg-slate-100 text-slate-800 border border-slate-200 rounded-md text-xs font-delight font-semibold flex items-center gap-1.5 transition-colors cursor-pointer shadow-2xs disabled:opacity-50"
+                      >
+                        {isSyncingNow ? (
+                          <>
+                            <RefreshCw className="w-3 h-3 animate-spin" />
+                            <span>Syncing Leads...</span>
+                          </>
+                        ) : (
+                          <>
+                            <Send className="w-3 h-3 text-[#C85A32]" />
+                            <span>Push CRM Leads to {selectedApp.name} Now</span>
+                          </>
+                        )}
+                      </button>
+                    </div>
+                  )}
+
+                  {/* Live Test / Verification Feedback Banner */}
                   {testPingResult && (
-                    <div className="p-2.5 bg-emerald-50 text-emerald-800 rounded-md text-xs font-delight font-medium border border-emerald-200 flex items-start gap-2">
-                      <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0 mt-0.5" />
-                      <span className="leading-snug">{testPingResult}</span>
+                    <div
+                      className={`p-3 rounded-md text-xs font-delight font-medium border flex items-start gap-2 ${
+                        testPingResult.ok
+                          ? 'bg-emerald-50 text-emerald-900 border-emerald-200'
+                          : 'bg-rose-50 text-rose-900 border-rose-200'
+                      }`}
+                    >
+                      {testPingResult.ok ? (
+                        <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0 mt-0.5" />
+                      ) : (
+                        <AlertCircle className="w-4 h-4 text-rose-600 shrink-0 mt-0.5" />
+                      )}
+                      <span className="leading-snug">{testPingResult.text}</span>
                     </div>
                   )}
                 </div>
@@ -1712,19 +1938,25 @@ const Integrations = () => {
                     type="button" 
                     disabled={isTestingPing}
                     onClick={handleTestConnection}
-                    className="px-3 py-1.5 bg-white border border-slate-200 hover:bg-slate-50 text-slate-700 rounded-md text-xs font-delight font-medium transition-colors cursor-pointer flex items-center gap-1.5"
+                    className="px-3 py-1.5 bg-white border border-slate-200 hover:bg-slate-50 text-slate-700 rounded-md text-xs font-delight font-semibold transition-colors cursor-pointer flex items-center gap-1.5"
                   >
                     {isTestingPing && <RefreshCw className="w-3 h-3 animate-spin text-slate-500" />}
-                    <span>{isTestingPing ? 'Pinging...' : 'Test Ping'}</span>
+                    <span>
+                      {isTestingPing
+                        ? 'Testing Live...'
+                        : isWebhookApp
+                        ? 'Test Live Webhook'
+                        : 'Test Live Connection'}
+                    </span>
                   </button>
                   
                   <button 
                     type="button" 
                     disabled={isSaving}
                     onClick={handleSaveConnection}
-                    className="px-3.5 py-1.5 bg-slate-900 text-white rounded-md text-xs font-delight font-medium hover:bg-slate-800 transition-colors border border-slate-900 cursor-pointer"
+                    className="px-3.5 py-1.5 bg-slate-900 text-white rounded-md text-xs font-delight font-semibold hover:bg-slate-800 transition-colors border border-slate-900 cursor-pointer"
                   >
-                    {isSaving ? 'Saving...' : 'Save & Link Credentials'}
+                    {isSaving ? 'Saving...' : selectedApp.connected ? 'Save Configuration' : `Save & Activate ${selectedApp.name}`}
                   </button>
                 </div>
               </div>

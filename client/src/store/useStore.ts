@@ -76,7 +76,13 @@ interface AppState {
   setIntegrations: (integrations: WorkspaceIntegration[]) => void;
   setIntegrationLogs: (logs: IntegrationLogEntry[]) => void;
   fetchWorkspaceIntegrations: (userId?: string) => Promise<void>;
-  syncLeadsToIntegration: (appId: string, leadIds: string[]) => Promise<{ syncedCount: number; appName: string } | null>;
+  syncLeadsToIntegration: (appId: string, leadIds: string[]) => Promise<{
+    syncedCount: number;
+    appName: string;
+    deliveryMode?: string;
+    externalUrl?: string;
+    deliveryNote?: string;
+  } | null>;
   enrichLeadViaIntegration: (leadId: string, appId?: string) => Promise<any>;
   notifyIntegration: (appId: string, summary: string, payload?: any) => Promise<any>;
 }
@@ -145,7 +151,37 @@ export const useStore = create<AppState>()(
           );
           if (res.data?.integrations) set({ integrations: res.data.integrations });
           if (res.data?.logs) set({ integrationLogs: res.data.logs });
-          return { syncedCount: res.data.syncedCount, appName: res.data.appName };
+
+          // If syncing to Google Sheets or Microsoft Excel, handle live sheet opening & clipboard/CSV sync
+          if (appId === 'google-sheets' || appId === 'microsoft-excel') {
+            if (res.data?.tsvContent && navigator?.clipboard) {
+              navigator.clipboard.writeText(res.data.tsvContent).catch(() => {});
+            }
+            if (res.data?.deliveryMode === 'sheet_bridge_export' && res.data?.csvContent) {
+              try {
+                const blob = new Blob([res.data.csvContent], { type: 'text/csv;charset=utf-8;' });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `LeadPulse_${appId}_Mirror_${new Date().toISOString().slice(0, 10)}.csv`;
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                URL.revokeObjectURL(url);
+              } catch {}
+            }
+            if (res.data?.externalUrl) {
+              window.open(res.data.externalUrl, '_blank', 'noopener,noreferrer');
+            }
+          }
+
+          return {
+            syncedCount: res.data.syncedCount,
+            appName: res.data.appName,
+            deliveryMode: res.data.deliveryMode,
+            externalUrl: res.data.externalUrl,
+            deliveryNote: res.data.deliveryNote
+          };
         } catch (err) {
           console.error('Sync leads failed:', err);
           return null;
