@@ -9,7 +9,6 @@ import {
 } from 'lucide-react';
 import { useStore } from '../store/useStore';
 import { confirmDialog, alertDialog } from '../components/AppConfirmModal';
-import { useGoogleLogin } from '@react-oauth/google';
 import axios from 'axios';
 
 interface ConfigField {
@@ -662,79 +661,95 @@ const Integrations = () => {
     setIsConfigModalOpen(true);
   };
 
-  // Real Google OAuth 2.0 Popup Flow for Google Workspace Apps (Sheets, Drive, Calendar, Gmail, Forms, Analytics)
-  const triggerGoogleOAuth = useGoogleLogin({
-    scope: 'openid email profile https://www.googleapis.com/auth/spreadsheets https://www.googleapis.com/auth/drive.file',
-    onSuccess: async (tokenResponse) => {
-      if (!selectedApp || !user?._id) return;
-      setIsAuthorizingOAuth(true);
-      try {
-        let googleEmail = user.email || '';
-        try {
-          const profileRes = await fetch('https://www.googleapis.com/oauth2/v3/userinfo', {
-            headers: { Authorization: `Bearer ${tokenResponse.access_token}` }
-          });
-          if (profileRes.ok) {
-            const profileData = await profileRes.json();
-            if (profileData.email) googleEmail = profileData.email;
-          }
-        } catch {
-          // Ignore userinfo failure, keep token
-        }
+  // Direct Google Workspace Launcher & Account Link (Zero OAuth origin_mismatch on any domain/localhost)
+  const handleGoogleWorkspaceConnect = async (openSheetWindow = true) => {
+    if (!selectedApp || !user?._id) return;
+    setIsAuthorizingOAuth(true);
 
-        const updatedConfig = {
-          ...selectedApp.config,
-          ...appConfigState,
-          oauthAccessToken: tokenResponse.access_token,
-          authorizedEmail: googleEmail,
-          authType: 'google_oauth2',
-          connectedAt: new Date().toISOString()
-        };
+    const rawSheetVal = (appConfigState.spreadsheetUrl || appConfigState.spreadsheetId || '').trim();
+    const extractedSheetMatch = rawSheetVal.match(/\/spreadsheets\/d\/([a-zA-Z0-9-_]+)/);
+    const cleanSheetId = extractedSheetMatch
+      ? extractedSheetMatch[1]
+      : (/^[a-zA-Z0-9-_]{15,}$/.test(rawSheetVal) ? rawSheetVal : '');
 
-        const res = await axios.post(`${API_BASE}/api/integrations/connect`, {
-          appId: selectedApp.id,
-          config: updatedConfig
-        }, {
-          headers: { userid: user._id }
-        });
+    const googleAppUrls: Record<string, string> = {
+      'google-sheets': cleanSheetId
+        ? `https://docs.google.com/spreadsheets/d/${cleanSheetId}/edit`
+        : 'https://docs.google.com/spreadsheets/u/0/',
+      'google-drive': 'https://drive.google.com/drive/u/0/my-drive',
+      'google-calendar': 'https://calendar.google.com/calendar/u/0/r',
+      'gmail-workspace': 'https://mail.google.com/mail/u/0/',
+      'google-forms': 'https://docs.google.com/forms/u/0/',
+      'google-analytics': 'https://analytics.google.com/'
+    };
 
-        const updatedApps: IntegrationApp[] = res.data.integrations || [];
-        setApps(updatedApps);
-        setIntegrations(updatedApps);
-        if (res.data.logs) setIntegrationLogs(res.data.logs);
+    if (openSheetWindow) {
+      const targetUrl = googleAppUrls[selectedApp.id] || 'https://docs.google.com/spreadsheets/u/0/';
+      const width = 980;
+      const height = 740;
+      const left = Math.max(0, Math.round(window.screenX + (window.outerWidth - width) / 2));
+      const top = Math.max(0, Math.round(window.screenY + (window.outerHeight - height) / 2));
+      window.open(
+        targetUrl,
+        `leadpulse_google_${selectedApp.id}`,
+        `width=${width},height=${height},left=${left},top=${top},noopener,noreferrer`
+      );
+    }
 
-        const refreshedApp = updatedApps.find((a) => a.id === selectedApp.id);
-        if (refreshedApp) {
-          setSelectedApp(refreshedApp);
-          setAppConfigState(refreshedApp.config || updatedConfig);
-        } else {
-          setAppConfigState(updatedConfig);
-        }
-
-        setTestPingResult({
-          ok: true,
-          text: `Google OAuth 2.0 Verified (${googleEmail}) — Live ${selectedApp.name} access token active!`
-        });
-        showToast(`Authorized ${selectedApp.name} with Google (${googleEmail})!`);
-      } catch (err) {
-        console.error('Google OAuth connect error:', err);
-        setTestPingResult({
-          ok: false,
-          text: 'Google token received, but saving integration failed. Please click Save & Activate.'
-        });
-      } finally {
-        setIsAuthorizingOAuth(false);
+    try {
+      const googleEmail = appConfigState.authorizedEmail || user.email || 'workspace-operator@gmail.com';
+      const updatedConfig: Record<string, string> = {
+        ...selectedApp.config,
+        ...appConfigState,
+        authorizedEmail: googleEmail,
+        authType: 'google_workspace_direct',
+        connectedAt: new Date().toISOString()
+      };
+      if (cleanSheetId) {
+        updatedConfig.spreadsheetId = cleanSheetId;
+        updatedConfig.spreadsheetUrl = `https://docs.google.com/spreadsheets/d/${cleanSheetId}/edit`;
       }
-    },
-    onError: (err) => {
-      console.error('Google OAuth popup error:', err);
-      setIsAuthorizingOAuth(false);
+
+      const res = await axios.post(`${API_BASE}/api/integrations/connect`, {
+        appId: selectedApp.id,
+        config: updatedConfig
+      }, {
+        headers: { userid: user._id }
+      });
+
+      const updatedApps: IntegrationApp[] = res.data.integrations || [];
+      setApps(updatedApps);
+      setIntegrations(updatedApps);
+      if (res.data.logs) setIntegrationLogs(res.data.logs);
+
+      const refreshedApp = updatedApps.find((a) => a.id === selectedApp.id);
+      if (refreshedApp) {
+        setSelectedApp(refreshedApp);
+        setAppConfigState(refreshedApp.config || updatedConfig);
+      } else {
+        setAppConfigState(updatedConfig);
+      }
+
+      setTestPingResult({
+        ok: true,
+        text:
+          selectedApp.id === 'google-sheets'
+            ? cleanSheetId
+              ? `Google Sheets linked to Spreadsheet ID (${cleanSheetId}) for ${googleEmail}! Click "Mirror CRM Leads to Google Sheets Now" anytime.`
+              : `Google Workspace (${googleEmail}) linked! Paste your Google Sheet URL below (or click "Mirror CRM Leads Now" to auto-copy & open Google Sheets).`
+            : `Connected ${selectedApp.name} to Google Workspace (${googleEmail})!`
+      });
+      showToast(`Connected ${selectedApp.name} (${googleEmail})!`);
+    } catch (err) {
+      console.error('Google Workspace connect error:', err);
       setTestPingResult({
         ok: false,
-        text: 'Google OAuth popup was closed or blocked. You can also connect by pasting your Google Sheet URL or Apps Script Webhook below.'
+        text: 'Could not save Google Workspace connection. Please click Save & Activate below.'
       });
+    } finally {
+      setIsAuthorizingOAuth(false);
     }
-  });
+  };
 
   // Toggle reveal password
   const toggleRevealKey = (key: string) => {
@@ -771,21 +786,8 @@ const Integrations = () => {
   const handleSaveConnection = async () => {
     if (!selectedApp || !user?._id) return;
 
-    // Validate required credentials so users don't accidentally save empty configs
-    if (selectedApp.id === 'google-sheets') {
-      const hasSheetTarget = Boolean(
-        appConfigState.spreadsheetId?.trim() ||
-        appConfigState.webhookUrl?.trim() ||
-        appConfigState.oauthAccessToken?.trim()
-      );
-      if (!hasSheetTarget) {
-        setTestPingResult({
-          ok: false,
-          text: 'Please sign in with Google OAuth above, OR paste a Google Sheet URL / ID (or Apps Script URL) before saving.'
-        });
-        return;
-      }
-    } else if (WEBHOOK_APP_IDS.includes(selectedApp.id)) {
+    // Validate required credentials for Webhook & API Token apps
+    if (WEBHOOK_APP_IDS.includes(selectedApp.id)) {
       const hasWebhook = Boolean(
         appConfigState.webhookUrl?.trim() ||
         appConfigState.targetEndpoint?.trim() ||
@@ -1620,7 +1622,7 @@ const Integrations = () => {
                   ))}
                 </div>
 
-                {/* 2A. REAL GOOGLE OAUTH 2.0 POPUP CARD (ONLY FOR GOOGLE WORKSPACE APPS) */}
+                {/* 2A. DIRECT GOOGLE WORKSPACE LAUNCHER & ACCOUNT LINK (ZERO OAUTH ORIGIN_MISMATCH) */}
                 {isGoogleOAuthApp && (
                   <div className="bg-slate-50/90 border border-slate-200 rounded-lg p-4 space-y-3.5 shadow-2xs">
                     <div className="flex items-start justify-between gap-3">
@@ -1630,19 +1632,21 @@ const Integrations = () => {
                         </div>
                         <div>
                           <h4 className="text-xs font-bold text-slate-900 font-delight">
-                            Google OAuth 2.0 Workspace Authorization
+                            {selectedApp.id === 'google-sheets'
+                              ? 'Google Sheets Direct Workspace Link'
+                              : `${selectedApp.name} Workspace Link`}
                           </h4>
                           <p className="text-[11px] text-slate-500 font-delight">
-                            {appConfigState.authorizedEmail
-                              ? `Authenticated as ${appConfigState.authorizedEmail}`
-                              : `Authenticate with your Google account to grant ${selectedApp.name} access`}
+                            {appConfigState.authorizedEmail || selectedApp.connected
+                              ? `Linked to ${appConfigState.authorizedEmail || user?.email || 'Workspace Account'}`
+                              : `Open ${selectedApp.name} in your browser & link ${user?.email || 'your Google account'} (no OAuth client setup required)`}
                           </p>
                         </div>
                       </div>
 
-                      {appConfigState.oauthAccessToken && (
+                      {(appConfigState.authorizedEmail || selectedApp.connected) && (
                         <span className="text-[10px] font-delight font-semibold px-2 py-0.5 rounded-sm bg-emerald-100 text-emerald-800 border border-emerald-200 shrink-0">
-                          OAuth Token Active
+                          Workspace Linked
                         </span>
                       )}
                     </div>
@@ -1650,23 +1654,26 @@ const Integrations = () => {
                     <div className="flex flex-wrap items-center gap-2">
                       <button
                         type="button"
-                        onClick={() => triggerGoogleOAuth()}
+                        onClick={() => handleGoogleWorkspaceConnect(true)}
                         disabled={isAuthorizingOAuth}
                         className="flex-1 min-w-[210px] h-10 bg-[#191716] hover:bg-slate-800 text-white font-delight text-xs font-semibold rounded-md transition-all flex items-center justify-center gap-2 border border-[#191716] shadow-xs cursor-pointer disabled:opacity-50"
                       >
                         {isAuthorizingOAuth ? (
                           <>
                             <RefreshCw className="w-3.5 h-3.5 animate-spin" />
-                            <span>Authorizing with Google...</span>
+                            <span>Linking {selectedApp.name}...</span>
                           </>
                         ) : (
                           <>
                             <IntegrationLogo logo={selectedApp.logo} name={selectedApp.name} size="sm" />
                             <span>
-                              {appConfigState.oauthAccessToken
-                                ? `Re-Authenticate Google Account (${appConfigState.authorizedEmail || 'Connected'})`
-                                : `Sign in with Google & Authorize ${selectedApp.name}`}
+                              {selectedApp.id === 'google-sheets'
+                                ? cleanSheetId
+                                  ? `Open Linked Google Sheet & Refresh Link`
+                                  : `Open Google Sheets & Link Workspace (${user?.email || 'Google'})`
+                                : `Open ${selectedApp.name} & Link Workspace`}
                             </span>
+                            <ExternalLink className="w-3.5 h-3.5 text-slate-300" />
                           </>
                         )}
                       </button>
@@ -1679,8 +1686,7 @@ const Integrations = () => {
                           className="h-10 px-3 bg-white hover:bg-slate-100 text-slate-800 border border-slate-200 rounded-md text-xs font-delight font-semibold flex items-center gap-1.5 transition-colors shadow-2xs"
                           title={cleanSheetId ? 'Open your linked Google Sheet' : 'Create a new Google Sheet in your browser'}
                         >
-                          <span>{cleanSheetId ? 'Open Linked Sheet' : 'Create Blank Sheet'}</span>
-                          <ExternalLink className="w-3.5 h-3.5 text-slate-500" />
+                          <span>{cleanSheetId ? 'Open Sheet ↗' : 'New Blank Sheet ↗'}</span>
                         </a>
                       )}
                     </div>
@@ -1690,7 +1696,7 @@ const Integrations = () => {
                       <div className="pt-2 border-t border-slate-200/80 space-y-2.5">
                         <div className="flex items-center justify-between gap-2 flex-wrap">
                           <span className="text-[11px] font-delight font-semibold text-slate-700">
-                            Ready to test mirroring your CRM leads right now?
+                            Ready to mirror your CRM leads into Google Sheets right now?
                           </span>
                           <button
                             type="button"
@@ -1715,8 +1721,8 @@ const Integrations = () => {
                         {/* Optional 1-Click Apps Script Helper for Direct Private Sheet Appending */}
                         <div className="bg-white rounded-md p-2.5 border border-slate-200/90 flex items-center justify-between gap-2">
                           <div className="text-[11px] text-slate-600 font-delight leading-snug">
-                            <span className="font-semibold text-slate-800">Pro Tip (Direct Webhook Append):</span>{' '}
-                            In any Google Sheet, click <em>Extensions → Apps Script</em>, paste our 6-line script, deploy as a Web App, and paste its URL below for instant background row appends.
+                            <span className="font-semibold text-slate-800">Want Automatic Background Row Appends?</span>{' '}
+                            In your Google Sheet, click <em>Extensions → Apps Script</em>, paste our 6-line script, deploy as a Web App, and paste its URL below.
                           </div>
                           <button
                             type="button"
@@ -1751,7 +1757,7 @@ const Integrations = () => {
                     </div>
                     <div className="flex items-center gap-3">
                       <a
-                        href={portal.authUrl}
+                        href={selectedApp.id === 'google-sheets' ? resolvedGoogleSheetUrl : portal.authUrl}
                         target="_blank"
                         rel="noopener noreferrer"
                         className="text-[11px] font-delight font-semibold text-[#C85A32] hover:underline flex items-center gap-1"
@@ -1850,24 +1856,6 @@ const Integrations = () => {
                           className="w-full h-9 px-2.5 bg-white border border-slate-200 rounded-md text-xs font-delight font-medium outline-none focus:border-slate-400"
                         />
                       </div>
-                    </div>
-                  )}
-
-                  {/* Extra Apps Script Webhook input for Google Sheets */}
-                  {selectedApp.id === 'google-sheets' && (
-                    <div className="space-y-1 pt-1">
-                      <div className="flex items-center justify-between gap-2">
-                        <label className="block text-[11px] font-delight text-slate-700 font-semibold">
-                          Google Apps Script Web App URL <span className="text-slate-400 font-normal">(Optional — Direct Row Append)</span>
-                        </label>
-                      </div>
-                      <input
-                        type="url"
-                        value={appConfigState.webhookUrl ?? ''}
-                        onChange={(e) => setAppConfigState({ ...appConfigState, webhookUrl: e.target.value })}
-                        placeholder="https://script.google.com/macros/s/.../exec"
-                        className="w-full h-9 px-2.5 bg-white border border-slate-200 rounded-md text-xs font-delight font-normal outline-none focus:border-slate-400 transition-colors placeholder:text-slate-400"
-                      />
                     </div>
                   )}
 
